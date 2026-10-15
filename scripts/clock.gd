@@ -49,3 +49,12 @@ func date_string() -> String:
 	var months := ["January", "February", "March", "April", "May", "June", "July",
 		"August", "September", "October", "November", "December"]
 	return "%d %s %d" % [d.day, months[d.month - 1], d.year]
+
+
+func save_state() -> Dictionary:
+	return {"day": day}
+
+
+func load_state(d: Dictionary) -> void:
+	day = d.day
+	set_speed(0)

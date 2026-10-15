@@ -1,7 +1,12 @@
 extends CanvasLayer
 ## Top-left panel: date, time speed, wind, sailing readout and supplies. Bottom-left: recent messages.
 
-const MAX_MESSAGES := 5
+const MAX_MESSAGES := 6
+
+signal enter_port_pressed
+signal save_pressed
+signal load_pressed
+signal map_mode_changed(good: String)  # "" = political
 
 var ship: Node2D
 var _messages: PackedStringArray = []
@@ -14,6 +19,16 @@ var _messages: PackedStringArray = []
 func _ready() -> void:
 	for i in Clock.SPEEDS.size():
 		%Speeds.get_child(i).pressed.connect(Clock.set_speed.bind(i))
+	%EnterPort.pressed.connect(enter_port_pressed.emit)
+	%Save.pressed.connect(save_pressed.emit)
+	%Load.pressed.connect(load_pressed.emit)
+	var modes: OptionButton = %MapMode
+	modes.add_item("Map: Political")
+	modes.set_item_metadata(0, "")
+	for good in Data.table("goods"):
+		modes.add_item("Map: Trade - " + Data.table("goods")[good].name)
+		modes.set_item_metadata(modes.item_count - 1, good)
+	modes.item_selected.connect(func(i): map_mode_changed.emit(modes.get_item_metadata(i)))
 
 
 func _process(_delta: float) -> void:
@@ -21,6 +36,7 @@ func _process(_delta: float) -> void:
 		return
 	var s: Dictionary = ship.state
 	var w: Dictionary = ship.wind
+	%EnterPort.visible = ship.anchored_at != ""
 	var lines := PackedStringArray()
 	lines.append(Clock.date_string() + ("   [PAUSED]" if Clock.speed_index == 0 else "   x%d" % Clock.SPEEDS[Clock.speed_index]))
 	var weather: String = Data.rules.storms[w.storm].name if w.storm != "" else ("Calm" if Weather.calm else "Fair")
@@ -35,7 +51,8 @@ func _process(_delta: float) -> void:
 		lines.append("Hove to")
 	lines.append("")
 	lines.append("Hull %d / %d    Crew %d" % [s.hull, ship.stats.hull, s.crew])
-	lines.append("Food %d (%d days)    Water %d (%d days)" % [s.food, ship.days_of("food"), s.water, ship.days_of("water")])
+	lines.append("Food %d (%d days)    Water %d (%d days)" % [s.cargo.get("food", 0), ship.days_of("food"), s.cargo.get("water", 0), ship.days_of("water")])
+	lines.append("Hold %d / %d tons" % [Market.cargo_used(s.cargo), ship.capacity()])
 	lines.append("Gold %d" % s.gold + ("    Wages owed %d" % s.wages_owed if s.wages_owed > 0 else ""))
 	info.text = "\n".join(lines)
 	compass.wind_dir = w.dir

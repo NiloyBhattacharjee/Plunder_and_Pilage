@@ -9,8 +9,8 @@ script = ExtResource("1")
 [node name="Panel" type="PanelContainer" parent="."]
 offset_left = 10.0
 offset_top = 10.0
-offset_right = 430.0
-offset_bottom = 200.0
+offset_right = 470.0
+offset_bottom = 280.0
 
 [node name="HBox" type="HBoxContainer" parent="Panel"]
 layout_mode = 2
@@ -42,6 +42,29 @@ text = "2x"
 [node name="X4" type="Button" parent="Panel/HBox/VBox/Speeds"]
 layout_mode = 2
 text = "4x"
+
+[node name="Actions" type="HBoxContainer" parent="Panel/HBox/VBox"]
+layout_mode = 2
+
+[node name="EnterPort" type="Button" parent="Panel/HBox/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Enter port"
+
+[node name="Save" type="Button" parent="Panel/HBox/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save (F5)"
+
+[node name="Load" type="Button" parent="Panel/HBox/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Load (F9)"
+
+[node name="MapMode" type="OptionButton" parent="Panel/HBox/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Map mode. Trade modes show the last prices you know for a good at each port, and how old they are."
 
 [node name="Compass" type="Control" parent="Panel/HBox"]
 unique_name_in_owner = true

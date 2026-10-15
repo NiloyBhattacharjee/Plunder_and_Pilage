@@ -1,7 +1,7 @@
 extends Node2D
 ## World map scene: builds the chart from data, routes the ship on click, and runs the camera.
 ## Controls: left-click sea or a port to sail there. Right/middle-drag pans, wheel zooms, F follows the ship.
-## Space pauses, 1/2/3 set time speed.
+## Space pauses, 1/2/3 set time speed. F5 quick-saves, F9 quick-loads.
 
 const PORT_CLICK_RADIUS := 14.0  # screen pixels
 const ZOOM_MAX := 4.0
@@ -14,6 +14,7 @@ var follow_ship := true
 @onready var ship: Node2D = $Ship
 @onready var camera: Camera2D = $Camera2D
 @onready var hud = $HUD
+@onready var port_screen = $PortScreen
 
 
 func _ready() -> void:
@@ -31,12 +32,20 @@ func _ready() -> void:
 	ship.terrain = terrain
 	ship.position = anchorages[start_port]
 	ship.anchored_at = start_port
-	ship.arrived.connect(func(id): hud.show_message("Anchored at %s." % Data.table("ports")[id].name))
+	ship.arrived.connect(_on_arrived)
 	ship.message.connect(hud.show_message)
 	ship.foundered.connect(_on_foundered)
 	hud.ship = ship
+	hud.enter_port_pressed.connect(func(): port_screen.open(ship.anchored_at, ship))
+	hud.save_pressed.connect(_save)
+	hud.load_pressed.connect(_load)
+	hud.map_mode_changed.connect(func(good): $PortLayer.trade_good = good)
+	port_screen.message.connect(hud.show_message)
+	port_screen.closed.connect($PortLayer.queue_redraw)
+	Clock.day_passed.connect(func(_d): if $PortLayer.trade_good != "": $PortLayer.queue_redraw())
 	hud.show_message("Your sloop lies at anchor in %s. Click the sea or a port to set a course." %
 		Data.table("ports")[start_port].name)
+	port_screen.open.call_deferred(start_port, ship)
 
 
 func _process(_delta: float) -> void:
@@ -45,6 +54,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if port_screen.visible:
+		return
 	if event is InputEventMouseButton and event.pressed:
 		match event.button_index:
 			MOUSE_BUTTON_LEFT: _set_course(get_global_mouse_position())
@@ -60,12 +71,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_2: Clock.set_speed(2)
 			KEY_3: Clock.set_speed(3)
 			KEY_F: follow_ship = true
+			KEY_F5: _save()
+			KEY_F9: _load()
 
 
 func _set_course(target: Vector2) -> void:
 	if ship.state.hull <= 0:
 		return
 	var port_id := _port_near(target)
+	if port_id != "" and port_id == ship.anchored_at:
+		port_screen.open(port_id, ship)
+		return
 	if port_id != "":
 		target = anchorages[port_id]
 	elif terrain.at(target) == TerrainGrid.LAND:
@@ -94,6 +110,24 @@ func _zoom(factor: float) -> void:
 	var z := clampf(camera.zoom.x * factor, maxf(fit.x, fit.y), ZOOM_MAX)
 	camera.zoom = Vector2(z, z)
 	$PortLayer.zoom = z
+
+
+func _on_arrived(id: String) -> void:
+	hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
+	port_screen.open(id, ship)
+
+
+func _save() -> void:
+	var err := SaveGame.save_game(self)
+	hud.show_message("Game saved." if err == OK else "Save failed: %s" % error_string(err))
+
+
+func _load() -> void:
+	if port_screen.visible:
+		port_screen.hide()
+	var err := SaveGame.load_game(self)
+	$PortLayer.queue_redraw()
+	hud.show_message("Game loaded (paused)." if err == OK else "Load failed: %s" % error_string(err))
 
 
 func _on_foundered() -> void:

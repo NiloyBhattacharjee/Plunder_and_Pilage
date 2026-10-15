@@ -7,8 +7,8 @@ const DATA_DIR := "res://data/"
 # Required fields per table, and fields that must reference ids in another table.
 # A bad entry fails loudly at startup naming the file, entry and field.
 const SCHEMA := {
-	"ports": {"required": ["name", "faction", "lat", "lon", "produces", "wants"],
-		"refs": {"faction": "factions", "produces": "goods", "wants": "goods"}},
+	"ports": {"required": ["name", "faction", "lat", "lon", "size", "produces", "wants", "shipyard", "sailors", "laws"],
+		"refs": {"faction": "factions", "produces": "goods", "wants": "goods", "laws.contraband": "goods"}},
 	"goods": {"required": ["name", "base_price"]},
 	"factions": {"required": ["name", "color"]},
 	"ships": {"required": ["name", "speed_knots", "polar", "hull", "crew_max", "cargo"]},
@@ -60,8 +60,18 @@ static func validate(all: Dictionary) -> PackedStringArray:
 					out.append("%s.json: '%s' is missing '%s'" % [tname, id, field])
 			for field in refs:
 				var target: Dictionary = all.get(refs[field], {})
-				var values = entry.get(field, [])
+				var values = _dig(entry, field)
 				for v in (values if values is Array else [values]):
 					if not target.has(v):
 						out.append("%s.json: '%s'.%s = '%s' is not in %s.json" % [tname, id, field, v, refs[field]])
 	return out
+
+
+## Looks up a dotted path like "laws.contraband"; [] if any part is missing.
+static func _dig(entry: Dictionary, path: String) -> Variant:
+	var v: Variant = entry
+	for key in path.split("."):
+		if not (v is Dictionary and v.has(key)):
+			return []
+		v = v[key]
+	return v

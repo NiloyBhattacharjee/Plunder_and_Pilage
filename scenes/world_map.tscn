@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ship.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="5"]
 [ext_resource type="Script" path="res://scripts/port_layer.gd" id="6"]
+[ext_resource type="PackedScene" path="res://ui/port_screen.tscn" id="7"]
 
 [node name="WorldMap" type="Node2D"]
 script = ExtResource("1")
@@ -28,3 +29,5 @@ limit_left = 0
 limit_top = 0
 
 [node name="HUD" parent="." instance=ExtResource("5")]
+
+[node name="PortScreen" parent="." instance=ExtResource("7")]

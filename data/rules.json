@@ -5,7 +5,8 @@
   },
   "start": {
     "ship": "sloop", "port": "port_royal",
-    "crew": 40, "food": 120, "water": 120, "gold": 500
+    "crew": 40, "gold": 500,
+    "cargo": {"food": 120, "water": 120}
   },
   "upkeep": {
     "food_per_crew": 0.1,
@@ -39,5 +40,37 @@
       "wind_strength": 1.6, "hull_damage_per_day": 30
     }
   },
-  "storm_shelter": 0.25
+  "storm_shelter": 0.25,
+
+  "market": {
+    "normal_stock": {"produces": 160, "neutral": 60, "wants": 20},
+    "size_mult": {"small": 0.6, "medium": 1.0, "large": 1.6},
+    "elasticity": 0.7,
+    "price_clamp": [0.25, 4.0],
+    "spread": 0.12,
+    "reversion": 0.05,
+    "noise": 0.04
+  },
+  "market_events": [
+    {"id": "shortage", "name": "Shortage", "kind": "wants", "mult": 0.35, "days": [20, 45], "daily_chance": 0.004,
+     "rumour": "{good} is fetching a fortune in {port}. They can't get enough of it."},
+    {"id": "glut", "name": "Glut", "kind": "produces", "mult": 2.0, "days": [20, 45], "daily_chance": 0.004,
+     "rumour": "Warehouses in {port} are overflowing with {good}. It's going for nothing."},
+    {"id": "bad_harvest", "name": "Poor harvest", "kind": "produces", "mult": 0.4, "days": [30, 60], "daily_chance": 0.003,
+     "rumour": "The {good} crop failed around {port}. Prices there have gone mad."}
+  ],
+  "smuggling": {
+    "seizure_per_10_units": 0.08,
+    "fine_mult": 0.5
+  },
+  "shipyard": {
+    "cost_per_hull": 3,
+    "hull_per_day": [0, 10, 25]
+  },
+  "tavern": {
+    "hire_cost": 12,
+    "regen_per_day": 0.05,
+    "round_cost": 15,
+    "rumours_per_visit": 2
+  }
 }

@@ -24,8 +24,8 @@ var _last_storm := ""
 func _ready() -> void:
 	var start: Dictionary = Data.rules.start
 	state = {"type": start.ship, "hull": float(Data.table("ships")[start.ship].hull),
-		"crew": int(start.crew), "food": float(start.food), "water": float(start.water),
-		"gold": float(start.gold), "wages_owed": 0.0}
+		"crew": int(start.crew), "gold": float(start.gold), "wages_owed": 0.0,
+		"cargo": start.cargo.duplicate(), "cargo_cost": {}}
 	stats = Data.table("ships")[state.type]
 	Clock.ticked.connect(_on_tick)
 	Clock.day_passed.connect(func(_d): apply_daily_upkeep(state, Data.rules.upkeep))
@@ -79,10 +79,10 @@ func _on_tick(dd: float) -> void:
 	queue_redraw()
 
 
-# Food and water are eaten each day; wages come out of the purse, and anything unpaid is owed.
+# Food and water are eaten from the hold each day; wages come out of the purse, and anything unpaid is owed.
 static func apply_daily_upkeep(s: Dictionary, upkeep: Dictionary) -> void:
-	s.food = maxf(0.0, s.food - s.crew * upkeep.food_per_crew)
-	s.water = maxf(0.0, s.water - s.crew * upkeep.water_per_crew)
+	Ports.remove_cargo(s, "food", s.crew * upkeep.food_per_crew)
+	Ports.remove_cargo(s, "water", s.crew * upkeep.water_per_crew)
 	var wages: float = s.crew * upkeep.wage_per_crew
 	var paid := minf(wages, s.gold)
 	s.gold -= paid
@@ -91,7 +91,28 @@ static func apply_daily_upkeep(s: Dictionary, upkeep: Dictionary) -> void:
 
 func days_of(supply: String) -> float:
 	var per_day: float = state.crew * Data.rules.upkeep[supply + "_per_crew"]
-	return state[supply] / per_day if per_day > 0 else INF
+	return state.cargo.get(supply, 0.0) / per_day if per_day > 0 else INF
+
+
+func capacity() -> float:
+	return stats.cargo
+
+
+func save_state() -> Dictionary:
+	return {"state": state, "position": position, "route": route, "target_port": target_port,
+		"anchored_at": anchored_at, "heading": heading}
+
+
+func load_state(d: Dictionary) -> void:
+	state = d.state
+	stats = Data.table("ships")[state.type]
+	position = d.position
+	route = d.route
+	target_port = d.target_port
+	anchored_at = d.anchored_at
+	heading = d.heading
+	$Hull.rotation = deg_to_rad(heading)
+	queue_redraw()
 
 
 func _draw() -> void:

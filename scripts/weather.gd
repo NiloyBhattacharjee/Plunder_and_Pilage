@@ -63,3 +63,15 @@ func spawn_storm(kind: String) -> Dictionary:
 	}
 	storms.append(s)
 	return s
+
+
+func save_state() -> Dictionary:
+	return {"rng": str(rng.state), "wind_dir": wind_dir, "wind_strength": wind_strength, "calm": calm, "storms": storms}
+
+
+func load_state(d: Dictionary) -> void:
+	rng.state = int(d.rng)
+	wind_dir = d.wind_dir
+	wind_strength = d.wind_strength
+	calm = d.calm
+	storms = d.storms
