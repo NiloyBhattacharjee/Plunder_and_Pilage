@@ -37,7 +37,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 	for key in bg.relations:
 		var f: String = nation.faction if key == "own" else key
 		if f != "":
-			relations[f] += bg.relations[key]
+			relations[f] += int(bg.relations[key])
 
 	var stats := ShipStats.effective(bg.ship, [])
 	var names: Array = Data.rules.ship_names
@@ -48,6 +48,8 @@ static func build(cfg: Dictionary) -> Dictionary:
 		"gold": float(bg.gold), "wages_owed": 0.0,
 		"cargo": Data.rules.start.cargo.duplicate(), "cargo_cost": {},
 		"relations": relations,
+		"reputation": {"honour": 0, "fear": 0, "notoriety": 0},
+		"stolen": {}, "prizes": [], "hostages": [], "guns_lost": 0,
 	}
 	auto_appoint(state, 7)
 	return {"state": state, "start_port": start_port}

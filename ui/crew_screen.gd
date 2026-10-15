@@ -48,6 +48,20 @@ func _build_captain(cap: Dictionary) -> void:
 	UIKit.label(box, "The captain is a crew member like any other. If they fall, someone else takes over.", "", UIKit.DIM)
 	_character_sheet(box, cap)
 	UIKit.label(box, "")
+	var s: Dictionary = ship.state
+	var rep: Dictionary = s.reputation
+	UIKit.label(box, "Reputation: honour %+d, fear %+d, notoriety %d" % [rep.honour, rep.fear, rep.notoriety],
+		"Honour grows from mercy and keeping your word; fear from cruelty. Notoriety is how widely your name is known.", UIKit.HEADER)
+	UIKit.label(box, "Standing: " + ", ".join(s.relations.keys().map(func(f): return "%s %+d" % [Data.table("factions")[f].name, s.relations[f]])))
+	var feelings: Array = s.crew.map(func(id): return People.person(id).relations.get(s.captain, 0))
+	var unhappy: int = feelings.filter(func(v): return v < 0).size()
+	if unhappy > 0:
+		UIKit.label(box, "%d of your crew hold something against you." % unhappy,
+			"Choices that clash with their traits (mercy to a bloodthirsty hand, cruelty to a merciful one) are remembered.", UIKit.BAD)
+	if not s.hostages.is_empty():
+		UIKit.label(box, "Hostages: " + ", ".join(s.hostages.map(func(h): return "%s (%s, %d gold)" % [
+			People.person(h.id).name, Data.table("factions")[h.faction].name, h.ransom])))
+	UIKit.label(box, "")
 	UIKit.label(box, "Log", "", UIKit.HEADER)
 	for line in cap.history:
 		UIKit.label(box, line, "", UIKit.DIM)
@@ -96,7 +110,7 @@ func _build_ship() -> void:
 		["cargo", "%d / %d" % [Market.cargo_used(s.cargo), st.cargo]],
 		["crew_max", str(st.crew_max)],
 		["crew_min", "%d (%d with your boatswain)" % [st.crew_min, ShipStats.crew_needed(s, st)]],
-		["guns", "%d x %d-pounders" % [st.guns, st.gun_weight]],
+		["guns", "%d x %d-pounders%s" % [st.guns, st.gun_weight, " (%d dismounted)" % s.guns_lost if s.guns_lost > 0 else ""]],
 		["swivels", str(st.swivels)],
 		["chase_guns", str(st.chase_guns)],
 		["comfort", str(st.comfort)],

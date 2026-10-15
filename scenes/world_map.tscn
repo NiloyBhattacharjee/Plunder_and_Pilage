@@ -8,6 +8,8 @@
 [ext_resource type="Script" path="res://scripts/port_layer.gd" id="6"]
 [ext_resource type="PackedScene" path="res://ui/port_screen.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://ui/crew_screen.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://ui/prize_screen.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://ui/choice_dialog.tscn" id="10"]
 
 [node name="WorldMap" type="Node2D"]
 script = ExtResource("1")
@@ -34,3 +36,7 @@ limit_top = 0
 [node name="PortScreen" parent="." instance=ExtResource("7")]
 
 [node name="CrewScreen" parent="." instance=ExtResource("8")]
+
+[node name="PrizeScreen" parent="." instance=ExtResource("9")]
+
+[node name="ChoiceDialog" parent="." instance=ExtResource("10")]

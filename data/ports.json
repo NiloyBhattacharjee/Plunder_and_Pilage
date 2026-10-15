@@ -81,7 +81,7 @@
     "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.3}
   },
   "tortuga": {
-    "name": "Tortuga", "faction": "france", "lat": 20.04, "lon": -72.78, "size": "small",
+    "name": "Tortuga", "faction": "france", "fence": true, "lat": 20.04, "lon": -72.78, "size": "small",
     "governor": "Jacques Nepveu de Pouancey",
     "description": "A rock of buccaneers under a French flag. The governor asks few questions if his share arrives on time.",
     "produces": ["hides", "tobacco", "food"],
@@ -117,7 +117,7 @@
     "laws": {"contraband": [], "vigilance": 0.1}
   },
   "nassau": {
-    "name": "Nassau", "faction": "pirates", "lat": 25.078, "lon": -77.339, "size": "small",
+    "name": "Nassau", "faction": "pirates", "fence": true, "lat": 25.078, "lon": -77.339, "size": "small",
     "governor": "Captain Elias Thorne",
     "description": "A ruined settlement turned pirate roost. The shoals of the Bahama Banks keep the navies' big ships away.",
     "produces": ["hides", "logwood"],

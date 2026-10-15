@@ -11,6 +11,8 @@ var terrain: TerrainGrid
 var port_positions := {}  # where the port marker is drawn
 var anchorages := {}      # nearest navigable point to each port
 var follow_ship := true
+var combat: Node = null
+var rng := RandomNumberGenerator.new()
 
 ## Set by the new-game screen before switching here: {name, nationality, background, ship_name} or {"load": true}.
 static var start_config := {}
@@ -20,9 +22,12 @@ static var start_config := {}
 @onready var hud = $HUD
 @onready var port_screen = $PortScreen
 @onready var crew_screen = $CrewScreen
+@onready var prize_screen = $PrizeScreen
+@onready var dialog = $ChoiceDialog
 
 
 func _ready() -> void:
+	rng.randomize()
 	terrain = TerrainGrid.new(load("res://data/map/terrain.png").get_image(), int(Data.map.cell_px))
 	for id in Data.table("ports"):
 		var p: Dictionary = Data.table("ports")[id]
@@ -55,6 +60,7 @@ func _ready() -> void:
 	Clock.day_passed.connect(func(_d): if $PortLayer.trade_good != "": $PortLayer.queue_redraw())
 	hud.crew_pressed.connect(func(): crew_screen.open(ship))
 	crew_screen.message.connect(hud.show_message)
+	Clock.day_passed.connect(func(_d): _maybe_encounter())
 	hud.show_message("Captain %s and the %s lie at anchor in %s. Click the sea or a port to set a course. C opens the crew and ship." % [
 		ShipStats.captain(ship.state).name, ship.state.name, Data.table("ports")[start_port].name])
 	if start_config.get("load", false):
@@ -69,7 +75,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if port_screen.visible or crew_screen.visible:
+	if busy():
 		return
 	if event is InputEventMouseButton and event.pressed:
 		match event.button_index:
@@ -148,6 +154,107 @@ func _load() -> void:
 		OK: hud.show_message("Game loaded (paused).")
 		ERR_INVALID_DATA: hud.show_message("That save is from an older version of the game and can't be loaded. Started a new game instead.")
 		_: hud.show_message("Load failed: %s" % error_string(err))
+
+
+## True while a screen, dialog or battle has the player's attention.
+func busy() -> bool:
+	return combat != null or port_screen.visible or crew_screen.visible or prize_screen.visible or dialog.visible
+
+
+# ---- Encounters and battle -------------------------------------------------
+
+func _maybe_encounter() -> void:
+	if busy() or ship.anchored_at != "" or ship.route.is_empty() or ship.state.hull <= 0:
+		return
+	if rng.randf() < Data.rules.encounters.daily_chance:
+		encounter(Encounters.generate(_nearest_port_faction(), rng))
+
+
+func _nearest_port_faction() -> String:
+	var best := ""
+	for id in port_positions:
+		if best == "" or ship.position.distance_to(port_positions[id]) < ship.position.distance_to(port_positions[best]):
+			best = id
+	return Data.table("ports")[best].faction
+
+
+func encounter(enemy: Dictionary) -> void:
+	UIKit.pause_clock()
+	var s: Dictionary = ship.state
+	var seen := Encounters.sighting(enemy, rng)
+	var hit: int = Data.table("encounters")[enemy.kind].relation_hit
+	var fname: String = Data.table("factions")[enemy.faction].name
+	if Encounters.hostile(enemy, s):
+		var pick: int = await dialog.ask("Enemy sail!", "A %s is bearing down on you.\n%s" % [enemy.label, seen], [
+			{"text": "Clear for action", "tooltip": "Turn and fight."},
+			{"text": "Crowd on sail and run", "tooltip": "Start the fight already running. Outdistance her (%d) and you're free." % Data.rules.combat.escape_distance},
+			{"text": "Strike your colours", "tooltip": "Surrender without a fight. They'll strip your hold and take half your gold."},
+		])
+		match pick:
+			0: start_combat(enemy, "defend")
+			1: start_combat(enemy, "flee")
+			2:
+				hud.show_message("You strike without a fight. " + Encounters.surrender_losses(s))
+				UIKit.resume_clock()
+	else:
+		var pick: int = await dialog.ask("Sail ho!", "A %s.\n%s" % [enemy.label, seen], [
+			{"text": "Attack her", "tooltip": "Standing with %s -%d, notoriety +%d. Her cargo and gold could be yours." % [fname, hit, Data.table("encounters")[enemy.kind].notoriety]},
+			{"text": "Let her pass", "tooltip": "Hold your course."},
+		])
+		if pick == 0:
+			hud.show_message(Encounters.attacked(s, enemy))
+			start_combat(enemy, "attack")
+		else:
+			UIKit.resume_clock()
+
+
+func start_combat(enemy: Dictionary, mode: String) -> void:
+	UIKit.pause_clock()
+	combat = load("res://scenes/combat.tscn").instantiate()
+	_show_world(false)
+	get_tree().root.add_child(combat)
+	var w := Weather.wind_at(ship.position)
+	combat.start(Encounters.player_side(ship.state), enemy, mode, w.dir, w.strength)
+	combat.get_node("Camera2D").make_current()
+	combat.finished.connect(_on_combat_finished)
+
+
+func _show_world(on: bool) -> void:
+	visible = on
+	hud.visible = on
+	process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+
+
+func _on_combat_finished(result: Dictionary) -> void:
+	combat.queue_free()
+	combat = null
+	_show_world(true)
+	camera.make_current()
+	var s: Dictionary = ship.state
+	for m in Encounters.apply_battle(s, result.player, rng):
+		hud.show_message(m)
+	if result.player.get("captain_wounded", false):
+		ShipStats.captain(s).history.append("Wounded in battle with the %s, %s." % [result.enemy_data.name, Clock.date_string()])
+	var e: Dictionary = result.enemy_data
+	match result.outcome:
+		"enemy_struck":
+			ShipStats.captain(s).history.append("Took the %s %s, %s." % [Data.table("factions")[e.faction].name, e.name, Clock.date_string()])
+			prize_screen.open(ship, result)
+			for m in await prize_screen.done:
+				hud.show_message(m)
+		"enemy_sunk":
+			hud.show_message("The %s sank with all her cargo." % e.name)
+		"separated":
+			hud.show_message("You and the %s go your separate ways." % e.name)
+		"player_struck":
+			hud.show_message("You struck your colours. " + Encounters.surrender_losses(s))
+		"player_sunk":
+			s.hull = 0.0
+			ship.route.clear()
+			_on_foundered()
+			return
+	ship.refresh_stats()
+	UIKit.resume_clock()
 
 
 func _on_foundered() -> void:

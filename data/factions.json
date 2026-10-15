@@ -1,7 +1,7 @@
 {
-  "england": {"name": "England",               "color": "#b8352c"},
-  "spain":   {"name": "Spain",                 "color": "#d9a520"},
-  "france":  {"name": "France",                "color": "#2f5fb3"},
-  "dutch":   {"name": "Dutch Republic",        "color": "#e07a1f"},
-  "pirates": {"name": "Brethren of the Coast", "color": "#222222"}
+  "england": {"name": "England", "color": "#b8352c", "ship_names": ["Mary Ann", "Prosperous", "Endeavour", "Swan", "Hopewell", "Charles", "Unity", "Bristol Merchant", "Diligence", "Lion"], "adjective": "English"},
+  "spain": {"name": "Spain", "color": "#d9a520", "ship_names": ["Santa Rosa", "San Felipe", "Nuestra Señora del Carmen", "San José", "Santo Cristo", "Concepción", "San Miguel", "Santa Ana", "Buen Jesús", "Trinidad"], "adjective": "Spanish"},
+  "france": {"name": "France", "color": "#2f5fb3", "ship_names": ["Belle", "Saint-Louis", "Hardi", "Fortune", "Espérance", "Saint-Esprit", "Marie", "Dauphin"], "adjective": "French"},
+  "dutch": {"name": "Dutch Republic", "color": "#e07a1f", "ship_names": ["Hoop", "Eendracht", "Zeemeeuw", "Gouden Leeuw", "Vrede", "Fortuyn", "Liefde", "Zeepaard"], "adjective": "Dutch"},
+  "pirates": {"name": "Brethren of the Coast", "color": "#222222", "ship_names": ["Black Joke", "Revenge", "Ranger", "Night Rambler", "Scourge", "Flying Dragon", "Sea King", "Bloody Hand"], "adjective": "pirate"}
 }

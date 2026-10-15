@@ -70,7 +70,8 @@
     "careen_cost_per_hull": 0.5,
     "careen_days": 3,
     "trade_in": 0.5,
-    "trade_in_upgrades": 0.3
+    "trade_in_upgrades": 0.3,
+    "cost_per_gun": 30
   },
   "tavern": {
     "hire_cost": 12,
@@ -119,5 +120,57 @@
   },
   "ship_names": ["Revenge", "Fancy", "Ranger", "Whydah", "Adventure", "Royal Fortune", "Kingston", "Delight", "Speedwell",
     "Swallow", "Good Fortune", "Black Joke", "Rising Sun", "Night Rambler", "Happy Delivery", "Defiance", "Sea Nymph",
-    "Merry Christmas", "Bachelor's Delight", "Liberty", "Wolf", "Dragon", "Pearl", "Fortune's Folly"]
+    "Merry Christmas", "Bachelor's Delight", "Liberty", "Wolf", "Dragon", "Pearl", "Fortune's Folly"],
+
+  "fence": {"legal_mult": 0.5},
+  "encounters": {"daily_chance": 0.12, "hostile_relation": -25, "friendly_pirate_relation": 20},
+  "combat": {
+    "px_per_knot": 8, "start_distance": {"attack": 650, "defend": 450, "flee": 700}, "escape_distance": 1150,
+    "turn_deg_per_point": 4, "accel_per_second": 0.35,
+    "sail_settings": [
+      {"name": "Sails furled", "speed": 0.0, "reload": 1.0},
+      {"name": "Battle sails", "speed": 0.6, "reload": 1.0},
+      {"name": "Full sail", "speed": 1.0, "reload": 1.4}
+    ],
+    "gun_range_base": 200, "gun_range_per_lb": 6, "broadside_arc": 35,
+    "base_accuracy": 0.5, "reload_seconds": 10, "crew_per_gun": 4,
+    "ammo": {
+      "round": {"name": "Round shot", "range": 1.0, "hull": 0.6, "sails": 0.1, "crew": 0.08,
+                "gun_chance": 0.08, "leak_chance": 0.06, "rudder_chance": 0.03, "mast_chance": 0.01,
+                "description": "Smashes hulls, guns and rudders. Too much and your prize sinks."},
+      "chain": {"name": "Chain shot", "range": 0.6, "hull": 0.1, "sails": 0.9, "crew": 0.03, "mast_chance": 0.05,
+                "description": "Shreds sails and brings down masts. Stops a ship running. Short range."},
+      "grape": {"name": "Grape shot", "range": 0.5, "hull": 0.05, "sails": 0.15, "crew": 0.35,
+                "description": "Sweeps the deck of men. Softens a crew before boarding. Very short range."}
+    },
+    "leak_per_lb": 0.02, "morale_per_crew_lost_pct": 1.2, "morale_per_hull_lost_pct": 0.3,
+    "surrender": {"morale": 15, "merchant_morale": 30, "hull_fraction": 0.2},
+    "board_distance": 70, "board_max_relative_speed": 35,
+    "ai_flee_hull": 0.35, "ai_flee_morale": 35,
+    "surgeon_saves_per_point": 0.03
+  },
+  "boarding": {
+    "casualty_rate": 0.09,
+    "choices": {
+      "push":   {"name": "Push forward", "deal": 1.3, "take": 1.2, "morale": 0,
+                 "description": "Throw everyone at them. Heavy losses both ways; ends it fast."},
+      "hold":   {"name": "Hold the rail", "deal": 0.7, "take": 0.7, "morale": 2,
+                 "description": "Fight from cover and steady the men. Slow, but cheap."},
+      "captain": {"name": "Go for their captain", "deal": 0.9, "take": 1.0, "morale": 0,
+                 "description": "Your captain seeks out theirs, blade to blade. Win and their crew breaks; lose and yours wavers."}
+    },
+    "duel_win_morale": 35, "duel_lose_morale": 25, "break_morale": 15, "swivel_kills": 1.5
+  },
+  "prizes": {"max": 2, "crew_fraction": 0.4, "sale_mult": 0.6, "max_speed_share": 1.0},
+  "prisoners": {
+    "fates": {
+      "adrift": {"name": "Set them adrift in the boats", "honour": 2, "fear": 0, "relation": 2, "tags": {"hates_mercy": -3, "hates_cruelty": 1},
+                 "description": "Merciful. Word of it will spread. Bloodthirsty hands will grumble."},
+      "maroon": {"name": "Maroon them on a key", "honour": -1, "fear": 2, "relation": -3, "tags": {"hates_cruelty": -1},
+                 "description": "Harsh but not murder. Some will live."},
+      "kill":   {"name": "Put them to the sword", "honour": -6, "fear": 6, "relation": -12, "tags": {"hates_cruelty": -6, "hates_mercy": 2, "devout": -2},
+                 "description": "Ruthless. Every captain in the Caribbean will hear of it. Some of your own crew won't forgive it."}
+    },
+    "ransom_per_authority": 40
+  }
 }

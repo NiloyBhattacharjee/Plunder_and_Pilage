@@ -58,7 +58,7 @@ func _process(_delta: float) -> void:
 	lines.append("Hull %d / %d   Sails %d / %d   Fouling %d%%" % [s.hull, ship.stats.hull, s.sails, ship.stats.sails, int(s.fouling * 100)])
 	lines.append("Crew %d (needs %d, berths %d)" % [ShipStats.headcount(s), ShipStats.crew_needed(s, ship.stats), ship.stats.crew_max])
 	lines.append("Food %d (%d days)    Water %d (%d days)" % [s.cargo.get("food", 0), ship.days_of("food"), s.cargo.get("water", 0), ship.days_of("water")])
-	lines.append("Hold %d / %d tons" % [Market.cargo_used(s.cargo), ship.capacity()])
+	lines.append("Hold %d / %d tons" % [Market.cargo_used(s.cargo), ship.capacity()] + ("   Prizes: " + ", ".join(s.prizes.map(func(p): return p.name)) if not s.prizes.is_empty() else ""))
 	lines.append("Gold %d" % s.gold + ("    Wages owed %d" % s.wages_owed if s.wages_owed > 0 else ""))
 	info.text = "\n".join(lines)
 	compass.wind_dir = w.dir

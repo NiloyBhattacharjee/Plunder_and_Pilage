@@ -72,6 +72,12 @@ func _on_tick(dd: float) -> void:
 	speed_knots = stats.speed_knots * sail_info.factor * wind.strength * cond.mult
 	speed_text = "Top speed %.1f kn\nPoint of sail: x%.2f\nWind strength: x%.2f\n%s" % [
 		stats.speed_knots, sail_info.factor, wind.strength, cond.text]
+	for prize in state.get("prizes", []):  # a squadron sails at the pace of its slowest ship
+		var pst := ShipStats.effective(prize.type, [])
+		var pk: float = pst.speed_knots * Sailing.best_course(pst.polar, off_wind).factor * wind.strength
+		if pk < speed_knots:
+			speed_knots = pk
+			speed_text += "\nHeld back by the prize %s: %.1f kn" % [prize.name, pk]
 	$Hull.rotation = deg_to_rad(heading)
 
 	if terrain and terrain.at(position) == TerrainGrid.SHALLOW:

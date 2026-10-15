@@ -99,29 +99,99 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	qty = mini(qty, int(have))
 	if qty <= 0:
 		return {"ok": false, "text": "Nothing to sell."}
-	var income := Market.quote(port(id), good, ps.stock[good], qty, false, spread_mult)
+	var stolen: float = s.get("stolen", {}).get(good, 0.0)
+	var n_clean := mini(qty, int(have - stolen))
+	var n_stolen := qty - n_clean
+	var income := Market.quote(port(id), good, ps.stock[good], n_clean, false, spread_mult)
+	if n_stolen > 0:  # stolen goods sell cheap unless there's a fence
+		var stolen_income := Market.quote(port(id), good, ps.stock[good] + n_clean * Market.weight(good), n_stolen, false, spread_mult)
+		income += int(stolen_income * fence_mult(id))
 	if rng.randf() < Market.seizure_chance(ps.laws, good, qty):
 		var fine := int(round(income * Data.rules.smuggling.fine_mult))
 		remove_cargo(s, good, have)
 		s.gold = maxf(0.0, s.gold - fine)
 		return {"ok": false, "text": "Customs officers seized all your %s and fined you %d!" % [_name(good), fine]}
-	remove_cargo(s, good, qty)
+	remove_cargo(s, good, qty, n_stolen)
 	s.gold += income
 	ps.stock[good] += qty * Market.weight(good)
 	return {"ok": true, "text": "Sold %d %s for %d." % [qty, _name(good), income], "value": income}
 
 
-## Removes cargo and the matching share of what was paid for it.
-static func remove_cargo(s: Dictionary, good: String, qty: float) -> void:
+## Removes cargo and the matching share of what was paid for it. `stolen_part` of it was stolen
+## (by default: whatever stolen units no longer fit in what's left).
+static func remove_cargo(s: Dictionary, good: String, qty: float, stolen_part := -1.0) -> void:
 	var have: float = s.cargo.get(good, 0)
 	var left := maxf(0.0, have - qty)
 	if have > 0:
 		s.cargo_cost[good] = s.cargo_cost.get(good, 0.0) * left / have
+	if s.has("stolen") and s.stolen.has(good):
+		var st: float = s.stolen[good] - stolen_part if stolen_part >= 0.0 else s.stolen[good]
+		s.stolen[good] = minf(st, left)
+		if s.stolen[good] <= 0.0:
+			s.stolen.erase(good)
 	if left <= 0.0:
 		s.cargo.erase(good)
 		s.cargo_cost.erase(good)
 	else:
 		s.cargo[good] = left
+
+
+## Stolen goods fetch full price only through a fence (pirate havens, some free ports).
+func fence_mult(id: String) -> float:
+	return 1.0 if port(id).get("fence", false) else Data.rules.fence.legal_mult
+
+
+## Sells a prize ship at the shipyard, with whatever cargo is left aboard. The prize crew rejoins.
+func sell_prize(id: String, index: int, s: Dictionary) -> Dictionary:
+	var prize: Dictionary = s.prizes[index]
+	var value := prize_value(id, prize)
+	s.gold += value
+	s.crew.append_array(prize.crew)
+	s.prizes.remove_at(index)
+	return {"ok": true, "text": "Sold the prize %s for %d." % [prize.name, value]}
+
+
+func prize_value(id: String, prize: Dictionary) -> int:
+	var st := ShipStats.effective(prize.type, [])
+	var v: float = Data.table("ships")[prize.type].price * Data.rules.prizes.sale_mult * clampf(prize.hull / st.hull, 0.2, 1.0)
+	for g in prize.cargo:
+		v += Market.quote(port(id), g, state[id].stock[g], int(prize.cargo[g]), false) * fence_mult(id)
+	return int(v)
+
+
+## Makes a prize your flagship. Your old ship is sold to the yard at trade-in value.
+func prize_to_flagship(index: int, s: Dictionary) -> Dictionary:
+	var prize: Dictionary = s.prizes[index]
+	var old_value := ShipStats.trade_in_value(s)
+	var new_stats := ShipStats.effective(prize.type, [])
+	if Market.cargo_used(s.cargo) > new_stats.cargo:
+		return {"ok": false, "text": "Your cargo won't fit in her hold."}
+	s.gold += old_value
+	s.crew.append_array(prize.crew)
+	s.type = prize.type
+	s.name = prize.name
+	s.upgrades = []
+	s.hull = minf(prize.hull, new_stats.hull)
+	s.sails = minf(prize.sails, new_stats.sails)
+	s.fouling = 0.0
+	s.guns_lost = 0
+	for g in prize.cargo:
+		s.cargo[g] = s.cargo.get(g, 0) + prize.cargo[g]
+		s.stolen[g] = s.stolen.get(g, 0) + prize.cargo[g]
+	s.prizes.remove_at(index)
+	return {"ok": true, "text": "The %s is your flagship now. The yard paid %d for your old ship." % [prize.name, old_value]}
+
+
+## Hostages from this port's nation can be ransomed here.
+func ransom(id: String, s: Dictionary, index: int) -> Dictionary:
+	var h: Dictionary = s.hostages[index]
+	if h.faction != port(id).faction:
+		return {"ok": false, "text": "Nobody here will pay for them."}
+	s.gold += h.ransom
+	var name: String = People.person(h.id).name
+	People.remove(h.id)
+	s.hostages.remove_at(index)
+	return {"ok": true, "text": "%s is ransomed for %d gold." % [name, h.ransom]}
 
 
 ## Signs on n new hands, each a generated character. Their nationality follows the port's mix.

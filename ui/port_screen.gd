@@ -44,6 +44,7 @@ func refresh() -> void:
 	%Title.text = "%s  (%s)" % [p.name, Data.table("factions")[p.faction].name]
 	var law_text := "No contraband laws." if laws.contraband.is_empty() else "Contraband: %s. Customs vigilance %d%%." % [
 		", ".join(laws.contraband.map(func(g): return Data.table("goods")[g].name)), int(laws.vigilance * 100)]
+	law_text += "  Stolen goods sell at %s here." % ("full price through the fence" if p.get("fence", false) else "half price, no questions asked")
 	%Info.text = "Governor: %s\n%s\n%s\nGold %d   Hold %d / %d tons" % [p.governor, p.description, law_text,
 		ship.state.gold, Market.cargo_used(ship.state.cargo), ship.capacity()]
 	_build_market()
@@ -73,6 +74,8 @@ func _build_market() -> void:
 			hold = "%d" % have
 			if s.cargo_cost.get(good, 0.0) > 0:
 				hold += " (paid %s)" % Market.fmt(s.cargo_cost[good] / have)
+			if s.stolen.get(good, 0) > 0:
+				hold += " [%d stolen]" % s.stolen[good]
 		UIKit.label(grid, hold)
 		UIKit.label(grid, Market.fmt(Ports.price(port_id, good, true, haggle)), tip)
 		UIKit.label(grid, Market.fmt(sell), tip)
@@ -109,7 +112,7 @@ func _build_shipyard() -> void:
 
 	UIKit.label(box, "")
 	UIKit.label(box, "Condition", "", UIKit.HEADER)
-	UIKit.label(box, "Hull %d / %d   Sails %d / %d   Fouling %d%%" % [s.hull, st.hull, s.sails, st.sails, int(s.fouling * 100)])
+	UIKit.label(box, "Hull %d / %d   Sails %d / %d   Guns dismounted %d   Fouling %d%%" % [s.hull, st.hull, s.sails, st.sails, s.guns_lost, int(s.fouling * 100)])
 	var r := UIKit.row(box)
 	for days in [1, 0]:
 		var job := _repair_job(per_day, days)
@@ -120,6 +123,22 @@ func _build_shipyard() -> void:
 	var cb := UIKit.button(r, "Careen (%d gold, %d days)" % [careen_cost, y.careen_days], _careen.bind(careen_cost),
 		"Heel her over on the beach and scrape the hull clean. Removes all fouling.")
 	cb.disabled = s.fouling < 0.01 or careen_cost > s.gold
+
+	if s.prizes.size() > 0:
+		UIKit.label(box, "")
+		UIKit.label(box, "Your prizes", "", UIKit.HEADER)
+		var pg := UIKit.grid(box, 4)
+		for i in s.prizes.size():
+			var prize: Dictionary = s.prizes[i]
+			var value := Ports.prize_value(port_id, prize)
+			UIKit.label(pg, "%s (%s), hull %d, %d prize crew" % [prize.name, Data.table("ships")[prize.type].name, prize.hull, prize.crew.size()])
+			UIKit.label(pg, "worth %d" % value, "Hull condition and any cargo left aboard (stolen goods at fence rates).")
+			UIKit.button(pg, "Sell", _act.bind(func(): return Ports.sell_prize(port_id, i, s)), "The prize crew rejoins you.")
+			UIKit.button(pg, "Make her your flagship", _act.bind(func():
+				var res := Ports.prize_to_flagship(i, s)
+				if res.ok:
+					ship.refresh_stats()
+				return res), "Your current ship is sold to the yard at trade-in value. Upgrades are lost.")
 
 	UIKit.label(box, "")
 	var trade_in := ShipStats.trade_in_value(s)
@@ -187,7 +206,9 @@ func _repair_job(per_day: int, days: int) -> Dictionary:
 	var d := need_days if days == 0 else mini(1, need_days)
 	var h := mini(hull_missing, per_day * d)
 	var sl := mini(sails_missing, per_day * d)
-	return {"days": d, "hull": h, "sails": sl, "cost": int(h * y.cost_per_hull + sl * y.cost_per_sail)}
+	var guns: int = ship.state.guns_lost if d > 0 or days == 0 else 0
+	return {"days": maxi(d, 1 if guns > 0 else 0), "hull": h, "sails": sl, "guns": guns,
+		"cost": int(h * y.cost_per_hull + sl * y.cost_per_sail + guns * y.cost_per_gun)}
 
 
 func _repair(days: int) -> void:
@@ -195,8 +216,9 @@ func _repair(days: int) -> void:
 	ship.state.gold -= job.cost
 	ship.state.hull += job.hull
 	ship.state.sails += job.sails
+	ship.state.guns_lost -= job.guns
 	Clock.advance(job.days)  # the world moves on while you wait: upkeep, storms, prices
-	_act(func(): return {"ok": true, "text": "Repaired %d hull and %d sails in %d days for %d gold." % [job.hull, job.sails, job.days, job.cost]})
+	_act(func(): return {"ok": true, "text": "Repaired %d hull, %d sails and %d guns in %d days for %d gold." % [job.hull, job.sails, job.guns, job.days, job.cost]})
 
 
 func _careen(cost: int) -> void:
@@ -227,6 +249,14 @@ func _refresh_tavern() -> void:
 	%Rumour.text = "Buy a round and listen (%d gold, %d left this visit)" % [t.round_cost, rumours_left]
 	%Rumour.disabled = rumours_left <= 0 or ship.state.gold < t.round_cost
 	%Dismiss10.tooltip_text = "Pays off your 10 least useful hands (never officers). Fewer mouths and wages, but a short-handed ship sails slower."
+	for c in %Hostages.get_children():
+		c.queue_free()
+	var s: Dictionary = ship.state
+	for i in s.hostages.size():
+		var h: Dictionary = s.hostages[i]
+		if h.faction == Ports.port(port_id).faction:
+			UIKit.button(%Hostages, "Ransom %s for %d gold" % [People.person(h.id).name, h.ransom],
+				_act.bind(func(): return Ports.ransom(port_id, s, i)))
 
 
 func _act(action: Callable) -> void:

@@ -67,11 +67,11 @@ func test_captain_is_an_ordinary_character_with_background():
 	assert_eq(cap.hidden, [], "you know your own traits")
 	assert_eq(game.state.type, "schooner")
 	assert_eq(game.start_port, "willemstad")
-	assert_eq(game.state.relations.dutch, 5.0)
+	assert_eq(game.state.relations.dutch, 5)
 	assert_eq(game.state.crew.size(), 20)
 
 
 func test_background_can_override_start_port():
 	var game := NewGame.build({"nationality": "english", "background": "indentured"})
 	assert_eq(game.start_port, "tortuga")
-	assert_lt(game.state.relations.england, 0.0)
+	assert_lt(game.state.relations.england, 0)
