@@ -1,0 +1,341 @@
+{
+  "_comment": "Crew events, mostly driven by individual traits and by how the crew feel about the captain. See docs/events.md.",
+
+  "drunk_on_watch": {
+    "title": "Asleep on watch",
+    "text": "{drunk} is found snoring at the masthead, an empty bottle in hand. Anything could have come up on you in the dark.",
+    "weight_mods": [["cargo.rum >= 20", 2.0]],
+    "roles": {"drunk": {"from": "crew", "where": ["trait.drunkard"]}},
+    "choices": [
+      {"text": "A dozen lashes at the grating", "outcomes": ["opinion {drunk} -10", "fear +1", "opinion crew -1"], "result": "The crew watch in silence."},
+      {"text": "Stop their rum for a month", "outcomes": ["opinion {drunk} -5"], "result": "{drunk} takes it badly, but stays awake."},
+      {"text": "Talk sense into {drunk}", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["untrait {drunk} drunkard", "opinion {drunk} +5"], "result": "{drunk} swears off the bottle, and for once means it.",
+       "fail_outcomes": ["opinion crew -1"], "fail_result": "{drunk} nods along and is drunk again by the dog watch."}
+    ]
+  },
+
+  "gambling_debt": {
+    "title": "Dice below decks",
+    "text": "{gambler} has won a month's wages from {loser} at dice, and {loser} swears the dice were loaded.",
+    "roles": {"gambler": {"from": "crew", "where": ["trait.gambler"]}, "loser": {"from": "crew"}},
+    "choices": [
+      {"text": "Check the dice yourself", "check": {"who": "captain", "skill": "experience", "dc": 12},
+       "outcomes": ["opinion {loser} +10", "opinion {gambler} -10", "reveal {gambler}"], "result": "Loaded, as sure as sin. {gambler} pays it all back.",
+       "fail_outcomes": ["opinion {loser} -5"], "fail_result": "You can't tell. The debt stands, and {loser} thinks you took sides."},
+      {"text": "Ban gambling aboard", "outcomes": ["opinion crew -3", "opinion {gambler} -5"], "result": "The dice go over the side. Grumbling for a week."},
+      {"text": "A debt's a debt", "outcomes": ["opinion {loser} -8", "opinion {gambler} +5"], "result": "{loser} pays, and hates you both."}
+    ]
+  },
+
+  "brawl_below": {
+    "title": "A fight on the berth deck",
+    "text": "{a} and {b} are at each other with knives over a woman in the last port.",
+    "roles": {"a": {"from": "crew", "where": ["trait.hot_headed"]}, "b": {"from": "crew"}},
+    "choices": [
+      {"text": "Separate them and stop both their grog", "check": {"who": "captain", "skill": "authority", "dc": 11},
+       "outcomes": ["opinion {a} -3", "opinion {b} -3"], "result": "Your voice alone stops them.",
+       "fail_outcomes": ["wound {b}", "opinion crew -2"], "fail_result": "Too late: {b} is cut badly before they're pulled apart."},
+      {"text": "Let them settle it with fists on deck, properly", "check": {"who": "{b}", "skill": "swordplay", "dc": 12},
+       "outcomes": ["opinion crew +2"], "result": "{b} wins a fair fight. The matter is closed, and the men enjoyed the show.",
+       "fail_outcomes": ["opinion {b} -5", "opinion crew +1"], "fail_result": "{a} knocks {b} senseless. Honour is satisfied, more or less."},
+      {"text": "Put {a} ashore at the next port", "outcomes": ["leave {a}", "opinion crew -1"], "result": "One less hothead."}
+    ]
+  },
+
+  "omen_friday": {
+    "title": "Never on a Friday",
+    "text": "{sailor} and half the watch refuse to weigh anchor on a Friday. They say a ship that sails on a Friday never comes home.",
+    "where": "port",
+    "roles": {"sailor": {"from": "crew", "where": ["trait.superstitious"]}},
+    "choices": [
+      {"text": "Wait a day", "outcomes": ["time 1", "opinion crew +2"], "result": "Saturday dawns fair."},
+      {"text": "We sail now", "check": {"who": "captain", "skill": "authority", "dc": 13},
+       "outcomes": ["fear +1"], "result": "They go to the capstan muttering.", "fail_outcomes": ["opinion crew -5", "opinion {sailor} -8"], "fail_result": "They go, but they'll blame you for every wave."}
+    ]
+  },
+
+  "devout_prayers": {
+    "title": "Divine service",
+    "text": "{sailor} asks that the ship keep the Sabbath, with prayers on deck.",
+    "roles": {"sailor": {"from": "crew", "where": ["trait.devout"]}},
+    "choices": [
+      {"text": "Read the service yourself", "outcomes": ["opinion {sailor} +10", "opinion crew +1", "honour +1"], "result": "Even the hardest cases take their hats off."},
+      {"text": "No time for psalm-singing", "outcomes": ["opinion {sailor} -10"], "result": "{sailor} prays alone, loudly, for your soul."}
+    ]
+  },
+
+  "popular_birthday": {
+    "title": "A birthday",
+    "text": "It's {sailor}'s birthday, and the whole crew loves {sailor}. They ask for a double ration of rum to drink the health of their shipmate.",
+    "conditions": ["cargo.rum >= 5"],
+    "roles": {"sailor": {"from": "crew", "where": ["trait.popular"]}},
+    "choices": [
+      {"text": "Splice the main brace!", "outcomes": ["cargo rum -5", "opinion crew +4"], "result": "Songs until the middle watch."},
+      {"text": "One ration, and a toast", "outcomes": ["opinion crew +1"], "result": "Short, but cheerful."},
+      {"text": "Rum is for victories", "outcomes": ["opinion crew -3", "opinion {sailor} -5"], "result": "Sour faces."}
+    ]
+  },
+
+  "hated_bullied": {
+    "title": "Bullying",
+    "text": "Nobody likes {victim}. Tonight someone cut {victim}'s hammock down in the middle watch, and the lower deck is laughing.",
+    "roles": {"victim": {"from": "crew", "where": ["trait.hated"]}},
+    "choices": [
+      {"text": "Stop it: no man on my ship is a dog", "check": {"who": "captain", "skill": "authority", "dc": 12},
+       "outcomes": ["opinion {victim} +15", "honour +1"], "result": "It stops. {victim} won't forget it.",
+       "fail_outcomes": ["opinion crew -2"], "fail_result": "It stops for a day, then goes on where you can't see."},
+      {"text": "It's how crews are", "outcomes": ["opinion {victim} -10", "opinion crew +1"], "result": "{victim} goes quiet and keeps apart."},
+      {"text": "Pay {victim} off at the next port", "outcomes": ["leave {victim}", "gold -10"], "result": "{victim} goes with a few coins and a grudge."}
+    ]
+  },
+
+  "seasick_hand": {
+    "title": "Green about the gills",
+    "text": "{sailor} has been sick for a week and is useless aloft. The others jeer 'landlubber'.",
+    "roles": {"sailor": {"from": "crew", "where": ["trait.seasick"]}},
+    "choices": [
+      {"text": "Put {sailor} to work in the galley", "outcomes": ["opinion {sailor} +5"], "result": "{sailor} is a better cook than sailor."},
+      {"text": "Sea legs come, or the sea takes you", "check": {"who": "{sailor}", "skill": "seamanship", "dc": 12},
+       "outcomes": ["untrait {sailor} seasick", "skill {sailor} seamanship +1"], "result": "A fortnight later {sailor} is racing the topmen.",
+       "fail_outcomes": ["opinion {sailor} -5"], "fail_result": "No better, and miserable too."}
+    ]
+  },
+
+  "green_hand_lesson": {
+    "title": "A green hand",
+    "text": "{green} has never been to sea before and keeps getting in the way. {veteran} offers to show {green} the ropes.",
+    "roles": {"green": {"from": "crew", "where": ["trait.green"]}, "veteran": {"from": "crew", "where": ["trait.veteran"]}},
+    "choices": [
+      {"text": "Let {veteran} teach {green}", "outcomes": ["untrait {green} green", "skill {green} seamanship +2", "opinion {veteran} +5"], "result": "Within a month {green} can hand, reef and steer."},
+      {"text": "Everyone learns the hard way", "outcomes": ["skill {green} seamanship +1"], "result": "{green} learns, with rope burns."}
+    ]
+  },
+
+  "veteran_advice": {
+    "title": "An old hand's advice",
+    "text": "{veteran}, who has sailed these waters thirty years, takes you aside: 'Begging your pardon, Captain, but the men are unhappy. Pay, mostly. And the way things are run.'",
+    "conditions": ["loyalty < 0"],
+    "roles": {"veteran": {"from": "crew", "where": ["trait.veteran", "opinion >= 0"]}},
+    "choices": [
+      {"text": "Thank {veteran} and ask what to do", "outcomes": ["opinion {veteran} +10", "opinion crew +2"], "result": "The advice is plain sense: pay what's owed and stop the floggings. The men hear you asked."},
+      {"text": "Tell {veteran} to mind their station", "outcomes": ["opinion {veteran} -10"], "result": "{veteran} touches a hat brim and says nothing more, and won't warn you again."}
+    ]
+  },
+
+  "ration_thief": {
+    "title": "A thief aboard",
+    "text": "The purser catches {thief} stealing from the bread room at night. Stealing from shipmates is the worst crime at sea.",
+    "roles": {"thief": {"from": "crew", "where": ["trait.greedy"]}},
+    "choices": [
+      {"text": "Moses' Law: thirty-nine lashes", "outcomes": ["opinion {thief} -15", "fear +2", "opinion crew +1"], "result": "The crew approve. Thieves get no sympathy."},
+      {"text": "Maroon {thief} on the next cay", "conditions": ["pirate"], "outcomes": ["leave {thief}", "fear +3", "opinion crew +2"], "result": "A pistol, a bottle of water, and a sandbar. Pirate justice."},
+      {"text": "Make {thief} pay it back from their share", "outcomes": ["opinion {thief} -5", "opinion crew -1"], "result": "Lenient. Some think too lenient."}
+    ]
+  },
+
+  "schemer_whispers": {
+    "title": "Whispering",
+    "text": "{informant} tells you quietly that {schemer} has been whispering in the forecastle: about your shares, your choices, and who'd make a better captain.",
+    "conditions": ["loyalty < 10"],
+    "roles": {"schemer": {"from": "crew", "where": ["trait.schemer"]}, "informant": {"from": "crew", "where": ["opinion >= 10"]}},
+    "choices": [
+      {"text": "Confront {schemer} in front of everyone", "check": {"who": "captain", "skill": "intimidation", "dc": 13},
+       "outcomes": ["opinion {schemer} -10", "fear +2"], "result": "{schemer} backs down in front of the crew. For now.",
+       "fail_outcomes": ["opinion crew -4"], "fail_result": "{schemer} answers you back, and some of the men laugh."},
+      {"text": "Win the whisperers over quietly", "check": {"who": "captain", "skill": "charisma", "dc": 14},
+       "outcomes": ["opinion crew +3"], "result": "Little by little, {schemer}'s audience drifts away.", "fail_outcomes": ["opinion crew -2"], "fail_result": "They take your rum and keep listening to {schemer}."},
+      {"text": "Put {schemer} ashore at the next port", "outcomes": ["leave {schemer}", "opinion {informant} +5"], "result": "{schemer} is gone. Friends left behind remember."},
+      {"text": "Thank {informant} and do nothing yet", "outcomes": ["opinion {informant} +5", "flag schemer_watched 60"], "result": "You keep an eye on {schemer}."}
+    ]
+  },
+
+  "family_man_money": {
+    "title": "Money for home",
+    "text": "{sailor} asks for an advance on their share to send to family in {port}.",
+    "conditions": ["gold >= 50"],
+    "roles": {"sailor": {"from": "crew", "where": ["trait.family_man"]}, "port": {"from": "port", "where": ["faction != pirates"]}},
+    "choices": [
+      {"text": "Give {sailor} the advance", "outcomes": ["gold -40", "opinion {sailor} +12"], "result": "{sailor} will never forget it."},
+      {"text": "Shares are paid at the end of the voyage", "outcomes": ["opinion {sailor} -6"], "result": "{sailor} takes it quietly, but takes it hard."}
+    ]
+  },
+
+  "bloodthirsty_prisoner": {
+    "title": "Sport with the prisoner",
+    "text": "{brute} and a few friends have dragged your hostage on deck and are making the poor wretch dance with pistol shots at the feet.",
+    "conditions": ["hostages >= 1"],
+    "roles": {"brute": {"from": "crew", "where": ["trait.bloodthirsty"]}},
+    "choices": [
+      {"text": "Stop it. The man is worth money alive", "outcomes": ["opinion {brute} -8", "honour +2"], "result": "You lock the hostage in your own cabin."},
+      {"text": "Let them have their fun", "outcomes": ["opinion {brute} +8", "fear +2", "honour -3"], "result": "The story will spread."}
+    ]
+  },
+
+  "merciful_objects": {
+    "title": "A matter of conscience",
+    "text": "{sailor} comes to you troubled: the crew have been cruel to the prisoners and {sailor} wants no part of it. Several of the men agree.",
+    "conditions": ["fear >= 10"],
+    "roles": {"sailor": {"from": "crew", "where": ["trait.merciful"]}},
+    "choices": [
+      {"text": "Agree: no more cruelty aboard", "outcomes": ["opinion {sailor} +10", "honour +2", "fear -2"], "result": "Some grumble, but the decent men are glad."},
+      {"text": "Fear keeps prizes cheap to take", "outcomes": ["opinion {sailor} -10"], "result": "{sailor} looks at you as if seeing you for the first time."}
+    ]
+  },
+
+  "navy_drill": {
+    "title": "Gun drill",
+    "text": "{sailor}, who served in the King's navy, offers to drill the gun crews the navy way: run out, fire, sponge, load, until they can do it asleep.",
+    "roles": {"sailor": {"from": "crew", "where": ["trait.former_navy"]}},
+    "choices": [
+      {"text": "Do it, and use powder for live firing", "conditions": ["cargo.gunpowder >= 1"], "outcomes": ["cargo gunpowder -1", "skill post.master_gunner gunnery +1", "opinion {sailor} +5"], "result": "A week of thunder. Your gunner learns a thing or two."},
+      {"text": "Dry drill only", "outcomes": ["skill {sailor} authority +1", "opinion crew -1"], "result": "The men hate it, but they're quicker."},
+      {"text": "This isn't the navy", "outcomes": ["opinion crew +1", "opinion {sailor} -3"], "result": "The lower deck cheers."}
+    ]
+  },
+
+  "officer_quarrel": {
+    "title": "Officers at odds",
+    "text": "{a} and {b} have quarrelled in front of the men over who gives orders on the quarterdeck.",
+    "roles": {"a": {"from": "officer"}, "b": {"from": "officer"}},
+    "choices": [
+      {"text": "Back {a}", "outcomes": ["opinion {a} +8", "opinion {b} -10"], "result": "{b} takes the rebuke stiffly."},
+      {"text": "Back {b}", "outcomes": ["opinion {b} +8", "opinion {a} -10"], "result": "{a} takes the rebuke stiffly."},
+      {"text": "Knock their heads together", "check": {"who": "captain", "skill": "authority", "dc": 14},
+       "outcomes": ["opinion {a} +2", "opinion {b} +2"], "result": "They shake hands in your cabin. It may even last.",
+       "fail_outcomes": ["opinion {a} -5", "opinion {b} -5"], "fail_result": "Both leave thinking you a weak captain."}
+    ]
+  },
+
+  "music_night": {
+    "title": "A fiddle on the forecastle",
+    "text": "Fair wind, easy sailing. Someone has a fiddle out, and the men are dancing on the forecastle.",
+    "conditions": ["not storm", "loyalty >= -10"],
+    "choices": [
+      {"text": "Join them", "check": {"who": "captain", "skill": "charisma", "dc": 10},
+       "outcomes": ["opinion crew +3"], "result": "You dance a hornpipe badly and the men love it.",
+       "fail_outcomes": ["opinion crew +1", "fear -1"], "fail_result": "You trip over a ringbolt. Good-natured laughter."},
+      {"text": "Let them be", "outcomes": ["opinion crew +1"], "result": "The music carries far across the dark water."}
+    ]
+  },
+
+  "extra_rum": {
+    "title": "A tot more",
+    "text": "The crew send a delegation: hard work, short commons, and they want their rum ration doubled.",
+    "conditions": ["cargo.rum >= 10"],
+    "choices": [
+      {"text": "Double it for a week", "outcomes": ["cargo rum -10", "opinion crew +3"], "result": "A happy, if slightly unsteady, ship."},
+      {"text": "Refuse", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": [], "result": "You explain the arithmetic of the hold. They accept it.", "fail_outcomes": ["opinion crew -3"], "fail_result": "They go away angry."}
+    ]
+  },
+
+  "shore_leave_demand": {
+    "title": "Shore leave",
+    "text": "The crew want shore leave, and the back pay you owe them to spend ashore.",
+    "where": "port",
+    "conditions": ["wages_owed > 20"],
+    "choices": [
+      {"text": "Pay what you owe and let them go ashore", "conditions": ["gold >= 100"], "outcomes": ["paywages", "opinion crew +4", "time 2"], "result": "Two days of riot ashore. They come back broke and happy."},
+      {"text": "Promise to pay at the next port", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["opinion crew -1"], "result": "They believe you. This time.", "fail_outcomes": ["opinion crew -5", "crew -3"], "fail_result": "Three men take their chances ashore and never come back."}
+    ]
+  },
+
+  "fever_aboard": {
+    "title": "Fever",
+    "text": "A fever is spreading through the lower deck. {sailor} was the first to fall sick and is raving.",
+    "weight_mods": [["month >= 6", 1.5]],
+    "roles": {"sailor": {"from": "crew"}},
+    "choices": [
+      {"text": "Isolate the sick and have the surgeon bleed them", "check": {"who": "post.surgeon", "skill": "medicine", "dc": 12},
+       "outcomes": [], "result": "The fever burns out in a week. Everyone lives.", "fail_outcomes": ["kill {sailor}", "crew -2"], "fail_result": "It burns through the ship. {sailor} and two others are sewn into their hammocks."},
+      {"text": "Make for land and fresh fruit", "outcomes": ["time 3", "crew -1"], "result": "Three days lost and one man buried, but it's stopped."}
+    ]
+  },
+
+  "fall_from_rigging": {
+    "title": "A fall from aloft",
+    "text": "{sailor} falls from the main yard and lands across a gun. A leg is shattered.",
+    "roles": {"sailor": {"from": "crew"}},
+    "choices": [
+      {"text": "Have the surgeon set it", "check": {"who": "post.surgeon", "skill": "medicine", "dc": 13},
+       "outcomes": ["opinion {sailor} +5"], "result": "It sets clean. {sailor} will walk with a limp, and live.",
+       "fail_outcomes": ["wound {sailor}"], "fail_result": "The leg comes off below the knee."},
+      {"text": "Take the leg off now, before it rots", "outcomes": ["wound {sailor}"], "result": "Rum, a leather strap to bite, and the saw."}
+    ]
+  },
+
+  "harsh_boatswain": {
+    "title": "A heavy hand",
+    "text": "Your boatswain {bosun} is free with the rope's end. The men are covered in welts and there's talk.",
+    "conditions": ["loyalty < 5"],
+    "roles": {"bosun": {"from": "officer", "where": ["post == boatswain", "intimidation >= 10"]}},
+    "choices": [
+      {"text": "Tell {bosun} to ease off", "outcomes": ["opinion crew +3", "opinion {bosun} -5"], "result": "The beatings stop. Discipline slackens, a little."},
+      {"text": "Back {bosun}: a ship runs on discipline", "outcomes": ["opinion crew -4", "fear +2", "opinion {bosun} +5"], "result": "The men work faster, and hate faster."}
+    ]
+  },
+
+  "loyal_warning": {
+    "title": "A word in your ear",
+    "text": "{loyal} knocks on your cabin door after dark. 'Captain, some of the men have been talking about taking the ship. I thought you should know.'",
+    "conditions": ["loyalty < -15"],
+    "roles": {"loyal": {"from": "crew", "where": ["trait.loyal"]}},
+    "choices": [
+      {"text": "Ask for names", "outcomes": ["opinion {loyal} +5", "flag mutiny_warned 60", "reveal {loyal}"], "result": "{loyal} gives you three. You'll be watching."},
+      {"text": "Pay the men what they're owed, at once", "conditions": ["wages_owed > 0"], "outcomes": ["paywages", "opinion crew +5", "opinion {loyal} +5"], "result": "Money talks louder than mutineers."},
+      {"text": "Send {loyal} away: you won't run a ship of informers", "outcomes": ["opinion {loyal} -5", "honour +1"], "result": "{loyal} leaves, worried."}
+    ]
+  },
+
+  "tattoos": {
+    "title": "Ink",
+    "text": "{sailor} has set up as tattooist on the forecastle. Half the crew want anchors and the ship's name pricked into their arms.",
+    "roles": {"sailor": {"from": "crew"}},
+    "weight": 6,
+    "choices": [
+      {"text": "Get one yourself", "outcomes": ["opinion crew +3"], "result": "The men cheer as the needle goes in."},
+      {"text": "Let them get on with it", "outcomes": ["opinion crew +1"], "result": "Every man aboard now carries the {ship} on their skin."}
+    ]
+  },
+
+  "wants_to_leave": {
+    "title": "A man wants to go home",
+    "text": "{sailor} asks to be paid off at {port}. Enough of the sea.",
+    "where": "port",
+    "roles": {"sailor": {"from": "crew", "where": ["not officer"]}},
+    "choices": [
+      {"text": "Pay {sailor} off fairly", "conditions": ["gold >= 20"], "outcomes": ["gold -20", "leave {sailor}", "honour +1"], "result": "{sailor} goes ashore with your blessing."},
+      {"text": "Articles were signed: {sailor} stays", "check": {"who": "captain", "skill": "authority", "dc": 12},
+       "outcomes": ["opinion {sailor} -10"], "result": "{sailor} stays, sullen.", "fail_outcomes": ["leave {sailor}", "opinion crew -2"], "fail_result": "{sailor} jumps ship that night."}
+    ]
+  },
+
+  "brave_volunteer": {
+    "title": "A volunteer",
+    "text": "The bilge pump has jammed far down in the dark, where the foul air kills. {brave} volunteers to go down and clear it.",
+    "roles": {"brave": {"from": "crew", "where": ["trait.brave"]}},
+    "choices": [
+      {"text": "Let {brave} go, with a line round the waist", "check": {"who": "{brave}", "skill": "carpentry", "dc": 11},
+       "outcomes": ["opinion crew +2", "opinion {brave} +5", "hull +5"], "result": "{brave} comes up black with filth, and the pump runs again.",
+       "fail_outcomes": ["wound {brave}"], "fail_result": "They haul {brave} up unconscious. Alive, but never the same again."},
+      {"text": "Go yourself", "check": {"who": "captain", "skill": "carpentry", "dc": 12},
+       "outcomes": ["opinion crew +6", "hull +5"], "result": "The men won't forget the captain who went down the well in person.",
+       "fail_outcomes": ["wound captain"], "fail_result": "You come up half-dead from the bad air."}
+    ]
+  },
+
+  "cowards_hide": {
+    "title": "Found hiding",
+    "text": "After the last fight, {coward} was found hiding in the cable tier while the others fought.",
+    "conditions": ["fear >= 5"],
+    "roles": {"coward": {"from": "crew", "where": ["trait.cowardly"]}},
+    "weight": 6,
+    "choices": [
+      {"text": "Put {coward} ashore, no use to anyone", "outcomes": ["leave {coward}", "opinion crew +1"], "result": "Nobody's sorry to see {coward} go."},
+      {"text": "A job where there's no running: the magazine", "outcomes": ["opinion {coward} +3"], "result": "{coward} is good at counting cartridges, at least."},
+      {"text": "Shame {coward} in front of the crew", "outcomes": ["opinion {coward} -15", "reveal {coward}"], "result": "{coward} will never live it down."}
+    ]
+  }
+}

@@ -4,7 +4,7 @@ class_name SaveGame
 ## Saves live in user:// (on Windows: %APPDATA%/Godot/app_userdata/Plunder and Pillage/saves/).
 
 const QUICKSAVE := "user://saves/quicksave.json"
-const VERSION := 7
+const VERSION := 8
 
 
 static func save_game(world: Node, path := QUICKSAVE) -> Error:
@@ -16,6 +16,7 @@ static func save_game(world: Node, path := QUICKSAVE) -> Error:
 		"people": People.save_state(),
 		"factions": Factions.save_state(),
 		"contracts": Contracts.save_state(),
+		"events": Events.save_state(),
 		"shipping": world.shipping.save_state(),
 		"ship": world.ship.save_state(),
 	}
@@ -42,6 +43,7 @@ static func load_game(world: Node, path := QUICKSAVE) -> Error:
 	People.load_state(data.people)
 	Factions.load_state(data.factions)
 	Contracts.load_state(data.contracts)
+	Events.load_state(data.events)
 	world.shipping.load_state(data.shipping)
 	world.ship.load_state(data.ship)
 	return OK

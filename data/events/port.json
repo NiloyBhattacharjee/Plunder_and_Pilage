@@ -1,0 +1,264 @@
+{
+  "_comment": "Events on arriving in port. See docs/events.md.",
+
+  "tavern_brawl": {
+    "title": "Tavern brawl",
+    "text": "Your men are drinking in a {port} tavern when a crew from a {nation_adj} ship starts calling them names. Chairs are already flying.",
+    "where": "port",
+    "roles": {"nation": {"from": "nation", "where": ["not mine"]}},
+    "choices": [
+      {"text": "Wade in yourself", "check": {"who": "captain", "skill": "swordplay", "dc": 12},
+       "outcomes": ["opinion crew +4", "fear +1"], "result": "The {nation_adj} sailors are thrown into the harbour. Your men will drink to this for a year.",
+       "fail_outcomes": ["opinion crew +1", "wound captain"], "fail_result": "You win, but someone breaks a bottle over your head."},
+      {"text": "Pay the landlord and drag your men out", "conditions": ["gold >= 40"], "outcomes": ["gold -40", "opinion crew -2"], "result": "Your men think you've gone soft."},
+      {"text": "Let the watch sort it out", "outcomes": ["crew -2", "relation port -2"], "result": "Two of your men spend a week in the gaol, and decide to stay ashore."}
+    ]
+  },
+
+  "press_gang": {
+    "title": "The press gang",
+    "text": "A navy press gang is sweeping the waterfront of {port}, taking any seaman they can catch.",
+    "where": "port",
+    "conditions": ["port_faction != pirates", "crew >= 12"],
+    "choices": [
+      {"text": "Keep the men aboard", "outcomes": ["opinion crew -2"], "result": "No shore leave. The men grumble, but they're safe."},
+      {"text": "Bribe the lieutenant", "conditions": ["gold >= 60"], "outcomes": ["gold -60"], "result": "He finds other ships more interesting."},
+      {"text": "Let them take their chances ashore", "outcomes": ["crew -3", "opinion crew +1"], "result": "Three don't come back."}
+    ]
+  },
+
+  "pickpocket": {
+    "title": "Light fingers",
+    "text": "In the crowd on the quay someone brushes past you. Your purse is lighter.",
+    "where": "port",
+    "conditions": ["gold >= 100"],
+    "roles": {"amount": {"from": "number", "range": [20, 80]}},
+    "choices": [
+      {"text": "Chase him!", "check": {"who": "captain", "skill": "experience", "dc": 13},
+       "outcomes": [], "result": "You catch him in an alley. He gives it back with interest.", "fail_outcomes": ["gold -{amount}"], "fail_result": "He vanishes into the crowd with {amount} gold."},
+      {"text": "Let it go", "outcomes": ["gold -{amount}"], "result": "A {amount}-gold lesson."}
+    ]
+  },
+
+  "old_shipmate": {
+    "title": "An old shipmate",
+    "text": "In a waterfront tavern you run into {friend}, who sailed with you years ago. Down on their luck, but a good seaman still.",
+    "where": "port",
+    "roles": {"friend": {"from": "new"}},
+    "choices": [
+      {"text": "Sign {friend} on", "outcomes": ["hire {friend}"], "result": "Like old times."},
+      {"text": "Lend {friend} some money", "conditions": ["gold >= 30"], "outcomes": ["gold -30", "honour +1"], "result": "{friend} swears to pay you back."},
+      {"text": "Buy {friend} a drink and part", "outcomes": [], "result": "You talk of old times until closing."}
+    ]
+  },
+
+  "fortune_teller": {
+    "title": "The fortune teller",
+    "text": "An old woman in a doorway offers to read your palm. The crew watching from the tavern are curious what she'll say.",
+    "where": "port", "weight": 5,
+    "choices": [
+      {"text": "Cross her palm with silver", "check": {"who": "captain", "skill": "charisma", "dc": 10},
+       "outcomes": ["gold -5", "opinion crew +2"], "result": "'Gold and glory, Captain, and a long life.' The crew are delighted.",
+       "fail_outcomes": ["gold -5", "opinion crew -2"], "fail_result": "'I see drowning.' The men go pale."},
+      {"text": "Walk on", "outcomes": [], "result": "She curses you, cheerfully."}
+    ]
+  },
+
+  "harbour_dues": {
+    "title": "Harbour dues",
+    "text": "The harbour master of {port} has found new dues to charge: anchorage, lighthouse, the King's health.",
+    "where": "port",
+    "conditions": ["port_faction != pirates", "gold >= 50"],
+    "roles": {"fee": {"from": "number", "range": [20, 60]}},
+    "choices": [
+      {"text": "Pay up", "outcomes": ["gold -{fee}"], "result": "{fee} gold, receipted."},
+      {"text": "Argue every line of it", "check": {"who": "captain", "skill": "trade", "dc": 12},
+       "outcomes": [], "result": "He gives up and waives the lot.", "fail_outcomes": ["gold -{fee}", "relation port -2"], "fail_result": "You pay, and he makes a note of your name."}
+    ]
+  },
+
+  "quarantine": {
+    "title": "Quarantine",
+    "text": "There's fever in {port}. The authorities want every ship to wait in the outer roads for a week.",
+    "where": "port",
+    "conditions": ["port_faction != pirates"],
+    "weight": 5,
+    "choices": [
+      {"text": "Wait out the quarantine", "outcomes": ["time 7"], "result": "A week of staring at the shore."},
+      {"text": "Come in anyway, and risk the fever", "check": {"who": "post.surgeon", "skill": "medicine", "dc": 12},
+       "outcomes": ["relation port -2"], "result": "Nobody aboard falls ill.", "fail_outcomes": ["crew -3", "relation port -2"], "fail_result": "Three men catch it and die."}
+    ]
+  },
+
+  "town_fire": {
+    "title": "Fire in the town",
+    "text": "Smoke over {port}: the warehouses along the waterfront are burning.",
+    "where": "port", "weight": 4,
+    "conditions": ["crew >= 10"],
+    "choices": [
+      {"text": "Send your men to fight the fire", "outcomes": ["relation port +6", "honour +2", "opinion crew -1"], "result": "Your crew save half the waterfront. The governor sends thanks."},
+      {"text": "Help yourselves while nobody's looking", "conditions": ["pirate"], "outcomes": ["loot sugar 15", "relation port -5", "notoriety +2"], "result": "Fifteen hogsheads of sugar walk out of a burning warehouse."},
+      {"text": "Keep clear", "outcomes": ["market {port} shortage"], "result": "It burns for a day. Prices will be wild for a while."}
+    ]
+  },
+
+  "festival": {
+    "title": "Feast day",
+    "text": "{port} is celebrating a saint's day: processions, music, cheap wine, and every tavern open all night.",
+    "where": "port", "weight": 5,
+    "choices": [
+      {"text": "Give the crew a night ashore", "outcomes": ["opinion crew +4", "gold -20", "crew -1"], "result": "A grand night. One man is never seen again."},
+      {"text": "Keep them aboard", "outcomes": ["opinion crew -3"], "result": "They watch the fireworks from the rail."}
+    ]
+  },
+
+  "duel_challenge": {
+    "title": "A challenge",
+    "text": "A young {nation_adj} gentleman claims you insulted his honour in the tavern last night. He demands satisfaction at dawn.",
+    "where": "port",
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Accept: swords", "check": {"who": "captain", "skill": "swordplay", "dc": 13},
+       "outcomes": ["fear +2", "honour +2", "opinion crew +3"], "result": "You disarm him in three passes and let him live. Your name goes up in the world.",
+       "fail_outcomes": ["wound captain", "honour +1"], "fail_result": "He's better than he looked. You'll carry the scar."},
+      {"text": "Apologise", "outcomes": ["honour -1", "opinion crew -2"], "result": "He accepts with a sneer."},
+      {"text": "Have your men throw him in the harbour", "conditions": ["fear >= 10"], "outcomes": ["fear +1", "relation {nation} -2"], "result": "Problem solved."}
+    ]
+  },
+
+  "card_game": {
+    "title": "Cards with a planter",
+    "text": "A rich planter invites you to a game of piquet. The stakes are high.",
+    "where": "port",
+    "conditions": ["gold >= 100", "port_faction != pirates"],
+    "roles": {"stake": {"from": "number", "range": [50, 150]}},
+    "choices": [
+      {"text": "Play for {stake} a hand", "check": {"who": "captain", "skill": "experience", "dc": 12},
+       "outcomes": ["gold +{stake}"], "result": "You leave {stake} richer and he leaves annoyed.", "fail_outcomes": ["gold -{stake}"], "fail_result": "He takes {stake} off you, smiling."},
+      {"text": "Decline politely", "outcomes": [], "result": "He shrugs and finds another pigeon."}
+    ]
+  },
+
+  "informant_news": {
+    "title": "A man who knows things",
+    "text": "A clerk from the {port} customs house sidles up. For a price, he'll tell you which ships are loading what, and when they sail.",
+    "where": "port",
+    "conditions": ["gold >= 40", "not honest"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Pay him", "outcomes": ["gold -40", "event informant_tip 2 20"], "result": "A {nation_adj} merchantman, heavily laden, sailing soon. You'll be waiting."},
+      {"text": "Send him off", "outcomes": [], "result": "He tries the next captain."}
+    ]
+  },
+
+  "informant_tip": {
+    "title": "Just as the clerk said",
+    "text": "A {nation_adj} merchantman, low in the water, exactly where the clerk said she'd be.",
+    "chain_only": true,
+    "conditions": ["at_sea"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Take her", "outcomes": ["fight merchant {nation} ambush"], "result": "You come out of the sun."},
+      {"text": "Let her go after all", "outcomes": [], "result": "Not today."}
+    ]
+  },
+
+  "wanted_poster": {
+    "title": "Your face on the wall",
+    "text": "A handbill nailed to the tavern door: a crude woodcut of you, and a price on your head.",
+    "where": "port",
+    "conditions": ["pirate", "notoriety >= 20"],
+    "choices": [
+      {"text": "Tear it down", "outcomes": ["fear +1"], "result": "You add it to your collection."},
+      {"text": "Laugh, and correct the spelling of your name", "outcomes": ["opinion crew +3", "notoriety +2"], "result": "The crew roar. The story travels."}
+    ]
+  },
+
+  "customs_search": {
+    "title": "Customs search",
+    "text": "Customs officers come aboard in {port} with a warrant. Someone has told them your hold is full of stolen goods.",
+    "where": "port",
+    "conditions": ["stolen > 0", "not port_fence", "port_faction != pirates"],
+    "choices": [
+      {"text": "Bribe the senior officer", "conditions": ["gold >= 80"], "check": {"who": "captain", "skill": "trade", "dc": 11},
+       "outcomes": ["gold -80"], "result": "He signs the report: nothing found.", "fail_outcomes": ["gold -80", "relation port -5"], "fail_result": "He takes the money and reports you anyway."},
+      {"text": "Bluff: those goods were bought honestly", "check": {"who": "captain", "skill": "charisma", "dc": 14},
+       "outcomes": [], "result": "Your paperwork is a masterpiece of invention. They leave.", "fail_outcomes": ["gold -10%", "relation port -8", "notoriety +2"], "fail_result": "They fine you, and your name goes in a book."}
+    ]
+  },
+
+  "shipwright_offer": {
+    "title": "A shipwright's offer",
+    "text": "A shipwright out of work offers to patch your hull cheaply, using timber he 'found'.",
+    "where": "port",
+    "conditions": ["hull < 85", "gold >= 40"],
+    "choices": [
+      {"text": "Take the offer", "check": {"who": "post.carpenter", "skill": "carpentry", "dc": 10},
+       "outcomes": ["gold -40", "hull +25"], "result": "Your carpenter watches him like a hawk. Good work, cheap.",
+       "fail_outcomes": ["gold -40", "hull +5"], "fail_result": "Green timber, badly fitted. It's already weeping."},
+      {"text": "No thanks", "outcomes": [], "result": "He shrugs."}
+    ]
+  },
+
+  "passenger_request": {
+    "title": "A passenger",
+    "text": "A well-dressed {nation_adj} merchant asks for passage to {dest}, and will pay handsomely.",
+    "where": "port",
+    "conditions": ["not wanted"],
+    "roles": {"nation": {"from": "nation"}, "dest": {"from": "port", "where": ["not here", "faction != pirates"]}},
+    "choices": [
+      {"text": "Take him", "outcomes": ["event passenger_arrives 0 60", "gold +50"], "result": "He pays half now, half on arrival in {dest}."},
+      {"text": "Take him, and hold him for ransom at sea", "conditions": ["pirate"], "outcomes": ["gold +250", "relation {nation} -8", "honour -3", "notoriety +3"], "result": "His family pay well, eventually."},
+      {"text": "Decline", "outcomes": [], "result": "He finds another ship."}
+    ]
+  },
+
+  "passenger_arrives": {
+    "title": "Safe arrival",
+    "text": "Your passenger steps ashore at {dest}, pays the rest, and promises to speak well of you.",
+    "where": "port", "chain_only": true,
+    "conditions": ["port == {dest}"],
+    "roles": {"nation": {"from": "nation"}, "dest": {"from": "port"}},
+    "choices": [
+      {"text": "Bid him farewell", "outcomes": ["gold +100", "relation {nation} +3"], "result": "A profitable little voyage."}
+    ]
+  },
+
+  "deserters_seek_berth": {
+    "title": "Men looking for a ship",
+    "text": "Half a dozen hard-looking men want to sign on. They won't say which ship they left, or why.",
+    "where": "port",
+    "conditions": ["crew >= 5"],
+    "choices": [
+      {"text": "Sign them on, no questions", "outcomes": ["crew +5", "relation port -2"], "result": "Navy deserters, by the look of them. Good seamen."},
+      {"text": "Ask questions first", "check": {"who": "captain", "skill": "experience", "dc": 12},
+       "outcomes": ["crew +3"], "result": "You take the three honest-looking ones.", "fail_outcomes": [], "fail_result": "They take offence and leave."},
+      {"text": "Turn them away", "outcomes": [], "result": "They'll find a ship. They always do."}
+    ]
+  },
+
+  "smuggler_contact": {
+    "title": "A quiet offer",
+    "text": "A man in the shadows offers to sell you {good} for half the market price. No receipts.",
+    "where": "port",
+    "conditions": ["gold >= 100"],
+    "roles": {"good": {"from": "good", "where": ["price >= 15"]}},
+    "choices": [
+      {"text": "Buy ten", "conditions": ["gold >= 120"], "outcomes": ["gold -100", "loot {good} 10"], "result": "It's real, and it's stolen."},
+      {"text": "Turn him in", "conditions": ["port_faction != pirates"], "outcomes": ["relation port +3", "relation pirates -2"], "result": "The governor's men thank you."},
+      {"text": "Not interested", "outcomes": [], "result": "He melts back into the dark."}
+    ]
+  },
+
+  "priest_blessing": {
+    "title": "A blessing for the ship",
+    "text": "A priest offers to bless the {ship} for a donation to his church.",
+    "where": "port",
+    "conditions": ["port_faction != pirates", "gold >= 25"],
+    "weight": 5,
+    "choices": [
+      {"text": "Pay for the blessing", "outcomes": ["gold -25", "opinion crew +2"], "result": "Holy water on the bow. The superstitious hands breathe easier."},
+      {"text": "Decline", "outcomes": [], "result": "He blesses you anyway, rather pointedly."}
+    ]
+  }
+}

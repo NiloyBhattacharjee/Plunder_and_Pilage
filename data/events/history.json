@@ -1,0 +1,182 @@
+{
+  "_comment": "Historical moments and figures, 1680-1722. Most fire once, inside a date window; 'priority' events fire as soon as they can. See docs/events.md.",
+
+  "morgan_at_port_royal": {
+    "title": "Sir Henry Morgan",
+    "text": "Sir Henry Morgan himself, buccaneer turned Lieutenant Governor, is holding court in a Port Royal tavern: fat, yellow with the dropsy, and still the most famous man in the Caribbean. He waves you over.",
+    "where": "port", "once": true, "weight": 40,
+    "conditions": ["port == port_royal", "date < 1688-08-25"],
+    "choices": [
+      {"text": "Drink with him and listen", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["skill captain experience +1", "relation england +5", "flag met_morgan"], "result": "He talks till dawn: Panama, Porto Bello, Maracaibo. You learn more in one night than in a year at sea.",
+       "fail_outcomes": ["gold -20", "flag met_morgan"], "fail_result": "He tells the same story four times and leaves you the bill."},
+      {"text": "Ask him for a word with the governor's council", "conditions": ["honest"], "outcomes": ["relation england +8", "flag met_morgan"], "result": "'A captain after my own heart,' he says, and writes a note."},
+      {"text": "Pay your respects and go", "outcomes": [], "result": "He doesn't notice you leave."}
+    ]
+  },
+
+  "morgan_dies": {
+    "title": "Morgan is dead",
+    "text": "News from Jamaica: Sir Henry Morgan is dead. They fired the guns of every ship in Port Royal harbour for him.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1688-08-25", "date < 1689-03-01"],
+    "choices": [
+      {"text": "Raise a glass to the old devil", "outcomes": ["opinion crew +1"], "result": "There will never be another like him.", "conditions": ["flag.met_morgan"]},
+      {"text": "Note it in the log", "outcomes": [], "result": "An age is passing."}
+    ]
+  },
+
+  "nine_years_war": {
+    "title": "War in Europe",
+    "text": "England, the Dutch and Spain have gone to war with France. There will be commissions for anyone who wants to fight, and prizes for the taking.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1689-05-07", "date < 1690-01-01"],
+    "choices": [
+      {"text": "Good news for a privateer", "conditions": ["not pirate"], "outcomes": ["opinion crew +2"], "result": "The men talk of nothing but French prizes."},
+      {"text": "Good news for the Brethren: the navies will be busy", "conditions": ["pirate"], "outcomes": ["opinion crew +2"], "result": "Fewer warships hunting pirates."},
+      {"text": "Bad news for trade", "outcomes": [], "result": "Insurance rates will soar."}
+    ]
+  },
+
+  "port_royal_earthquake": {
+    "title": "Port Royal is gone",
+    "text": "Terrible news from Jamaica: on the seventh of June an earthquake shook Port Royal into the sea. Two thousand dead, the waterfront drowned, the fort sunk. Looters are already picking over the ruins.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1692-06-07", "date < 1692-10-01"],
+    "choices": [
+      {"text": "Sail there with supplies for the survivors", "conditions": ["food >= 15"], "outcomes": ["food -40", "relation england +10", "honour +4", "market port_royal shortage"], "result": "The survivors on the Palisadoes will remember your name."},
+      {"text": "Sail there and pick over the wreckage", "conditions": ["pirate"], "outcomes": ["loot silver 10", "relation england -10", "notoriety +4", "honour -3", "market port_royal shortage"], "result": "Drowned treasure in the shallows, and English soldiers with orders to shoot looters."},
+      {"text": "God's judgement on the wickedest city in the world", "outcomes": ["market port_royal shortage"], "result": "The preachers say so, anyway."}
+    ]
+  },
+
+  "spanish_succession": {
+    "title": "The War of the Spanish Succession",
+    "text": "The King of Spain has died without an heir, and Europe is at war over his throne: England and the Dutch against France and Spain. The Caribbean will burn again.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1702-05-15", "date < 1703-01-01"],
+    "choices": [
+      {"text": "Read the news to the crew", "outcomes": ["opinion crew +1"], "result": "Commissions, prizes, and Spanish silver. The men are delighted."}
+    ]
+  },
+
+  "treasure_fleet_wreck": {
+    "title": "The Plate Fleet is lost",
+    "text": "The whole Spanish treasure fleet, eleven ships laden with silver, has been wrecked by a hurricane on the Florida coast. The Spanish are salvaging it, and every pirate in the Caribbean is on his way.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1715-08-15", "date < 1716-06-01"],
+    "choices": [
+      {"text": "Sail for the Florida wrecks", "outcomes": ["event treasure_fleet_salvage 12 90"], "result": "You set a course north. So, no doubt, is everyone else."},
+      {"text": "Leave it to the vultures", "outcomes": [], "result": "There'll be a battle for every bar of silver."}
+    ]
+  },
+
+  "treasure_fleet_salvage": {
+    "title": "The wrecks off Florida",
+    "text": "The beaches are black with Spanish salvors and their camp, guarded by soldiers. Divers bring up silver all day. Offshore, two pirate sloops are already circling.",
+    "chain_only": true,
+    "conditions": ["at_sea"],
+    "choices": [
+      {"text": "Raid the salvors' camp", "check": {"who": "captain", "skill": "authority", "dc": 14, "bonus": [["crew >= 50", "A big crew", 2], ["fear >= 30", "Your fearsome name", 2]]},
+       "outcomes": ["loot silver 25", "relation spain -15", "notoriety +6"], "result": "The camp falls in an hour. Silver by the chestful, and Spain will want your head for it.",
+       "fail_outcomes": ["crew -6", "relation spain -10", "notoriety +3"], "fail_result": "The soldiers were ready. You pull back with your dead."},
+      {"text": "Dive on the outer wrecks yourselves", "check": {"who": "captain", "skill": "seamanship", "dc": 13},
+       "outcomes": ["cargo silver +10", "time 5"], "result": "Five days of diving. Ten bars of silver the Spanish missed.",
+       "fail_outcomes": ["time 5", "crew -2"], "fail_result": "The sea is rough and the wrecks deep. Two divers drown for nothing."},
+      {"text": "Prey on the pirate sloops instead", "outcomes": ["fight pirate pirates attack", "relation england +3"], "result": "They're loaded with stolen silver, and nobody will mourn them."}
+    ]
+  },
+
+  "blackbeard_meeting": {
+    "title": "Blackbeard",
+    "text": "A big French-built ship with forty guns heaves to beside you: the Queen Anne's Revenge. On her quarterdeck, a huge man with a black beard plaited with ribbons, slow-match smoking under his hat. Edward Teach wants a word.",
+    "once": true, "weight": 30,
+    "conditions": ["at_sea", "date >= 1716-06-01", "date < 1718-11-22"],
+    "choices": [
+      {"text": "Sail in company with him for a cruise", "conditions": ["relation.pirates >= 0"], "outcomes": ["gold +300", "notoriety +5", "relation pirates +8", "flag sailed_with_blackbeard"], "result": "A month in his shadow. Prizes strike to him on sight. Your share is generous; his temper is not."},
+      {"text": "Trade news and powder, and part friends", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["relation pirates +4", "flag met_blackbeard"], "result": "He laughs like thunder and sends over a cask of rum.",
+       "fail_outcomes": ["gold -10%", "flag met_blackbeard"], "fail_result": "He takes a fancy to some of your gold. You don't argue."},
+      {"text": "Run", "outcomes": ["fight pirate pirates flee"], "result": "Nobody runs from Blackbeard. You'll try."}
+    ]
+  },
+
+  "woodes_rogers": {
+    "title": "Woodes Rogers comes to Nassau",
+    "text": "Three warships in the harbour mouth: Captain Woodes Rogers, the new royal governor, has come to clean out Nassau. He offers the King's Pardon to every pirate who'll take it. Charles Vane has already set a fire ship loose and run.",
+    "where": "port", "once": true, "priority": true,
+    "conditions": ["port == nassau", "date >= 1718-07-26", "date < 1719-06-01"],
+    "choices": [
+      {"text": "Take the pardon", "conditions": ["pirate"], "outcomes": ["relation england +15", "relation pirates -10", "notoriety -10", "flag rogers_pardon"], "result": "You swear the oath on the beach with two hundred others. How many of them mean it?"},
+      {"text": "Run out with Vane", "conditions": ["pirate"], "outcomes": ["relation pirates +10", "relation england -10", "fear +3"], "result": "Out past the warships under full sail, black flag flying."},
+      {"text": "Pay your respects to the new governor", "conditions": ["not pirate"], "outcomes": ["relation england +5"], "result": "Rogers is a hard, sensible man. Nassau will be a different place."}
+    ]
+  },
+
+  "blackbeard_dies": {
+    "title": "Blackbeard is dead",
+    "text": "News from Virginia: Blackbeard has been killed at Ocracoke by Lieutenant Maynard of the Royal Navy, after five pistol balls and twenty sword cuts. His head hangs from Maynard's bowsprit.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1718-11-22", "date < 1719-06-01"],
+    "choices": [
+      {"text": "Drink to him", "conditions": ["flag.sailed_with_blackbeard"], "outcomes": ["opinion crew +2", "relation pirates +2"], "result": "Your old shipmates fall silent, then roar his name."},
+      {"text": "A warning to every pirate", "outcomes": [], "result": "The navies are winning."}
+    ]
+  },
+
+  "calico_jack": {
+    "title": "Calico Jack",
+    "text": "A gaudy sloop flying a black flag with a skull and crossed swords: Calico Jack Rackham. Two of his crew, by the way they carry their cutlasses, are women. Anne Bonny and Mary Read, the taverns call them.",
+    "once": true, "weight": 30,
+    "conditions": ["at_sea", "date >= 1719-05-01", "date < 1720-10-31"],
+    "roles": {"mary": {"from": "new", "name": "Mary Read", "traits": ["brave", "veteran"]}},
+    "choices": [
+      {"text": "Drink with them", "outcomes": ["relation pirates +4", "opinion crew +2", "flag met_calico_jack"], "result": "Rackham is all show. The two women are the real thing."},
+      {"text": "Mary Read asks to sign on with you", "conditions": ["relation.pirates >= 5"], "outcomes": ["hire {mary}", "relation pirates -2"], "result": "She's tired of Rackham's drinking. She's a better fighter than any man aboard."},
+      {"text": "Keep clear", "outcomes": [], "result": "Rackham's a fool, and fools get hanged."}
+    ]
+  },
+
+  "rackham_hanged": {
+    "title": "Rackham hanged",
+    "text": "News from Jamaica: Calico Jack Rackham has been hanged at Gallows Point. Anne Bonny and Mary Read escaped the rope by 'pleading their bellies'. Bonny's last words to Jack: 'If you'd fought like a man, you need not have been hanged like a dog.'",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1720-11-18", "date < 1721-06-01"],
+    "choices": [
+      {"text": "A hard end", "outcomes": [], "result": "The gibbet at Port Royal is never empty these days."}
+    ]
+  },
+
+  "black_bart": {
+    "title": "Black Bart",
+    "text": "Four sail hull-up to windward: Bartholomew Roberts' squadron, the most successful pirate of the age. He neither drinks nor gambles, and he has taken four hundred ships. A boat comes across with an invitation, or a demand.",
+    "once": true, "weight": 30,
+    "conditions": ["at_sea", "date >= 1719-07-01", "date < 1722-02-10"],
+    "choices": [
+      {"text": "Join his squadron for a season", "conditions": ["pirate"], "outcomes": ["gold +500", "notoriety +8", "relation pirates +10", "time 20"], "result": "Twenty days and a dozen prizes. Roberts runs a sober, orderly, terrifying fleet."},
+      {"text": "Pay tribute and be on your way", "conditions": ["gold >= 100"], "outcomes": ["gold -100"], "result": "His quartermaster counts it, and lets you go."},
+      {"text": "Run for it", "outcomes": ["fight pirate pirates flee"], "result": "His fastest sloop gives chase."}
+    ]
+  },
+
+  "roberts_dies": {
+    "title": "The end of Black Bart",
+    "text": "News from Africa: Bartholomew Roberts was killed by grapeshot off Cape Lopez, fighting HMS Swallow. His crew threw his body overboard, still in his finery, as he'd asked. With him, they say, the golden age is over.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1722-02-10", "date < 1722-08-01"],
+    "choices": [
+      {"text": "The end of an age", "outcomes": [], "result": "Fewer pirates every year, and more gibbets."}
+    ]
+  },
+
+  "kings_pardon_proclaimed": {
+    "title": "The King's Pardon",
+    "text": "A proclamation is read at every harbour: King George will pardon every pirate who surrenders to a governor within the year. Afterwards, no mercy.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["pardon_open.england"],
+    "choices": [
+      {"text": "Food for thought", "conditions": ["pirate"], "outcomes": ["opinion crew -1"], "result": "Some of your crew suddenly have families to think of."},
+      {"text": "Good riddance to them all", "conditions": ["not pirate"], "outcomes": [], "result": "The seas will be safer, perhaps."}
+    ]
+  }
+}

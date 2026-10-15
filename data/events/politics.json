@@ -1,0 +1,158 @@
+{
+  "_comment": "Factions and politics: navies, governors, commissions, pardons, the Brethren. See docs/events.md.",
+
+  "navy_inspection": {
+    "title": "Show your commission",
+    "text": "A {nation_adj} frigate runs alongside. Her captain demands to see your letter of marque, and looks ready to take your ship if it isn't in order.",
+    "conditions": ["privateer"],
+    "roles": {"nation": {"from": "nation", "where": ["not at_war.marque"]}},
+    "choices": [
+      {"text": "Show him the papers", "check": {"who": "captain", "skill": "authority", "dc": 10},
+       "outcomes": ["relation {nation} +2"], "result": "He reads it twice, hands it back, and wishes you good hunting.",
+       "fail_outcomes": ["time 1", "relation {nation} -2"], "fail_result": "He keeps you hove to for a day out of spite before letting you go."},
+      {"text": "Refuse: you answer to your own Admiralty", "outcomes": ["relation {nation} -5", "honour +1"], "result": "He fumes, but he has no right to stop you."}
+    ]
+  },
+
+  "governor_loan": {
+    "title": "The governor's request",
+    "text": "The governor of {port} asks, very politely, for a loan of 300 gold to repair the fortifications. Repayment is... uncertain.",
+    "where": "port",
+    "conditions": ["port_faction != pirates", "gold >= 300", "relation.port >= 10"],
+    "weight": 5,
+    "choices": [
+      {"text": "Lend it", "outcomes": ["gold -300", "relation port +10"], "result": "He clasps your hand. You'll be welcome here for years."},
+      {"text": "Lend half", "outcomes": ["gold -150", "relation port +4"], "result": "He's grateful, if a little disappointed."},
+      {"text": "Plead poverty", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": [], "result": "He commiserates. Hard times for everyone.", "fail_outcomes": ["relation port -4"], "fail_result": "He knows exactly how much you have."}
+    ]
+  },
+
+  "privateers_wanted": {
+    "title": "Privateers wanted",
+    "text": "Handbills on every quay in {port}: the governor seeks captains to sail against {enemy}. Letters of marque are to be had at the governor's house.",
+    "where": "port",
+    "conditions": ["honest", "port_faction != pirates"],
+    "roles": {"enemy": {"from": "nation", "where": ["at_war.port"]}},
+    "weight": 6,
+    "choices": [
+      {"text": "Go and see the governor", "outcomes": ["relation port +3"], "result": "He'll see you in the Governor's tab. Your name is already on his desk."},
+      {"text": "Not interested", "outcomes": [], "result": "There's money in war, but there's also a rope for anyone who gets it wrong."}
+    ]
+  },
+
+  "pardon_debate": {
+    "title": "The pardon",
+    "text": "The King's Pardon is the only thing the crew talk about. {wants} wants to take it and go home to family. {against} says any man who takes it is no better than a hangman.",
+    "conditions": ["pirate", "pardon_open.england"],
+    "roles": {"wants": {"from": "crew", "where": ["trait.family_man"]}, "against": {"from": "crew", "where": ["trait.bloodthirsty"]}},
+    "choices": [
+      {"text": "We'll take it, at the next English port", "outcomes": ["opinion {wants} +10", "opinion {against} -15", "flag crew_wants_pardon 120"], "result": "Half the crew cheer. The other half go very quiet."},
+      {"text": "We're Brethren, and we'll die Brethren", "outcomes": ["opinion {wants} -10", "opinion {against} +10", "relation pirates +3"], "result": "The black flag stays up. {wants} looks out at the sea for a long time."},
+      {"text": "Every man may choose for himself", "outcomes": ["leave {wants}", "opinion crew +2", "honour +1"], "result": "{wants} and a few others go ashore at the next landfall to seek the pardon."}
+    ]
+  },
+
+  "enemy_spy": {
+    "title": "An offer from the other side",
+    "text": "A {enemy_adj} agent finds you in a back room in {port}. He'll pay well for a count of the guns in the fort and the ships in harbour.",
+    "where": "port",
+    "conditions": ["port_faction != pirates"],
+    "roles": {"enemy": {"from": "nation", "where": ["at_war.port"]}},
+    "choices": [
+      {"text": "Take his money and count the guns", "check": {"who": "captain", "skill": "experience", "dc": 12},
+       "outcomes": ["gold +200", "relation {enemy} +5"], "result": "Easy money. Nobody saw a thing.",
+       "fail_outcomes": ["gold +200", "relation port -15", "notoriety +3"], "fail_result": "You're seen sketching the bastions. You leave with his money and a price on your head here."},
+      {"text": "Turn him in to the governor", "outcomes": ["relation port +8", "relation {enemy} -5"], "result": "He hangs the following week. The governor is very grateful."},
+      {"text": "Refuse, and forget you met him", "outcomes": [], "result": "He bows and melts away."}
+    ]
+  },
+
+  "navy_deserter_asks": {
+    "title": "A deserter",
+    "text": "A man swims out to your ship at night: a {nation_adj} navy topman, flogged one time too many, who begs to sign on.",
+    "where": "port",
+    "conditions": ["port_faction != pirates"],
+    "roles": {"nation": {"from": "nation"}, "topman": {"from": "new", "nation": "{nation}"}},
+    "choices": [
+      {"text": "Hide {topman} and sign them on", "outcomes": ["hire {topman}", "relation {nation} -3"], "result": "{topman} is a fine seaman. The navy will be looking."},
+      {"text": "Hand {topman} back", "outcomes": ["relation {nation} +3", "opinion crew -3"], "result": "The crew watch {topman} rowed away in irons."},
+      {"text": "Send {topman} back into the water", "outcomes": [], "result": "{topman} swims for another ship."}
+    ]
+  },
+
+  "enemy_privateer": {
+    "title": "Enemy privateer",
+    "text": "A {enemy_adj} privateer, flying a commission against your nation, comes about to engage.",
+    "conditions": ["at_sea"],
+    "roles": {"enemy": {"from": "enemy"}},
+    "weight": 6,
+    "choices": [
+      {"text": "Clear for action", "outcomes": ["fight pirate {enemy} defend"], "result": "Guns run out on both sides."},
+      {"text": "Run", "outcomes": ["fight pirate {enemy} flee"], "result": "Every sail you have."}
+    ]
+  },
+
+  "admiralty_commendation": {
+    "title": "A letter from the Admiralty",
+    "text": "A packet boat brings a letter sealed with the Admiralty's arms. Your service has been noted.",
+    "where": "port",
+    "conditions": ["privateer", "port_is.marque"],
+    "weight": 5,
+    "choices": [
+      {"text": "Read it to the crew", "outcomes": ["opinion crew +3", "relation marque +4", "gold +100"], "result": "A purse of a hundred guineas and the thanks of the Crown. The men stand a little taller."}
+    ]
+  },
+
+  "brethren_council": {
+    "title": "The captains' council",
+    "text": "The pirate captains in {port} are meeting in the old fort. They're planning a joint raid on a {nation_adj} convoy and want your ship.",
+    "where": "port",
+    "conditions": ["port_faction == pirates", "relation.pirates >= 0"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Join the raid", "outcomes": ["relation pirates +5", "event brethren_raid 3 30"], "result": "You'll sail with the others in three days."},
+      {"text": "Speak for a bigger share for your crew", "check": {"who": "captain", "skill": "charisma", "dc": 13, "bonus": [["fear >= 30", "Your fearsome name", 2]]},
+       "outcomes": ["relation pirates +3", "opinion crew +3", "event brethren_raid 3 30"], "result": "The council grumble, but agree.",
+       "fail_outcomes": ["relation pirates -3"], "fail_result": "They laugh you out of the room."},
+      {"text": "Decline", "outcomes": ["relation pirates -2"], "result": "Some of them won't forget it."}
+    ]
+  },
+
+  "brethren_raid": {
+    "title": "The convoy",
+    "text": "Five pirate sloops fall on the {nation_adj} convoy at dawn. A merchantman breaks away to the south, and she's yours if you want her.",
+    "chain_only": true,
+    "conditions": ["at_sea"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Chase her down", "outcomes": ["fight merchant {nation} attack", "notoriety +2"], "result": "She's slow, and frightened."},
+      {"text": "Take a share of the spoils instead", "outcomes": ["gold +250", "notoriety +2", "relation {nation} -5"], "result": "The fleet takes three ships. Your share comes to 250."}
+    ]
+  },
+
+  "corrupt_official": {
+    "title": "The customs collector",
+    "text": "The collector of {port} hints that your ship's papers have 'irregularities', which could be smoothed over with a gift.",
+    "where": "port",
+    "conditions": ["port_faction != pirates", "relation.port < 10"],
+    "roles": {"collector": {"from": "new", "pool": "official"}},
+    "choices": [
+      {"text": "Pay the 'gift'", "conditions": ["gold >= 50"], "outcomes": ["gold -50", "relation port +2"], "result": "{collector} smiles. Your papers are in perfect order."},
+      {"text": "Call the bluff", "check": {"who": "captain", "skill": "intimidation", "dc": 13},
+       "outcomes": [], "result": "{collector} decides your papers are fine after all.", "fail_outcomes": ["gold -80", "relation port -3"], "fail_result": "{collector} finds a real irregularity and fines you for it."}
+    ]
+  },
+
+  "fort_salute": {
+    "title": "The salute",
+    "text": "The fort at {port} fires a salute as you come in. Custom demands you answer gun for gun.",
+    "where": "port",
+    "conditions": ["port_faction != pirates", "guns >= 4", "not pirate"],
+    "weight": 5,
+    "choices": [
+      {"text": "Answer it properly", "outcomes": ["relation port +2", "honour +1"], "result": "Nine guns, smartly fired. The garrison approve."},
+      {"text": "Save the powder", "outcomes": ["relation port -1"], "result": "Someone in the fort takes it as an insult."}
+    ]
+  }
+}

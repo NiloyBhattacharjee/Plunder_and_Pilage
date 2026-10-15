@@ -1,0 +1,101 @@
+{
+  "_comment": "Contract events: betrayals, bribes, double-crosses. They only fire while you hold the matching contract. See docs/events.md.",
+
+  "target_bribe": {
+    "title": "A letter from the owners",
+    "text": "A boat brings a letter: the owners of the ship you were hired to take have heard you're coming. They offer 300 gold to look the other way.",
+    "conditions": ["contract.capture_ship"],
+    "choices": [
+      {"text": "Take the money and drop the job", "outcomes": ["gold +300", "abandon capture_ship", "honour -2"], "result": "Easy money. Your employer won't see it that way."},
+      {"text": "Take the money and do the job anyway", "outcomes": ["gold +300", "honour -4", "notoriety +2"], "result": "Business is business. The story will get around."},
+      {"text": "Refuse", "outcomes": ["honour +2"], "result": "You burn the letter."}
+    ]
+  },
+
+  "dispatch_thief": {
+    "title": "A thief in the night",
+    "text": "You wake to a figure at your sea chest, where the dispatches are locked. He bolts for the companionway.",
+    "where": "port",
+    "conditions": ["contract.dispatches"],
+    "choices": [
+      {"text": "After him!", "check": {"who": "captain", "skill": "swordplay", "dc": 12},
+       "outcomes": ["fear +1"], "result": "You catch him at the rail. The seals are unbroken; he'll talk to the governor.",
+       "fail_outcomes": ["abandon dispatches"], "fail_result": "He's over the side with the packet. The dispatches are gone."},
+      {"text": "Raise the alarm", "check": {"who": "post.quartermaster", "skill": "swordplay", "dc": 11},
+       "outcomes": [], "result": "The watch corners him in the waist.",
+       "fail_outcomes": ["abandon dispatches"], "fail_result": "Too slow. He's gone, and so are the dispatches."}
+    ]
+  },
+
+  "rival_on_the_job": {
+    "title": "Another hunter",
+    "text": "A pirate sloop is shadowing you. A man on her deck shouts across: 'That prize is ours, mate. We were hired first!'",
+    "conditions": ["at_sea", "contracts >= 1", "not contract.dispatches"],
+    "weight": 6,
+    "choices": [
+      {"text": "Fight for the job", "outcomes": ["fight pirate pirates defend"], "result": "Only one of you is collecting."},
+      {"text": "Offer to split the reward", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["relation pirates +3"], "result": "He agrees and sheers off. You'll owe him a drink.",
+       "fail_outcomes": ["fight pirate pirates defend"], "fail_result": "He'd rather fight."}
+    ]
+  },
+
+  "customs_tipped": {
+    "title": "A warning from the broker's man",
+    "text": "A fishing boat comes alongside. The broker's man aboard says customs know what you're carrying. Someone talked.",
+    "conditions": ["contract.smuggle"],
+    "choices": [
+      {"text": "Dump the contraband and give up the run", "outcomes": ["abandon smuggle"], "result": "Better a broken promise than a hanging."},
+      {"text": "Run it in anyway", "outcomes": ["fear +1"], "result": "You'll trust to luck, and to darkness."}
+    ]
+  },
+
+  "broker_squeeze": {
+    "title": "The broker's men",
+    "text": "Two of the broker's men come aboard in {port} with a new demand: a bigger cut, paid now, or the deal's off and they'll let your name slip to the authorities.",
+    "where": "port",
+    "conditions": ["contract.hijack_cargo"],
+    "choices": [
+      {"text": "Pay them", "conditions": ["gold >= 100"], "outcomes": ["gold -100"], "result": "They count it twice and leave."},
+      {"text": "Throw them off the ship", "check": {"who": "captain", "skill": "intimidation", "dc": 13},
+       "outcomes": ["fear +2"], "result": "They swim ashore. The broker sends an apology the next day.",
+       "fail_outcomes": ["notoriety +5", "relation port -5"], "fail_result": "They make good on the threat."}
+    ]
+  },
+
+  "hunter_hired": {
+    "title": "A price on your head",
+    "text": "A tavern keeper in {port} warns you quietly: a merchant you robbed has hired a pirate hunter, and he's already at sea looking for you.",
+    "where": "port",
+    "conditions": ["pirate", "notoriety >= 25"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Lie low here for a while", "outcomes": ["time 5", "notoriety -3"], "result": "Five quiet days. Perhaps he'll look elsewhere."},
+      {"text": "Go out and meet him", "outcomes": ["event hunter_found 1 15"], "result": "Better to choose the time and place yourself."}
+    ]
+  },
+
+  "hunter_found": {
+    "title": "The hunter",
+    "text": "There he is: a {nation_adj} hunter, cleared for action, beating up toward you.",
+    "chain_only": true,
+    "conditions": ["at_sea"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Engage", "outcomes": ["fight hunter {nation} defend"], "result": "Guns out."},
+      {"text": "Lead him into the shoals", "outcomes": ["fight hunter {nation} flee"], "result": "You know these waters better than he does, you hope."}
+    ]
+  },
+
+  "employer_gift": {
+    "title": "A token of thanks",
+    "text": "The governor of {port} sends a case of fine wine aboard, with his compliments, for your good service.",
+    "where": "port",
+    "conditions": ["privateer", "port_is.marque", "relation.marque >= 20"],
+    "weight": 5,
+    "choices": [
+      {"text": "Share it with the officers", "outcomes": ["cargo wine +2", "opinion crew +1"], "result": "Fine claret at the captain's table."},
+      {"text": "Sell it", "outcomes": ["gold +60"], "result": "Too good for the likes of you."}
+    ]
+  }
+}

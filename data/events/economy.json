@@ -1,0 +1,116 @@
+{
+  "_comment": "Trade and money. Several start market events, so what you hear here moves real prices. See docs/events.md.",
+
+  "glut_news": {
+    "title": "News of a glut",
+    "text": "A passing sloop hails with news: {port} is drowning in its own produce. The warehouses are full and prices have collapsed.",
+    "roles": {"port": {"from": "port", "where": ["faction != pirates"]}},
+    "choices": [
+      {"text": "Note it in the log", "outcomes": ["market {port} glut"], "result": "Cheap cargo in {port}, for anyone quick enough."}
+    ]
+  },
+
+  "harvest_failure": {
+    "title": "A failed harvest",
+    "text": "Merchants in {here} talk of nothing else: blight has ruined the crop around {port}. Prices there will go through the roof.",
+    "where": "port",
+    "roles": {"here": {"from": "here"}, "port": {"from": "port", "where": ["not here", "faction != pirates"]}},
+    "choices": [
+      {"text": "Thank them for the tip", "outcomes": ["market {port} bad_harvest"], "result": "Whatever {port} grows will be scarce, and dear."}
+    ]
+  },
+
+  "warehouse_fire_news": {
+    "title": "Fire in {port}",
+    "text": "Word comes that a fire has gutted the warehouses of {port}. They'll pay anything for what they've lost.",
+    "roles": {"port": {"from": "port", "where": ["faction != pirates"]}},
+    "choices": [
+      {"text": "Make a note of it", "outcomes": ["market {port} shortage"], "result": "Anything {port} imports will fetch a fortune for a while."}
+    ]
+  },
+
+  "rotten_cargo": {
+    "title": "Spoiled cargo",
+    "text": "Seawater has got into the hold. The {good} is spoiling.",
+    "roles": {"good": {"from": "good", "where": ["held >= 5"]}},
+    "choices": [
+      {"text": "Jettison the worst of it", "outcomes": ["cargo {good} -5"], "result": "Five units over the side. The rest is saved."},
+      {"text": "Dry it on deck and hope", "check": {"who": "post.boatswain", "skill": "seamanship", "dc": 11},
+       "outcomes": [], "result": "Two days of sun saves it all.", "fail_outcomes": ["cargo {good} -10", "time 2"], "fail_result": "A squall soaks it all again. You lose more than you saved."}
+    ]
+  },
+
+  "speculator": {
+    "title": "A sure thing",
+    "text": "A smooth merchant in {port} offers you a share in a cargo of {good} bound for Europe. Put in 200 now, {merchant} says, and collect 400 in a month.",
+    "where": "port",
+    "conditions": ["gold >= 250", "port_faction != pirates"],
+    "roles": {"good": {"from": "good"}, "merchant": {"from": "new", "pool": "official"}},
+    "choices": [
+      {"text": "Invest 200", "outcomes": ["gold -200", "event speculator_return 30 120"], "result": "{merchant} shakes your hand warmly."},
+      {"text": "Look into {merchant} first", "check": {"who": "captain", "skill": "trade", "dc": 13},
+       "outcomes": [], "result": "There is no ship. There is no cargo. You walk away.", "fail_outcomes": ["gold -200", "event speculator_return 30 120"], "fail_result": "Everything checks out. You invest."},
+      {"text": "Decline", "outcomes": [], "result": "There are no sure things."}
+    ]
+  },
+
+  "speculator_return": {
+    "title": "The cargo of {good}",
+    "text": "You go looking for {merchant} and your 400 gold.",
+    "where": "port", "chain_only": true,
+    "roles": {"good": {"from": "good"}, "merchant": {"from": "new", "pool": "official"}},
+    "choices": [
+      {"text": "Ask for your money", "check": {"who": "captain", "skill": "trade", "dc": 12},
+       "outcomes": ["gold +400"], "result": "The cargo sold well in Cádiz. {merchant} pays you 400, with a flourish.",
+       "fail_outcomes": [], "fail_result": "The ship was lost, {merchant} says, with a very straight face. You'll never see that money again."}
+    ]
+  },
+
+  "counterfeit_coin": {
+    "title": "Bad coin",
+    "text": "Your purser bites a coin from the last sale and spits. Lead, washed in silver. A good share of your money is false.",
+    "conditions": ["gold >= 200"],
+    "weight": 5,
+    "choices": [
+      {"text": "Sort it out and throw the bad coin away", "outcomes": ["gold -8%"], "result": "An expensive lesson."},
+      {"text": "Pass it on at the next port", "outcomes": ["gold -2%", "honour -1"], "result": "Someone else's problem now."}
+    ]
+  },
+
+  "buyer_at_sea": {
+    "title": "A buyer at sea",
+    "text": "A Dutch trader runs alongside. He knows stolen cargo when he sees it, and offers to take your {good} off your hands, here and now, no questions.",
+    "conditions": ["stolen > 0"],
+    "roles": {"good": {"from": "good", "where": ["held >= 1"]}},
+    "choices": [
+      {"text": "Sell the {good}", "outcomes": ["cargo {good} -all", "gold +150"], "result": "Quick money, and the evidence is gone."},
+      {"text": "Haggle", "check": {"who": "captain", "skill": "trade", "dc": 12},
+       "outcomes": ["cargo {good} -all", "gold +250"], "result": "You talk him up to 250.", "fail_outcomes": [], "fail_result": "He gets bored and sails off."},
+      {"text": "Keep it for a fence", "outcomes": [], "result": "You'll get a better price in Nassau."}
+    ]
+  },
+
+  "merchant_partnership": {
+    "title": "A merchant's proposal",
+    "text": "{merchant}, a merchant of {port}, has watched you trade. The offer: your ship on the merchant's books, cargo on credit, a share of the profit.",
+    "where": "port",
+    "conditions": ["honest", "captain.trade >= 8"],
+    "roles": {"merchant": {"from": "new", "pool": "official"}, "good": {"from": "good", "where": ["price <= 30"]}},
+    "choices": [
+      {"text": "Accept a first cargo on credit", "outcomes": ["cargo {good} +20", "flag merchant_credit 60"], "result": "Twenty of {good}, on account. Sell it well."},
+      {"text": "You prefer to stay your own master", "outcomes": [], "result": "{merchant} respects that."}
+    ]
+  },
+
+  "guild_fee": {
+    "title": "The merchants' guild",
+    "text": "The merchants of {port} want a fee from every foreign captain who trades here. Refuse, and they'll make sure nobody buys from you.",
+    "where": "port",
+    "conditions": ["port_faction != pirates", "not port_is.home", "gold >= 60"],
+    "weight": 5,
+    "choices": [
+      {"text": "Pay", "outcomes": ["gold -40"], "result": "Forty gold for the privilege."},
+      {"text": "Tell them where to put their fee", "outcomes": ["relation port -3", "honour +1"], "result": "You'll find the prices here a little less friendly."}
+    ]
+  }
+}

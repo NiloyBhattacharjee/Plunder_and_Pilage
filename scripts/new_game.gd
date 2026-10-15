@@ -9,6 +9,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 	Ports.reset()
 	Factions.reset()
 	Contracts.reset()
+	Events.reset()
 	var bg: Dictionary = Data.table("backgrounds")[cfg.background]
 	var nation: Dictionary = Data.table("nations")[cfg.nationality]
 	var start_port: String = bg.get("start_port", nation.start_port)

@@ -1,0 +1,304 @@
+{
+  "_comment": "Events at sea: weather, the sea itself, strangers and wreckage. See docs/events.md.",
+
+  "man_overboard": {
+    "title": "Man overboard!",
+    "text": "A green sea sweeps the waist and takes {sailor} with it. Still afloat, waving, falling astern fast.",
+    "conditions": ["crew >= 8"],
+    "weight_mods": [["storm", 4.0]],
+    "roles": {"sailor": {"from": "crew", "where": ["not officer"]}},
+    "choices": [
+      {"text": "Heave to and lower a boat", "check": {"who": "post.boatswain", "skill": "seamanship", "dc": 12, "bonus": [["storm", "Heavy seas", -3]]},
+       "outcomes": ["opinion crew +3", "opinion {sailor} +15", "time 1"], "result": "They haul {sailor} in half-drowned. The crew saw you turn back for one of their own.",
+       "fail_outcomes": ["kill {sailor}", "time 1"], "fail_result": "The boat searches until dark. The sea keeps {sailor}."},
+      {"text": "Throw a line and hope", "check": {"who": "{sailor}", "skill": "seamanship", "dc": 14},
+       "outcomes": ["opinion {sailor} +5"], "result": "{sailor} catches the line and is dragged aboard like a gaffed fish.",
+       "fail_outcomes": ["kill {sailor}", "opinion crew -2"], "fail_result": "The line falls short."},
+      {"text": "Hold your course", "outcomes": ["kill {sailor}", "opinion crew -5"], "result": "Nobody speaks at mess that night."}
+    ]
+  },
+
+  "becalmed": {
+    "title": "Becalmed",
+    "text": "The wind dies to nothing. The sails hang slack, the pitch bubbles in the deck seams, and the water casks go down by the hour.",
+    "conditions": ["not storm"],
+    "choices": [
+      {"text": "Put the boats out and tow", "outcomes": ["water -10", "opinion crew -2", "time 1"], "result": "Backbreaking work at the oars, but she creeps on.",
+       "conditions": ["crew >= 10"]},
+      {"text": "Wait it out and ration the water", "outcomes": ["time 3", "opinion crew -3"], "result": "Three days of glass-flat sea before a cat's-paw ruffles the water."},
+      {"text": "Whistle for a wind (the old sailors swear by it)", "check": {"who": "captain", "skill": "experience", "dc": 13},
+       "outcomes": ["opinion crew +2", "time 1"], "result": "A breeze comes up by the afternoon watch. The superstitious are delighted.",
+       "fail_outcomes": ["time 4", "opinion crew -2"], "fail_result": "Nothing. Four days of it."}
+    ]
+  },
+
+  "flotsam_cask": {
+    "title": "Flotsam",
+    "text": "The lookout spots casks bobbing in the swell, the wreck of somebody's cargo.",
+    "roles": {"good": {"from": "good", "where": ["price <= 40"]}, "n": {"from": "number", "range": [5, 20]}},
+    "choices": [
+      {"text": "Hoist them aboard", "outcomes": ["cargo {good} +{n}", "time 1"], "result": "Sound casks of {good}, salt-stained but good."},
+      {"text": "Leave them: a wreck means reefs or pirates nearby", "outcomes": [], "result": "You keep a sharp lookout instead."}
+    ]
+  },
+
+  "castaways": {
+    "title": "Castaways",
+    "text": "A ragged figure on a sandbar waves a shirt on a stick. Through the glass: three, four men, burnt black by the sun.",
+    "roles": {"newcomer": {"from": "new"}},
+    "choices": [
+      {"text": "Take them aboard and sign them on", "outcomes": ["hire {newcomer}", "crew +2", "honour +1"], "result": "{newcomer} and the others weep at the sight of water. They'll work for nothing but their keep."},
+      {"text": "Take them aboard, put them ashore at the next port", "outcomes": ["honour +2", "water -5"], "result": "They bless your name to anyone who'll listen."},
+      {"text": "Sail on. Marooned men are marooned for a reason", "outcomes": ["honour -1", "opinion crew -1"], "result": "Their shouts carry a long way over the water."}
+    ]
+  },
+
+  "st_elmos_fire": {
+    "title": "St. Elmo's fire",
+    "text": "Pale blue flames dance on the yardarms and mastheads. Some of the men cross themselves; {sailor} swears it's the souls of drowned sailors come to take another.",
+    "conditions": ["storm"],
+    "roles": {"sailor": {"from": "crew", "where": ["trait.superstitious"]}},
+    "choices": [
+      {"text": "Tell them it's a blessing: the saint watches over us", "check": {"who": "captain", "skill": "charisma", "dc": 11},
+       "outcomes": ["opinion crew +3"], "result": "The fear turns to wonder.", "fail_outcomes": ["opinion crew -3"], "fail_result": "Nobody believes you. They mutter about ill omens all night."},
+      {"text": "Order silence and get on with the work", "check": {"who": "captain", "skill": "authority", "dc": 12},
+       "outcomes": ["fear +1"], "result": "Work goes on, fire or no fire.", "fail_outcomes": ["opinion crew -4", "opinion {sailor} -5"], "fail_result": "{sailor} has half the watch convinced the ship is doomed."}
+    ]
+  },
+
+  "squall_carries_away": {
+    "title": "White squall",
+    "text": "A squall comes out of a clear sky. Before the topsails can come in, the fore-topmast goes with a crack like a cannon shot.",
+    "weight_mods": [["storm", 3.0]],
+    "choices": [
+      {"text": "Cut away the wreckage", "outcomes": ["sails -15"], "result": "Axes flash. The wreckage goes over the side before it can stave in the hull."},
+      {"text": "Try to save the spars and rigging", "check": {"who": "post.carpenter", "skill": "carpentry", "dc": 13},
+       "outcomes": ["sails -5"], "result": "Hard, dangerous work, but your carpenter saves most of it.",
+       "fail_outcomes": ["sails -20", "hull -10", "crew -1"], "fail_result": "The wreckage swings into the side and takes a man with it."}
+    ]
+  },
+
+  "waterspout": {
+    "title": "Waterspout",
+    "text": "A dark column of whirling water marches across the sea toward you, sucking up spray.",
+    "conditions": ["month >= 5", "month <= 10"],
+    "choices": [
+      {"text": "Bear away hard", "check": {"who": "post.boatswain", "skill": "seamanship", "dc": 12},
+       "outcomes": [], "result": "It passes half a cable off your quarter.", "fail_outcomes": ["sails -20", "hull -5"], "fail_result": "It clips you: sails blown out, a boat smashed."},
+      {"text": "Fire a gun into it (the old cure)", "check": {"who": "post.master_gunner", "skill": "gunnery", "dc": 15},
+       "outcomes": ["opinion crew +3"], "result": "The ball goes through and the spout collapses in a great rain. The men cheer.",
+       "fail_outcomes": ["sails -25", "hull -10"], "fail_result": "Miss. It comes on regardless."}
+    ]
+  },
+
+  "whale": {
+    "title": "Whales",
+    "text": "A pod of whales surfaces alongside, blowing and rolling, close enough to touch.",
+    "weight": 6,
+    "choices": [
+      {"text": "Let the men watch", "outcomes": ["opinion crew +2"], "result": "For an hour nobody thinks about pay or rum."},
+      {"text": "Try for one with a harpoon", "check": {"who": "captain", "skill": "seamanship", "dc": 16},
+       "outcomes": ["food +60", "cargo molasses +5", "time 2"], "result": "Two days flensing, but you'll eat well and there's oil to sell.",
+       "fail_outcomes": ["hull -5", "opinion crew -1"], "fail_result": "The whale sounds and nearly takes the boat down with it."}
+    ]
+  },
+
+  "rain_squall_water": {
+    "title": "Rain",
+    "text": "A heavy tropical rain comes down like a curtain.",
+    "conditions": ["water < 20"],
+    "weight": 12,
+    "choices": [
+      {"text": "Spread the sails and fill every cask", "outcomes": ["water +40"], "result": "Fresh water, sweet as wine after the green stuff in the casks."}
+    ]
+  },
+
+  "fish_shoal": {
+    "title": "A shoal of fish",
+    "text": "The sea boils with fish. Dolphins and flying fish leap all around the bow.",
+    "conditions": ["food < 20"],
+    "choices": [
+      {"text": "Lines over the side", "outcomes": ["food +30", "time 1"], "result": "A day's fishing fills the kettles."},
+      {"text": "No time. Sail on", "outcomes": [], "result": "The cook looks longingly astern."}
+    ]
+  },
+
+  "drifting_longboat": {
+    "title": "A drifting longboat",
+    "text": "A longboat drifts on the swell. In it, a {nation_adj} officer and two seamen, half-dead. Their ship went down three days ago.",
+    "roles": {"nation": {"from": "nation"}, "officer": {"from": "new", "nation": "{nation}"}},
+    "choices": [
+      {"text": "Take them aboard and land them in a {nation_adj} port", "outcomes": ["relation {nation} +5", "honour +2", "water -5"], "result": "The officer promises the governor will hear of this."},
+      {"text": "Take them aboard and offer the officer a berth", "outcomes": ["hire {officer}", "honour +1"], "result": "{officer} has nothing to go back to and signs on."},
+      {"text": "Hold them for ransom", "conditions": ["pirate"], "outcomes": ["gold +150", "relation {nation} -5", "honour -2", "fear +1"], "result": "Their families pay, eventually."},
+      {"text": "Leave them", "outcomes": ["honour -2"], "result": "The longboat falls astern."}
+    ]
+  },
+
+  "fouled_water": {
+    "title": "The water has turned",
+    "text": "The surgeon reports green slime in the water casks. Men who drank it are already sick.",
+    "conditions": ["water > 10"],
+    "choices": [
+      {"text": "Stave in the bad casks", "outcomes": ["water -40"], "result": "Half your water goes over the side. Better than the flux."},
+      {"text": "Boil it and add vinegar", "check": {"who": "post.surgeon", "skill": "medicine", "dc": 12},
+       "outcomes": [], "result": "It tastes vile, but nobody else falls sick.",
+       "fail_outcomes": ["crew -2", "opinion crew -3"], "fail_result": "The flux goes through the lower deck. Two men die of it."}
+    ]
+  },
+
+  "rats_in_hold": {
+    "title": "Rats",
+    "text": "The bread room is crawling with rats. They've been at the stores for weeks.",
+    "conditions": ["food > 10"],
+    "choices": [
+      {"text": "Smoke them out", "outcomes": ["food -20", "time 1"], "result": "A day of choking smoke below decks. The rats are gone, and so is a share of the bread."},
+      {"text": "Offer a tot of rum for every rat's tail", "conditions": ["cargo.rum >= 5"], "outcomes": ["cargo rum -5", "opinion crew +2"], "result": "A great hunt. The ship's boys make a fortune in rum."}
+    ]
+  },
+
+  "sprung_leak": {
+    "title": "Sprung a leak",
+    "text": "The well is sounded: three feet of water in the hold, and rising. A plank has sprung somewhere below the waterline.",
+    "weight_mods": [["hull < 60", 2.0]],
+    "choices": [
+      {"text": "Find it and fother it with a sail", "check": {"who": "post.carpenter", "skill": "carpentry", "dc": 12},
+       "outcomes": ["sails -5"], "result": "A sail drawn under the hull plugs the leak.", "fail_outcomes": ["hull -15", "sails -5"], "fail_result": "The pumps run day and night until you can patch her properly."},
+      {"text": "Man the pumps in shifts", "outcomes": ["hull -8", "opinion crew -2"], "result": "Exhausting, but she stays afloat."}
+    ]
+  },
+
+  "fog_bank": {
+    "title": "Fog",
+    "text": "Thick fog rolls in. Somewhere close, a ship's bell is ringing.",
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Ring your own bell and hail her", "outcomes": ["relation {nation} +1"], "result": "A {nation_adj} merchantman. You trade news across the water and part friends."},
+      {"text": "Creep up on her in silence", "conditions": ["guns >= 6"], "outcomes": ["fight merchant {nation} ambush"], "result": "Her hull looms out of the murk, close enough to board."},
+      {"text": "Keep well clear", "outcomes": [], "result": "The bell fades."}
+    ]
+  },
+
+  "message_in_bottle": {
+    "title": "A bottle in the sea",
+    "text": "The boatswain fishes a corked bottle out of the sea. Inside: a scrap of chart, a cross, and the words 'Twenty paces from the twin palms, {port}'.",
+    "roles": {"port": {"from": "port", "where": ["not here"]}},
+    "weight": 5,
+    "choices": [
+      {"text": "Keep it. Next time you're in {port}, you'll look", "outcomes": ["event treasure_twin_palms 0 365", "flag map_twin_palms 365"], "result": "You fold the scrap carefully into your coat."},
+      {"text": "Laugh and throw it back", "outcomes": [], "result": "Some joker's idea of fun, surely."}
+    ]
+  },
+
+  "reef_ahead": {
+    "title": "Breakers ahead!",
+    "text": "The lookout screams 'Breakers!' A reef the chart doesn't show, dead ahead.",
+    "choices": [
+      {"text": "Hard over!", "check": {"who": "post.navigator", "skill": "navigation", "dc": 12, "bonus": [["storm", "Storm", -3]]},
+       "outcomes": [], "result": "She clears it by a fathom. The navigator corrects the chart with shaking hands.",
+       "fail_outcomes": ["hull -20", "time 1"], "fail_result": "She strikes, grinds, and comes off with planks stove in."},
+      {"text": "Let go the anchor", "check": {"who": "post.boatswain", "skill": "seamanship", "dc": 10},
+       "outcomes": ["time 1"], "result": "The anchor bites. You warp off in the morning.", "fail_outcomes": ["hull -15", "time 1"], "fail_result": "The anchor drags."}
+    ]
+  },
+
+  "yellow_flag": {
+    "title": "The yellow flag",
+    "text": "A merchantman lies hove to with a yellow flag at the masthead: plague, or yellow fever. A voice begs for a surgeon.",
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Send the surgeon across", "conditions": ["has_officer.surgeon"], "check": {"who": "post.surgeon", "skill": "medicine", "dc": 13},
+       "outcomes": ["honour +3", "relation {nation} +5", "skill post.surgeon medicine +1"], "result": "Your surgeon saves most of them, and comes back clean.",
+       "fail_outcomes": ["crew -3", "honour +2"], "fail_result": "The fever comes back with your surgeon. Three of your men die of it."},
+      {"text": "Send over food and water, no more", "outcomes": ["food -15", "water -15", "honour +1"], "result": "They cheer you from the rail."},
+      {"text": "Give her a wide berth", "outcomes": [], "result": "You've seen what fever does to a ship."}
+    ]
+  },
+
+  "dead_calm_sharks": {
+    "title": "Sharks",
+    "text": "Sharks circle the ship. {sailor} dares the others to swim under the keel.",
+    "roles": {"sailor": {"from": "crew", "where": ["trait.hot_headed"]}},
+    "weight": 5,
+    "choices": [
+      {"text": "Forbid it", "outcomes": ["opinion {sailor} -3"], "result": "{sailor} sulks for days."},
+      {"text": "Let them. A bet's a bet", "check": {"who": "{sailor}", "skill": "seamanship", "dc": 13},
+       "outcomes": ["opinion crew +3", "fear +1"], "result": "{sailor} comes up the other side grinning. The legend of {sailor} grows.",
+       "fail_outcomes": ["kill {sailor}", "opinion crew -3"], "fail_result": "The water turns red."}
+    ]
+  },
+
+  "hurricane_signs": {
+    "title": "A long swell from the east",
+    "text": "A long greasy swell, a brassy sky, birds flying west. The old hands say a hurricane is coming.",
+    "conditions": ["month >= 7", "month <= 10"],
+    "choices": [
+      {"text": "Run for shelter at once", "outcomes": ["time 2"], "result": "You lose two days sheltering in a lee. Nothing comes of it, this time."},
+      {"text": "Strike the topmasts, double the lashings, carry on", "check": {"who": "captain", "skill": "seamanship", "dc": 13},
+       "outcomes": [], "result": "The blow, when it comes, passes to the north.", "fail_outcomes": ["hull -20", "sails -25", "crew -2"], "fail_result": "It catches you in the open. You survive, barely."}
+    ]
+  },
+
+  "abandoned_ship": {
+    "title": "A ship with no one aboard",
+    "text": "A {nation_adj} brigantine drifts with her sails in rags. No one answers your hail. The galley fire is cold; the table is laid for dinner.",
+    "roles": {"nation": {"from": "nation"}, "good": {"from": "good"}, "n": {"from": "number", "range": [10, 30]}},
+    "weight": 4,
+    "choices": [
+      {"text": "Board and strip her", "outcomes": ["loot {good} {n}", "opinion crew -2"], "result": "Her hold is full of {good}. The men are uneasy; nobody wants to sleep near the things they brought back."},
+      {"text": "Board her, and search for the reason", "check": {"who": "captain", "skill": "experience", "dc": 14},
+       "outcomes": ["loot {good} {n}", "gold +100"], "result": "A log, a mutiny, a captain's strongbox they never found. Now you have.",
+       "fail_outcomes": ["crew -1"], "fail_result": "A rotten deck gives way under a boarder."},
+      {"text": "Sink her. Some things should stay lost", "outcomes": ["opinion crew +1"], "result": "The superstitious approve."}
+    ]
+  },
+
+  "lightning_strike": {
+    "title": "Lightning",
+    "text": "A bolt strikes the mainmast. Smoke pours from the top; the tar in the rigging is alight.",
+    "conditions": ["storm"],
+    "choices": [
+      {"text": "Fight the fire aloft", "check": {"who": "post.boatswain", "skill": "seamanship", "dc": 12},
+       "outcomes": ["sails -5"], "result": "Buckets and wet canvas. It's out.", "fail_outcomes": ["sails -25", "crew -1"], "fail_result": "The mainsail burns before it's out."},
+      {"text": "Flood the magazine first", "outcomes": ["sails -20", "opinion crew +1"], "result": "Safe, if the powder's soaked. The fire burns itself out in the rigging."}
+    ]
+  },
+
+  "spanish_coastguard": {
+    "title": "Guarda costa",
+    "text": "A Spanish guarda costa runs out from the coast and hails you: heave to and be searched for contraband.",
+    "conditions": ["not war.spain.home", "stolen > 0"],
+    "choices": [
+      {"text": "Heave to and let them look", "check": {"who": "captain", "skill": "trade", "dc": 13},
+       "outcomes": [], "result": "Bribes, paperwork and a good deal of shrugging. They leave empty-handed.",
+       "fail_outcomes": ["gold -15%", "relation spain -5"], "fail_result": "They find enough to fine you heavily."},
+      {"text": "Run for it", "outcomes": ["fight navy spain flee", "relation spain -5"], "result": "She's fast."},
+      {"text": "Fight", "outcomes": ["fight navy spain defend", "relation spain -10"], "result": "You run out your guns."}
+    ]
+  },
+
+  "pirate_signal": {
+    "title": "A signal from the shore",
+    "text": "Smoke on a headland: two columns, then one. The Brethren's sign for 'Fat prize passing'.",
+    "conditions": ["relation.pirates >= 10"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Go hunting", "outcomes": ["fight merchant {nation} attack"], "result": "A {nation_adj} merchantman, just where the smoke said."},
+      {"text": "Leave the prize to whoever lit the fire", "outcomes": ["relation pirates +2"], "result": "Manners among thieves."}
+    ]
+  },
+
+  "navy_impress": {
+    "title": "Pressed men",
+    "text": "A {nation_adj} man-of-war orders you to heave to. Her lieutenant wants seamen for the King's service, and he means to take some of yours.",
+    "conditions": ["not pirate", "crew >= 15"],
+    "roles": {"nation": {"from": "nation", "where": ["mine"]}},
+    "choices": [
+      {"text": "Let him take his men", "outcomes": ["crew -4", "relation {nation} +3", "opinion crew -5"], "result": "Four of your best are rowed away."},
+      {"text": "Argue: your men are protected", "check": {"who": "captain", "skill": "authority", "dc": 14, "bonus": [["privateer", "Your commission", 3]]},
+       "outcomes": ["opinion crew +3"], "result": "He backs down, with bad grace.", "fail_outcomes": ["crew -5", "opinion crew -5"], "fail_result": "He takes five, and the best of them."},
+      {"text": "Hide the best hands below", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["crew -1"], "result": "He finds one old man and gives up.", "fail_outcomes": ["crew -4", "relation {nation} -5"], "fail_result": "He finds them, and is not amused."}
+    ]
+  }
+}

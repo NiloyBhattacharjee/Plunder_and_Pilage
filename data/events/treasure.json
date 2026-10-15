@@ -1,0 +1,122 @@
+{
+  "_comment": "Treasure: maps, wrecks, buried chests. Many are chains: a first event queues a second that waits for you somewhere. See docs/events.md.",
+
+  "treasure_twin_palms": {
+    "title": "The twin palms",
+    "text": "{port}. Ashore, beyond the town, two palms lean together exactly as the scrap of chart showed.",
+    "where": "port", "chain_only": true,
+    "conditions": ["port == {port}", "flag.map_twin_palms"],
+    "roles": {"port": {"from": "port"}},
+    "choices": [
+      {"text": "Pace it out and dig", "check": {"who": "captain", "skill": "navigation", "dc": 12},
+       "outcomes": ["gold +600", "unflag map_twin_palms", "opinion crew +3"], "result": "Spades strike wood. A sea chest, packed with coin of every nation.",
+       "fail_outcomes": ["unflag map_twin_palms", "time 2"], "fail_result": "Two days of digging. Nothing but sand crabs. Either you counted wrong or someone got here first."},
+      {"text": "Sell the map to a local fool", "outcomes": ["gold +80", "unflag map_twin_palms"], "result": "He pays eighty and runs off with a spade."}
+    ]
+  },
+
+  "dying_pirate": {
+    "title": "An old pirate's last words",
+    "text": "In a tavern back room an old buccaneer is dying of the drink. He grips your sleeve: 'Silver, Captain. Silver from the Panama raid, buried on a cay off {port}. I never went back for it.'",
+    "where": "port", "weight": 4,
+    "conditions": ["port_fence"],
+    "roles": {"port": {"from": "port", "where": ["not here"]}},
+    "choices": [
+      {"text": "Sit with him and hear it all", "outcomes": ["event dying_pirate_cay 0 365", "honour +1"], "result": "He dies before dawn. You have a bearing, a landmark, a number of paces."},
+      {"text": "Buy him a last bottle and leave him be", "outcomes": ["gold -5"], "result": "He dies happy, if not rich."}
+    ]
+  },
+
+  "dying_pirate_cay": {
+    "title": "The cay off {port}",
+    "text": "You anchor off {port}, row to the low cay the old man described, and find the blasted tree he swore by.",
+    "where": "port", "chain_only": true,
+    "conditions": ["port == {port}"],
+    "roles": {"port": {"from": "port"}},
+    "choices": [
+      {"text": "Dig", "check": {"who": "captain", "skill": "navigation", "dc": 13},
+       "outcomes": ["cargo silver +15", "opinion crew +5"], "result": "Three rotten sea chests. Silver bars, black with tarnish. The old man told the truth.",
+       "fail_outcomes": ["time 2", "opinion crew -2"], "fail_result": "Nothing. Perhaps the old man lied. Perhaps someone else listened."},
+      {"text": "Take the whole crew ashore and turn the cay over", "conditions": ["crew >= 20"],
+       "outcomes": ["cargo silver +12", "time 3"], "result": "Three days and every man with a spade. You find most of it."}
+    ]
+  },
+
+  "map_seller": {
+    "title": "A treasure map, cheap",
+    "text": "A one-eyed man in the market unrolls a stained chart: 'Spanish gold, Captain, on an island near {port}. Yours for {price} pieces.'",
+    "where": "port", "weight": 6,
+    "roles": {"port": {"from": "port", "where": ["not here"]}, "price": {"from": "number", "range": [60, 200]}},
+    "choices": [
+      {"text": "Pay him", "conditions": ["gold >= {price}"], "outcomes": ["gold -{price}", "event map_seller_dig 0 365"], "result": "You pocket the chart."},
+      {"text": "Look at it closely first", "check": {"who": "captain", "skill": "navigation", "dc": 13},
+       "outcomes": [], "result": "The coastline is drawn wrong, the ink is new, and the 'old Spanish' is misspelt. A forgery.",
+       "fail_outcomes": ["gold -{price}", "event map_seller_dig 0 365"], "fail_result": "It looks genuine enough. You pay."},
+      {"text": "Send him on his way", "outcomes": [], "result": "He tries the next captain along."}
+    ]
+  },
+
+  "map_seller_dig": {
+    "title": "The one-eyed man's island",
+    "text": "The island near {port} is just where the chart puts it.",
+    "where": "port", "chain_only": true,
+    "conditions": ["port == {port}"],
+    "roles": {"port": {"from": "port"}, "price": {"from": "number", "range": [60, 200]}},
+    "choices": [
+      {"text": "Search it", "check": {"who": "captain", "skill": "navigation", "dc": 16},
+       "outcomes": ["gold +400"], "result": "Against all odds, a buried strongbox. The forger had a real map after all, or copied one.",
+       "fail_outcomes": ["time 1", "opinion crew -2"], "fail_result": "Nothing but goats. The crew laugh at you behind their hands."}
+    ]
+  },
+
+  "silver_wreck": {
+    "title": "A wreck on the shoals",
+    "text": "In clear water over a reef, the outline of an old ship: ribs, ballast stones, and something glinting.",
+    "conditions": ["at_sea", "not storm"],
+    "weight": 4,
+    "choices": [
+      {"text": "Send down divers", "check": {"who": "captain", "skill": "seamanship", "dc": 13},
+       "outcomes": ["cargo silver +8", "time 2"], "result": "Pieces of eight, fused into lumps by the sea. Still silver.",
+       "fail_outcomes": ["crew -1", "time 2"], "fail_result": "A diver comes up too fast, and doesn't come round."},
+      {"text": "Mark the spot and move on", "outcomes": ["flag wreck_marked 200"], "result": "You note the bearings in the log."}
+    ]
+  },
+
+  "cursed_coins": {
+    "title": "Aztec gold",
+    "text": "{sailor} comes to you pale: the gold coins from the last prize carry strange heathen faces, and the men who handled them have been dreaming of drowning.",
+    "conditions": ["stolen > 0"],
+    "roles": {"sailor": {"from": "crew", "where": ["trait.superstitious"]}},
+    "weight": 4,
+    "choices": [
+      {"text": "Throw the coins overboard", "outcomes": ["gold -5%", "opinion crew +3"], "result": "The dreams stop. So does a share of your fortune."},
+      {"text": "Laugh and spend them", "check": {"who": "captain", "skill": "authority", "dc": 12},
+       "outcomes": [], "result": "Gold is gold.", "fail_outcomes": ["opinion crew -5", "opinion {sailor} -10"], "fail_result": "Half the crew won't go below at night."},
+      {"text": "Have the coins blessed", "conditions": ["gold >= 30"], "outcomes": ["gold -30", "opinion crew +2"], "result": "A priest at the next port earns a fat fee."}
+    ]
+  },
+
+  "buried_by_crew": {
+    "title": "Hidden shares",
+    "text": "{sailor} confesses, drunk: some of the crew buried their own shares of plunder on a beach near {port}, rather than trust them to you.",
+    "conditions": ["pirate", "loyalty < 0"],
+    "roles": {"sailor": {"from": "crew", "where": ["trait.drunkard"]}, "port": {"from": "port"}},
+    "weight": 4,
+    "choices": [
+      {"text": "Go and dig it up yourself", "outcomes": ["event hidden_shares_dig 0 120", "opinion {sailor} -5"], "result": "You'll be in {port} soon enough."},
+      {"text": "Say nothing. A man's share is his own", "outcomes": ["opinion crew +3", "honour +1"], "result": "Word gets round that you heard and let it be."}
+    ]
+  },
+
+  "hidden_shares_dig": {
+    "title": "The crew's cache",
+    "text": "At {port} you slip ashore at night with a lantern and a spade.",
+    "where": "port", "chain_only": true,
+    "conditions": ["port == {port}"],
+    "roles": {"port": {"from": "port"}},
+    "choices": [
+      {"text": "Take it all", "outcomes": ["gold +300", "opinion crew -10"], "result": "Three hundred in coin. By morning the whole ship knows."},
+      {"text": "Leave it. Think better of it", "outcomes": [], "result": "You walk back empty-handed."}
+    ]
+  }
+}

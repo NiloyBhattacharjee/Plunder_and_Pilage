@@ -16,6 +16,7 @@ var rng := RandomNumberGenerator.new()
 var current_npc := {}     # the NPC ship you're dealing with, if any
 var chase_id := ""        # the NPC ship you're chasing
 var _chase_timer := 0.0
+var _in_event := false   # an event's "time" outcome runs days; don't start another inside it
 
 ## Set by the new-game screen before switching here: {name, nationality, background, ship_name} or {"load": true}.
 static var start_config := {}
@@ -114,6 +115,10 @@ func _daily() -> void:
 	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
 	for m in Contracts.daily(s):
 		hud.show_message(m)
+	if ship.anchored_at == "" and not busy() and s.hull > 0:
+		var inst := Events.pick("sea", _event_ctx())
+		if not inst.is_empty():
+			run_event(inst)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -187,7 +192,11 @@ func _on_arrived(id: String) -> void:
 	var access := Career.port_access(ship.state, id)
 	if access.open:
 		hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
-		port_screen.open(id, ship)
+		var inst := Events.pick("port", _event_ctx())
+		if not inst.is_empty():
+			await run_event(inst)
+		if ship.anchored_at == id and combat == null:
+			port_screen.open(id, ship)
 		return
 	UIKit.pause_clock()
 	var s: Dictionary = ship.state
@@ -228,6 +237,35 @@ func _on_arrived(id: String) -> void:
 		UIKit.resume_clock()
 
 
+func _event_ctx() -> Dictionary:
+	return {"s": ship.state, "stats": ship.stats, "port": ship.anchored_at, "storm": ship.wind.get("storm", "") != ""}
+
+
+## Shows an event, applies the choice, and shows what came of it. A choice can start a fight.
+func run_event(inst: Dictionary) -> void:
+	UIKit.pause_clock()
+	_in_event = true
+	var ctx := _event_ctx()
+	var v := Events.view(inst, ctx)
+	var pick: int = await dialog.ask(v.title, v.text, v.options)
+	var res := Events.resolve(inst, pick, ctx)
+	ship.refresh_stats()
+	var body: String = res.text
+	if not res.effects.is_empty():
+		body += ("
+
+" if body != "" else "") + "
+".join(res.effects)
+	if body != "":
+		await dialog.ask(v.title, body, [{"text": "Continue"}])
+	_in_event = false
+	hud.show_message("%s: %s" % [v.title, ", ".join(res.effects.filter(func(e): return not e.begins_with("d20")))] if not res.effects.is_empty() else v.title)
+	if not res.fight.is_empty():
+		start_combat(Encounters.generate(res.fight.faction, rng, res.fight.kind), res.fight.mode)
+		return
+	UIKit.resume_clock()
+
+
 func _save() -> void:
 	var err := SaveGame.save_game(self)
 	hud.show_message("Game saved." if err == OK else "Save failed: %s" % error_string(err))
@@ -247,7 +285,7 @@ func _load() -> void:
 
 ## True while a screen, dialog or battle has the player's attention.
 func busy() -> bool:
-	return combat != null or port_screen.visible or crew_screen.visible or prize_screen.visible or dialog.visible
+	return combat != null or _in_event or port_screen.visible or crew_screen.visible or prize_screen.visible or dialog.visible
 
 
 # ---- Encounters and battle -------------------------------------------------
