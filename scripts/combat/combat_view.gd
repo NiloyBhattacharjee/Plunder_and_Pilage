@@ -97,7 +97,7 @@ func _build_party() -> void:
 			pick.set_item_tooltip(pick.item_count - 1, can[id].description)
 			if keep.get(post, "") == id:
 				pick.select(pick.item_count - 1)
-		if pick.selected <= 0 and pick.item_count > 1 and not keep.has(post):
+		if pick.selected <= 0 and pick.item_count > 1 and keep.get(post, "?") != "":  # keep a deliberate "(no action)"; replace picks the new band ruled out
 			pick.select(_default_pick(post, pick))
 		box.add_child(pick)
 		pickers[post] = pick

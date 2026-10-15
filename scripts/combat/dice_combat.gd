@@ -106,7 +106,7 @@ func available(i: int, post: String) -> Dictionary:
 	var list: Dictionary = actions().get(post, {})
 	for id in list:
 		var a: Dictionary = list[id]
-		if id.begins_with("_") or not band in a.bands:
+		if id.begins_with("_") or not float(band) in a.bands:  # JSON numbers are floats; 1 in [1.0] is false
 			continue
 		if a.get("needs", "") == "chase_guns" and sides[i].stats.chase_guns <= 0:
 			continue
@@ -292,7 +292,7 @@ func _act(i: int, post: String, id: String) -> void:
 			c = _contest_seamanship(i, a.name)
 			if c.success:
 				gauge = i
-			_note(i, post, "%s: %s. %s" % [who, a.name, "%s hold%s the weather gauge." % ["You" if gauge == 0 else "They", "" if gauge == 0 else "s"]], c)
+			_note(i, post, "%s: %s. %s" % [who, a.name, "%s hold the weather gauge." % ("You" if gauge == 0 else "They")], c)
 		"grapple":
 			if _mods[o].shoals:
 				_note(i, post, "%s can't get alongside in the shoals." % who)
@@ -511,6 +511,8 @@ func _melee_parts(i: int) -> Array:
 		parts.append(["Morale", morale])
 	if s.armed:
 		parts.append(["Armed boarders", 2])
+	if int(s.stats.swivels / 3) > 0:
+		parts.append(["Swivel guns", int(s.stats.swivels / 3)])
 	if _mods[i].melee != 0:
 		parts.append(["Gun crews join in", _mods[i].melee])
 	if s.stance == "push":
@@ -553,6 +555,7 @@ func _hit_morale(i: int, amount: float) -> void:
 func _morale_checks() -> void:
 	for i in 2:
 		var s: Dictionary = sides[i]
+		s.morale = clampf(s.morale, 0.0, 100.0)  # rallies and losses within a round can overshoot
 		if result != "" or s.morale >= cfg().morale_check_below:
 			continue
 		var dc := int(cfg().morale_check_dc + (cfg().morale_check_below - s.morale) / 3.0)

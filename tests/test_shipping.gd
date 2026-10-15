@@ -6,6 +6,7 @@ var world
 func before_each():
 	world = load("res://scenes/world_map.tscn").instantiate()
 	add_child_autofree(world)
+	await get_tree().process_frame  # the world opens the start port deferred; close it once it's open
 	world.port_screen.close()
 	world.shipping.npcs = []
 	world.shipping.rng.seed = 12

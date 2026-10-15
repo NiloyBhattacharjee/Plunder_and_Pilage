@@ -271,7 +271,7 @@ func encounter(enemy: Dictionary, npc := {}) -> void:
 	if hostile:
 		var pick: int = await dialog.ask("Enemy sail!", "A %s is bearing down on you.\n%s%s" % [enemy.label, seen, flag_note], [
 			{"text": "Clear for action", "tooltip": "Turn and fight."},
-			{"text": "Crowd on sail and run", "tooltip": "Start the fight already running. Outdistance her (%d) and you're free.\nIn the shallows a deep-keeled ship can't follow." % Data.rules.combat.escape_distance},
+			{"text": "Crowd on sail and run", "tooltip": "Start the fight at long range with the weather gauge likely hers. Win a run for it and you're free.\nA fast, handy ship runs better; a shallower keel can lead her onto the shoals."},
 			{"text": "Strike your colours", "tooltip": "Surrender without a fight. They'll strip your hold and take half your gold."},
 		])
 		match pick:

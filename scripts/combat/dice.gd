@@ -85,9 +85,9 @@ static func describe(c: Dictionary) -> String:
 				obits.append("%s %+d" % [p[0], p[1]])
 		target = "their %d (%s)" % [c.dc, ", ".join(obits)]
 	var verdict := "[color=#2e6b3a]SUCCESS[/color]" if c.success else "[color=#a3261b]FAIL[/color]"
-	if c.crit:
+	if c.crit and c.success:  # both sides can roll a 20 (or a 1) in a contest
 		verdict = "[color=#2e6b3a][b]CRITICAL![/b][/color]"
-	elif c.fumble:
+	elif c.fumble and not c.success:
 		verdict = "[color=#a3261b][b]FUMBLE![/b][/color]"
 	lines.append("%s = [b]%d[/b] vs %s  %s" % [", ".join(bits), c.total, target, verdict])
 	return "\n".join(lines)
