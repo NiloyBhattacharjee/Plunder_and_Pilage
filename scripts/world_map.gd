@@ -69,6 +69,8 @@ func _ready() -> void:
 	hud.crew_pressed.connect(func(): crew_screen.open(ship))
 	crew_screen.message.connect(hud.show_message)
 	shipping.setup(terrain, self)
+	Contracts.shipping = shipping
+	Contracts.changed.connect($PortLayer.queue_redraw)
 	shipping.contact.connect(_on_contact)
 	shipping.news.connect(hud.show_message)
 	shipping.alert.connect(func(text):
@@ -110,6 +112,8 @@ func _process(delta: float) -> void:
 func _daily() -> void:
 	var s: Dictionary = ship.state
 	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
+	for m in Contracts.daily(s):
+		hud.show_message(m)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -265,6 +269,12 @@ func encounter(enemy: Dictionary, npc := {}) -> void:
 		flag_note = "\nShe was flying %s colours, but up close she's no %s." % [
 			Data.table("factions")[Career.flag_faction(npc.flag)].adjective if Career.flag_faction(npc.flag) != "" else "plain",
 			Data.table("factions")[Career.flag_faction(npc.flag)].adjective if Career.flag_faction(npc.flag) != "" else "honest ship"]
+	var job := Contracts.find(enemy.get("contract", ""))
+	if not job.is_empty():
+		flag_note += "
+This is the %s you were hired to find." % enemy.name
+		if job.trap:
+			flag_note += " But she's no %s: her gunports are open and her decks are packed with men. You were sold out." % job.kind
 	var hostile: bool = npc.get("hostile") if npc.get("hostile") != null else Career.npc_hostile(s, enemy, rng)
 	if enemy.behaviour == "merchant":
 		hostile = false
@@ -342,6 +352,8 @@ func _on_combat_finished(result: Dictionary) -> void:
 	for m in Encounters.apply_battle(s, result.player, rng):
 		hud.show_message(m)
 	var e: Dictionary = result.enemy_data
+	for m in Contracts.on_battle(s, e, result.outcome, ship.position):
+		hud.show_message(m)
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
 		shipping.remove(current_npc)
 	current_npc = {}

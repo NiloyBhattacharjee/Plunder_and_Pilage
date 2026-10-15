@@ -74,6 +74,8 @@ func _process(_delta: float) -> void:
 	lines.append("Food %d (%d days)    Water %d (%d days)" % [s.cargo.get("food", 0), ship.days_of("food"), s.cargo.get("water", 0), ship.days_of("water")])
 	lines.append("Hold %d / %d tons" % [Market.cargo_used(s.cargo), ship.capacity()] + ("   Prizes: " + ", ".join(s.prizes.map(func(p): return p.name)) if not s.prizes.is_empty() else ""))
 	lines.append("Gold %d" % s.gold + ("    Wages owed %d" % s.wages_owed if s.wages_owed > 0 else ""))
+	for c in Contracts.active:
+		lines.append("Contract: " + Contracts.summary(c))
 	info.text = "\n".join(lines)
 	compass.wind_dir = w.dir
 	compass.heading = ship.heading

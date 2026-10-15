@@ -130,6 +130,16 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="Contracts" type="ScrollContainer" parent="Panel/VBox/Tabs"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 4
+
+[node name="ContractBox" type="VBoxContainer" parent="Panel/VBox/Tabs/Contracts"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="Footer" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
 

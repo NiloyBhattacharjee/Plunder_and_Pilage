@@ -18,6 +18,16 @@ var zoom := 1.0:
 
 func _draw() -> void:
 	var s := 1.0 / zoom
+	var red := Color(Style.c("bad"), 0.8)
+	for h in Contracts.hints():  # where your contracts send you, inked on the chart
+		var at: Vector2
+		if h.has("radius"):
+			draw_arc(h.pos, h.radius, 0.0, TAU, 64, red, 2.0 * s)
+			at = h.pos + Vector2(-h.radius, -h.radius - 6.0 * s)
+		else:
+			draw_dashed_line(h.from, h.to, red, 2.0 * s, 10.0 * s)
+			at = h.from.lerp(h.to, 0.5)
+		draw_string(Style.font("italic"), at, h.label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), red)
 	for id in port_positions:
 		var port: Dictionary = Data.table("ports")[id]
 		var pos: Vector2 = port_positions[id]

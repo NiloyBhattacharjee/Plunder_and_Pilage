@@ -59,6 +59,7 @@ func refresh() -> void:
 	_build_shipyard()
 	_refresh_tavern()
 	_build_governor()
+	_build_contracts()
 
 
 func _build_market() -> void:
@@ -301,6 +302,68 @@ func _build_governor() -> void:
 		var b2 := UIKit.button(box, ("Accept the King's Pardon (free)" if cost == 0 else "Seek a pardon (%d gold)" % cost),
 			_act.bind(func(): return {"ok": true, "text": " ".join(Career.pardon(s, f))}), why2 if why2 != "" else tip2)
 		b2.disabled = why2 != ""
+
+
+func _build_contracts() -> void:
+	var box: VBoxContainer = %ContractBox
+	UIKit.clear(box)
+	var s: Dictionary = ship.state
+	var free: float = ship.capacity() - Market.cargo_used(s.cargo)
+	var offers := Contracts.offers_at(port_id, s)
+	for role in ["governor", "broker"]:
+		var emp := Contracts.employer(port_id, role)
+		if emp == "":
+			continue
+		var e := People.person(emp)
+		var r := UIKit.row(box)
+		r.add_child(Portrait.make(e, "captain", 48))
+		UIKit.label(r, "%s %s.   Trust in you: %+d" % ["Governor" if role == "governor" else "The broker", e.name, Contracts.trust(emp, s)],
+			People.describe(e) + "\n\nTrust grows with every job done and unlocks bigger ones. Failing a job costs it.")
+		if role == "governor" and disguised:
+			UIKit.label(box, "You're here under false colours: the governor's office is no place for you.", "", Style.c("bad"))
+			continue
+		var g := UIKit.grid(box, 3)
+		var mine := offers.filter(func(c): return c.employer == emp)
+		if mine.is_empty():
+			UIKit.label(g, "No work on offer just now.", "", Style.c("dim"))
+		for c in mine:
+			var tip := Contracts.details(c, s)
+			UIKit.label(g, c.name, tip)
+			UIKit.label(g, "%d gold, %d days, risk: %s" % [c.reward, c.days, Contracts.risk(c, s)], tip)
+			var why := Contracts.problem(c, s, free)
+			var b := UIKit.button(g, "Accept", _act.bind(func(): return {"ok": true, "text": Contracts.accept(c, s, free)}), why if why != "" else tip)
+			b.disabled = why != ""
+		UIKit.label(box, "")
+
+	UIKit.label(box, "Your contracts (%d of %d)" % [Contracts.active.size(), Data.rules.contracts.max_active], "", Style.c("header"))
+	if Contracts.active.is_empty():
+		UIKit.label(box, "None. Every job pays, and every job is a promise.", "", Style.c("dim"))
+	for c in Contracts.active.duplicate():
+		var r := UIKit.row(box)
+		UIKit.label(r, Contracts.summary(c), Contracts.details(c, s))
+		if c.status == "done":
+			if c.pay_port != port_id:
+				continue
+			var pay := Contracts.offered_pay(c)
+			if c.lied:
+				var full: int = c.reward + int(c.get("deposit", 0))
+				UIKit.button(r, "Take the %d offered" % pay, _act.bind(func(): return {"ok": true, "text": Contracts.collect(c, s)}),
+					"You were promised %d. Take what's offered and keep the peace." % full)
+				UIKit.button(r, "Demand the full %d (%d%%)" % [full, int(Contracts.demand_odds(c, s) * 100)], _act.bind(func(): return {"ok": true, "text": Contracts.collect(c, s, true)}),
+					"Your intimidation and fearsome name against their authority. Lose and you take the short pay and lose their trust.")
+			else:
+				UIKit.button(r, "Collect %d gold" % pay, _act.bind(func(): return {"ok": true, "text": Contracts.collect(c, s)}))
+			continue
+		if c.objective == "deliver" and c.dest == port_id:
+			var tip := "Hand over the dispatches." if c.good == "dispatches" else "Chance customs seize the goods on the quay: %d%%." % int(Contracts.seizure_risk(c) * 100)
+			if c.trap and c.good != "dispatches":
+				UIKit.label(box, "Customs men swarm the quay today, as if someone told them to expect you.", "", Style.c("bad"))
+			UIKit.button(r, "Deliver", _act.bind(func(): return {"ok": true, "text": Contracts.deliver(c, s)}), tip)
+		if c.good == "dispatches" and Ports.port(port_id).faction != "pirates" and Factions.at_war(Ports.port(port_id).faction, c.faction) and not disguised:
+			UIKit.button(r, "Sell the dispatches here (%d)" % int(c.reward * Data.rules.contracts.betray.mult), _act.bind(func(): return {"ok": true, "text": Contracts.betray(c, s, port_id)}),
+				"The enemy pays well for those seals. Your employer will never trust you again, and if word gets out (%d%%), %s brands you a traitor." % [
+					int(Data.rules.contracts.betray.discovery * 100), Data.table("factions")[c.faction].name])
+		UIKit.button(r, "Abandon", _act.bind(func(): return {"ok": true, "text": Contracts.abandon(c, s)}), "Counts as failing the job.")
 
 
 func _refresh_tavern() -> void:

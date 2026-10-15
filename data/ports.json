@@ -83,6 +83,7 @@
   "tortuga": {
     "name": "Tortuga", "faction": "france", "fence": true, "lat": 20.04, "lon": -72.78, "size": "small",
     "governor": "Jacques Nepveu de Pouancey",
+    "broker": "Marie Leclerc",
     "description": "A rock of buccaneers under a French flag. The governor asks few questions if his share arrives on time.",
     "produces": ["hides", "tobacco", "food"],
     "wants": ["gunpowder", "weapons", "wine", "cloth"],
@@ -110,6 +111,7 @@
   "st_eustatius": {
     "name": "St. Eustatius", "faction": "dutch", "lat": 17.483, "lon": -62.983, "size": "small",
     "governor": "Mijnheer Jan Schot",
+    "broker": "Abraham Pereira",
     "description": "A free port on a volcanic rock. Warehouses line the beach and nobody checks whose flag a buyer sails under.",
     "produces": ["weapons", "gunpowder", "cloth", "wine"],
     "wants": ["sugar", "tobacco", "cotton", "indigo", "water"],
@@ -119,6 +121,7 @@
   "nassau": {
     "name": "Nassau", "faction": "pirates", "fence": true, "lat": 25.078, "lon": -77.339, "size": "small",
     "governor": "Captain Elias Thorne",
+    "broker": "Captain Elias Thorne",
     "description": "A ruined settlement turned pirate roost. The shoals of the Bahama Banks keep the navies' big ships away.",
     "produces": ["hides", "logwood"],
     "wants": ["rum", "gunpowder", "weapons", "wine", "tools", "food"],

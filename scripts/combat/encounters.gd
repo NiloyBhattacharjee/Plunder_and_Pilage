@@ -5,13 +5,14 @@ class_name Encounters
 
 
 ## A random ship near waters owned by `faction`. Pirate waters only produce pirates.
-static func generate(faction: String, rng: RandomNumberGenerator, kind := "") -> Dictionary:
+static func generate(faction: String, rng: RandomNumberGenerator, kind := "", type := "") -> Dictionary:
 	var table: Dictionary = Data.table("encounters")
 	if kind == "":
 		kind = "pirate" if faction == "pirates" else _weighted(table, rng)
 	var e: Dictionary = table[kind]
 	var f: String = e.get("faction", faction)
-	var type: String = e.ships[rng.randi() % e.ships.size()]
+	if type == "":
+		type = e.ships[rng.randi() % e.ships.size()]
 	var upgrades: Array = e.get("upgrades", []).filter(func(u): return ShipStats.cannot_install({"type": type, "upgrades": []}, u, 2) == "")
 	var st := ShipStats.effective(type, upgrades)
 	var names: Array = Data.table("factions")[f].ship_names

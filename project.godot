@@ -16,6 +16,7 @@ Ports="*res://scripts/ports.gd"
 People="*res://scripts/people.gd"
 Style="*res://scripts/style.gd"
 Factions="*res://scripts/factions.gd"
+Contracts="*res://scripts/contracts.gd"
 
 [display]
 

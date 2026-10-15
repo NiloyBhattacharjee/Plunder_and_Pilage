@@ -1,0 +1,70 @@
+{
+  "_comment": "Contract templates. employer: governor (any lawful port) or broker (ports with a 'broker' in ports.json). needs: marque (a letter of marque from the employer's nation) and/or standing (minimum standing with the employer's faction; brokers count the Brethren). objective: raid (take or sink `count` ships of the target nation near a port), intercept (a named ship sails the map; take her, or sink her unless capture is true), deliver (carry dispatches or contraband to `dest`). target: enemy (a nation at war with the employer), nation (any nation but the employer's), pirates. Tiers unlock with the employer's trust in you. success: standing with the employer's faction, trust, and other relations ('target' means the target's faction). Placeholders: {target} {ship} {port} {dest} {good} {qty} {count} {captain}.",
+
+  "raid_shipping": {
+    "name": "Raid {target} shipping off {port}",
+    "description": "The Admiralty wants {target} trade strangled. Take or sink {count} {target} ships within a day's sail of {port}.",
+    "employer": "governor", "needs": {"marque": true}, "objective": "raid", "target": "enemy", "days": 50,
+    "tiers": [{"trust": 0, "reward": 600, "count": 2}, {"trust": 15, "reward": 1200, "count": 3}, {"trust": 35, "reward": 2200, "count": 4}],
+    "success": {"standing": 5, "trust": 10},
+    "lie_chance": 0.05, "trap_chance": 0.0
+  },
+  "capture_ship": {
+    "name": "Capture the {ship}",
+    "description": "The {target} {ship} sails from {port} for {dest} with {good} in her hold. Bring her in as a prize: sunk, she is worth nothing to the Crown.",
+    "employer": "governor", "needs": {"marque": true}, "objective": "intercept", "kind": "merchant", "capture": true, "target": "enemy",
+    "cargo": ["silver", "gold", "cocoa", "indigo"], "days": 40,
+    "tiers": [{"trust": 0, "reward": 800, "ships": ["brigantine", "fluyt"]}, {"trust": 15, "reward": 1500, "ships": ["fluyt", "brig"]}, {"trust": 35, "reward": 3000, "ships": ["galleon"]}],
+    "success": {"standing": 6, "trust": 10},
+    "lie_chance": 0.05, "trap_chance": 0.1
+  },
+  "hunt_pirate": {
+    "name": "Hunt down {captain} of the {ship}",
+    "description": "The pirate {captain} and the {ship} prey on shipping near {port}. Take her or send her to the bottom. The Brethren will not thank you.",
+    "employer": "governor", "needs": {"standing": 5}, "objective": "intercept", "kind": "pirate", "capture": false, "target": "pirates", "days": 45,
+    "tiers": [{"trust": 0, "reward": 600, "ships": ["sloop", "schooner"]}, {"trust": 15, "reward": 1200, "ships": ["brigantine"]}, {"trust": 35, "reward": 2400, "ships": ["brig", "frigate"]}],
+    "success": {"standing": 6, "trust": 10, "relations": {"pirates": -8}},
+    "lie_chance": 0.05, "trap_chance": 0.05
+  },
+  "dispatches": {
+    "name": "Carry dispatches to {dest}",
+    "description": "Sealed dispatches for the governor at {dest}. Strike your colours and they're lost. Their enemies would pay well to read them.",
+    "employer": "governor", "needs": {"standing": 0}, "objective": "deliver", "cargo": ["dispatches"], "days": 30,
+    "tiers": [{"trust": 0, "reward": 300}, {"trust": 15, "reward": 600}, {"trust": 35, "reward": 1000}],
+    "success": {"standing": 4, "trust": 8},
+    "lie_chance": 0.0, "trap_chance": 0.15
+  },
+  "hijack_cargo": {
+    "name": "Hijack the {ship}'s {good}",
+    "description": "Word is the {target} {ship} loads {good} at {port} for {dest}. Take her and her cargo is yours; the broker wants a finder's fee paid the other way, in favours.",
+    "employer": "broker", "needs": {"standing": 0}, "objective": "intercept", "kind": "merchant", "capture": true, "target": "nation",
+    "cargo": ["silver", "gold", "cocoa", "tobacco", "indigo"], "days": 35,
+    "tiers": [{"trust": 0, "reward": 300, "ships": ["sloop", "schooner", "brigantine"]}, {"trust": 15, "reward": 700, "ships": ["brigantine", "fluyt"]}, {"trust": 35, "reward": 1500, "ships": ["fluyt", "galleon"]}],
+    "success": {"standing": 4, "trust": 10},
+    "lie_chance": 0.3, "trap_chance": 0.15
+  },
+  "smuggle": {
+    "name": "Run {qty} {good} into {dest}",
+    "description": "{good} is contraband in {dest}, and the planters there will pay for it. The goods are loaded for you. Deliver them to the broker's man on the quay.",
+    "employer": "broker", "needs": {"standing": -10}, "objective": "deliver", "cargo": ["contraband"], "days": 35,
+    "tiers": [{"trust": 0, "reward": 400, "qty": 20}, {"trust": 15, "reward": 800, "qty": 40}, {"trust": 35, "reward": 1500, "qty": 70}],
+    "success": {"standing": 3, "trust": 10},
+    "lie_chance": 0.25, "trap_chance": 0.15
+  },
+  "revenge": {
+    "name": "Settle a score with {captain}",
+    "description": "{captain} of the {ship} cheated the broker of his share. She lurks near {port}. Sink her or take her; either way, see that {captain} learns.",
+    "employer": "broker", "needs": {"standing": 10}, "objective": "intercept", "kind": "pirate", "capture": false, "target": "pirates", "days": 40,
+    "tiers": [{"trust": 0, "reward": 500, "ships": ["sloop", "schooner"]}, {"trust": 15, "reward": 1000, "ships": ["brigantine"]}, {"trust": 35, "reward": 2000, "ships": ["brig"]}],
+    "success": {"standing": 2, "trust": 15, "relations": {"pirates": 5}},
+    "lie_chance": 0.3, "trap_chance": 0.1
+  },
+  "sink_hunter": {
+    "name": "Sink the pirate hunter {ship}",
+    "description": "The {target} hunter {ship} has hanged three crews this season and is cruising near {port}. Be rid of her and every captain in the Brethren owes you.",
+    "employer": "broker", "needs": {"standing": 15}, "objective": "intercept", "kind": "hunter", "capture": false, "target": "nation", "days": 45,
+    "tiers": [{"trust": 0, "reward": 800, "ships": ["brigantine", "brig"]}, {"trust": 15, "reward": 1600, "ships": ["brig"]}, {"trust": 35, "reward": 3000, "ships": ["frigate"]}],
+    "success": {"standing": 10, "trust": 12, "relations": {"target": -10}},
+    "lie_chance": 0.2, "trap_chance": 0.0
+  }
+}

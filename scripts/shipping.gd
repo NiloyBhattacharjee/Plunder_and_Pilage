@@ -118,6 +118,13 @@ func _arrive(n: Dictionary) -> void:
 
 func _new_goal(n: Dictionary) -> void:
 	var goal: Vector2
+	if n.has("home"):  # a contract target keeps to the waters she was reported in
+		var r: float = nm(Data.rules.contracts.lurk_nm)
+		goal = terrain.nearest_sea(world.anchorages[n.home] + Vector2(rng.randf_range(-r, r), rng.randf_range(-r, r)))
+		n.route = terrain.find_path(n.pos, goal)
+		if n.route.is_empty():
+			n.route = PackedVector2Array([goal])
+		return
 	match n.kind:
 		"navy":
 			var own := _ports_of(n.enemy.faction)
@@ -140,7 +147,7 @@ func _new_goal(n: Dictionary) -> void:
 func daily() -> void:
 	for n in npcs.duplicate():
 		n.age += 1
-		if n.age > cfg().max_age_days:
+		if n.age > cfg().max_age_days and not n.has("contract"):  # contract targets sail until the job is settled
 			remove(n)
 	for i in cfg().spawn_per_day:
 		if count("merchant") < cfg().merchants:
@@ -160,7 +167,7 @@ func daily() -> void:
 
 func _meetings() -> void:
 	for p in npcs.filter(func(n): return n.kind == "pirate"):
-		for m in npcs.filter(func(n): return n.kind == "merchant"):
+		for m in npcs.filter(func(n): return n.kind == "merchant" and not n.has("contract")):
 			if p.pos.distance_to(m.pos) < nm(cfg().contact_nm) * 2.0:
 				for g in m.enemy.cargo:
 					p.enemy.cargo[g] = p.enemy.cargo.get(g, 0) + m.enemy.cargo[g]
@@ -168,7 +175,7 @@ func _meetings() -> void:
 					Data.table("factions")[m.enemy.faction].adjective, m.enemy.name, Ports.port(m.dest).name])
 				remove(m)
 	for v in npcs.filter(func(n): return n.kind == "navy" or n.kind == "hunter"):
-		for p in npcs.filter(func(n): return n.kind == "pirate"):
+		for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("contract")):
 			if v.pos.distance_to(p.pos) < nm(cfg().contact_nm) * 2.0:
 				_say(p, "The %s navy ran down the pirate %s." % [Data.table("factions")[v.enemy.faction].adjective, p.enemy.name])
 				remove(p)
@@ -221,6 +228,20 @@ func spawn(kind: String, f: String) -> Dictionary:
 	var homes := _ports_of(f) if f != "pirates" else Ports.state.keys().filter(func(id): return Ports.port(id).get("fence", false))
 	var n := _add(kind, e, world.anchorages[homes[rng.randi() % homes.size()]], flag)
 	_new_goal(n)
+	return n
+
+
+## A named ship for a contract. Merchants sail origin to dest; the others lurk near origin.
+func spawn_target(kind: String, e: Dictionary, origin: String, dest: String) -> Dictionary:
+	var n := _add(kind, e, world.anchorages[origin], Data.table("factions")[e.faction].flag)
+	n.contract = e.contract
+	if dest != "":
+		n.origin = origin
+		n.dest = dest
+		n.route = _route(origin, dest)
+	else:
+		n.home = origin
+		_new_goal(n)
 	return n
 
 
