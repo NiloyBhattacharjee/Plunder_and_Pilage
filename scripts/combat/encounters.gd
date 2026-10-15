@@ -79,7 +79,28 @@ static func player_side(s: Dictionary) -> Dictionary:
 		"morale": morale, "swivels": ShipStats.effective(s.type, s.upgrades).swivels, "behaviour": "player",
 		"roles": {"sailors": preset.sailors, "gunners": preset.gunners, "marines": preset.marines},
 		"flag": s.get("flag", "white"),
+		"fear": s.reputation.fear,
+		"party": party(s),
 	}
+
+
+## Your officers as a battle party: the captain and whoever holds each post, with their real skills.
+static func party(s: Dictionary) -> Dictionary:
+	var out := {"captain": _member(s.captain)}
+	for post in s.officers:
+		if People.chars.has(s.officers[post]):
+			out[post] = _member(s.officers[post])
+	return out
+
+
+static func _member(id: String) -> Dictionary:
+	var c := People.person(id)
+	var m := {"name": c.name, "id": id, "skills": {}, "stats": {}}
+	for k in People.SKILLS:
+		m.skills[k] = People.value(c, k)
+	for k in People.STATS:
+		m.stats[k] = People.value(c, k)
+	return m
 
 
 ## Writes battle damage back to the ship and buries the dead. Returns messages.
@@ -112,6 +133,16 @@ static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGene
 		var t := People.wound(ShipStats.captain(s))
 		if t != "":
 			msgs.append("Your captain will carry this fight forever: %s." % Data.table("traits")[t].name.to_lower())
+	for id in after.get("officer_wounds", []):
+		if People.chars.has(id) and id in s.crew:
+			var t := People.wound(People.person(id))
+			if t != "":
+				msgs.append("%s will carry a %s from this fight." % [People.person(id).name, Data.table("traits")[t].name.to_lower()])
+	for id in after.get("xp", {}):  # officers learn by doing: every roll in battle counts
+		if People.chars.has(id):
+			for skill in after.xp[id]:
+				if People.gain_xp(People.person(id), skill, after.xp[id][skill]):
+					msgs.append("%s's %s improves to %d." % [People.person(id).name, People.SKILL_NAMES[skill].to_lower(), People.person(id).skills[skill]])
 	return msgs
 
 

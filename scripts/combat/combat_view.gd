@@ -1,170 +1,234 @@
 extends Node2D
-## The battle scene: draws the sim, takes your orders, runs boarding, and reports the outcome.
-## Controls: A/D (or arrows) steer, W/S sails, Q/E fire port/starboard, 1/2/3 ammo, B board, Space pause.
+## The battle screen, tabletop style. Choose an action for each officer, roll, and read the dice in the log.
+## The ships are drawn side by side, broadside to broadside, as far apart as the range band;
+## whoever holds the weather gauge sits upwind (left). Space or Enter rolls.
 
 signal finished(result: Dictionary)
 
-const SPEEDS := [0.0, 1.0, 2.0]
-
-var sim := CombatSim.new()
-var speed_index := 1
-var effects: Array = []  # {kind, from, to, pos, text, age, color}
-var enemy_data: Dictionary
-var ending := false
-var sprites: Array = []  # ShipSprite per sim ship
 const PUFF := preload("res://assets/fx/puff.png")
+const BAND_GAP := [620.0, 420.0, 230.0, 90.0]
+
+var battle := DiceCombat.new()
+var enemy_data: Dictionary
+var sprites: Array = []
+var pickers := {}          # post -> OptionButton
+var busy := false
 
 @onready var camera: Camera2D = $Camera2D
 @onready var dialog = $ChoiceDialog
 
 
-func start(player_data: Dictionary, enemy: Dictionary, mode: String, wind_dir: float, wind_strength: float) -> void:
+func start(player_data: Dictionary, enemy: Dictionary, mode: String, _wind_dir: float, wind_strength: float) -> void:
 	enemy_data = enemy
-	sim.rng.randomize()
-	sim.setup(CombatSim.make_ship(player_data), CombatSim.make_ship(enemy), wind_dir, wind_strength, mode)
+	battle.rng.randomize()
+	var foe := enemy.duplicate(true)
+	foe.party = DiceCombat.npc_party(enemy, battle.rng)
+	battle.setup(DiceCombat.make_side(player_data), DiceCombat.make_side(foe), mode, wind_strength)
 	var flags := [player_data.get("flag", "white"), Data.table("factions")[enemy.faction].flag]
 	for i in 2:
 		var sp: Node2D = load("res://scenes/ship_sprite.tscn").instantiate()
 		add_child(sp)
-		sp.setup(sim.ships[i].type, flags[i])
-		sp.scale = Vector2.ONE * 0.6
+		sp.setup(battle.sides[i].type, flags[i])
+		sp.scale = Vector2.ONE * 0.8
 		sprites.append(sp)
-	_build_hud()
-	camera.position = sim.ships[0].pos
+	camera.position = Vector2(0, 40)
+	%Roll.pressed.connect(_roll)
+	_log("[i]The %s %s. Your officers await your orders.[/i]" % [enemy.label, enemy.name])
+	_refresh()
 
 
-func _process(delta: float) -> void:
-	if not ending:
-		_steer()
-		sim.step(delta * SPEEDS[speed_index])
-		for ev in sim.events:
-			_effect(ev)
-		sim.events.clear()
-		if sim.result == "boarding":
-			ending = true
-			_boarding()
-		elif sim.result != "":
-			ending = true
-			_end()
-	for i in sprites.size():
-		var s: Dictionary = sim.ships[i]
-		sprites[i].position = s.pos
-		sprites[i].rotation = deg_to_rad(s.heading)
-		sprites[i].set_state(s.hull / s.stats.hull, s.sails / s.stats.sails, s.sail_setting, s.struck)
-	for e in effects:
-		e.age += delta
-	effects = effects.filter(func(e): return e.age < 1.5)
-	_fit_camera(delta)
-	_update_hud()
+func _process(_delta: float) -> void:
+	_place_ships()
 	queue_redraw()
 
 
-func _steer() -> void:
-	var me: Dictionary = sim.ships[0]
-	me.helm = 0.0
-	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): me.helm -= 1.0
-	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): me.helm += 1.0
-
-
 func _unhandled_input(event: InputEvent) -> void:
-	if ending or not (event is InputEventKey and event.pressed and not event.echo):
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_SPACE, KEY_ENTER] and not busy and not dialog.visible:
+		_roll()
+
+
+# ---- orders ---------------------------------------------------------------
+
+func _refresh() -> void:
+	%Mine.text = _status(battle.sides[0], true)
+	%Theirs.text = _status(battle.sides[1], false)
+	var bands: Array = DiceCombat.cfg().bands
+	var track := PackedStringArray()
+	for b in bands.size():
+		track.append("[ %s ]" % bands[b].to_upper() if b == battle.band else bands[b])
+	%Info.text = "  —  ".join(track) + "        %s the weather gauge." % ("You hold" if battle.gauge == 0 else "They hold")
+	_build_party()
+
+
+func _build_party() -> void:
+	var box: GridContainer = %Party
+	var keep := {}
+	for post in pickers:  # remember choices between rounds
+		if is_instance_valid(pickers[post]) and pickers[post].selected >= 0:
+			keep[post] = pickers[post].get_selected_metadata()
+	UIKit.clear(box)
+	pickers = {}
+	var me: Dictionary = battle.sides[0]
+	var posts: Array = ["captain"] + DiceCombat.cfg().order.filter(func(p): return p != "captain")
+	for post in posts:
+		var m: Dictionary = me.party.get(post, {})
+		if m.is_empty():
+			UIKit.icon(box, "", 36)
+			UIKit.label(box, "%s: (vacant)" % _post_name(post), "Nobody holds this post, so it takes no action. Appoint officers in the crew screen.", Style.c("dim"))
+			UIKit.label(box, "")
+			UIKit.label(box, "")
+			continue
+		if m.id != "" and People.chars.has(m.id):
+			box.add_child(Portrait.make(People.person(m.id), "captain" if post == "captain" else "officer", 36))
+		else:
+			UIKit.icon(box, "", 36)
+		var skill: String = DiceCombat.cfg().post_skills[post]
+		UIKit.label(box, "%s: %s%s" % [_post_name(post), m.name, " (wounded)" if m.get("wounded", false) else ""],
+			"%s %d (%+d)" % [People.SKILL_NAMES.get(skill, skill), DiceCombat.value(m, skill), Dice.mod(DiceCombat.value(m, skill))])
+		var pick := OptionButton.new()
+		pick.custom_minimum_size = Vector2(330, 0)
+		var can := battle.available(0, post)
+		pick.add_item("(no action)")
+		pick.set_item_metadata(0, "")
+		for id in can:
+			var chance := battle.odds(0, post, id)
+			pick.add_item("%s  (%d%%)" % [can[id].name, int(round(chance * 100))])
+			pick.set_item_metadata(pick.item_count - 1, id)
+			pick.set_item_tooltip(pick.item_count - 1, can[id].description)
+			if keep.get(post, "") == id:
+				pick.select(pick.item_count - 1)
+		if pick.selected <= 0 and pick.item_count > 1 and not keep.has(post):
+			pick.select(_default_pick(post, pick))
+		box.add_child(pick)
+		pickers[post] = pick
+		var desc := UIKit.label(box, "")
+		pick.item_selected.connect(func(i): desc.text = _hint(post, pick.get_item_metadata(i)))
+		desc.text = _hint(post, pick.get_selected_metadata())
+
+
+func _default_pick(post: String, pick: OptionButton) -> int:
+	var prefer := {"captain": "steady", "boatswain": "close", "master_gunner": "round", "navigator": "read_wind",
+		"quartermaster": "arm", "carpenter": "plug", "surgeon": "tend"}
+	for i in pick.item_count:
+		if pick.get_item_metadata(i) == prefer.get(post, ""):
+			return i
+	return 1
+
+
+func _hint(post: String, id: String) -> String:
+	if id == "":
+		return ""
+	var a: Dictionary = DiceCombat.actions()[post][id]
+	if a.has("ammo"):
+		return "DC %d" % battle.gun_dc(0)
+	if a.has("vs"):
+		return "vs their %s" % _post_name(a.vs).to_lower()
+	return "DC %d" % battle._dc_for(0, id, a) if a.get("dc", 0) > 0 or id in ["close", "open", "demand"] else ""
+
+
+static func _post_name(post: String) -> String:
+	return "Captain" if post == "captain" else Data.rules.officer_roles[post].name
+
+
+func _status(s: Dictionary, mine: bool) -> String:
+	var crew := "%d" % s.crew if mine else "about %d" % (int(s.crew / 5.0) * 5)
+	var lines := PackedStringArray([
+		"%s (%s)" % [s.name, Data.table("ships")[s.type].name],
+		"Hull %d / %d   Sails %d / %d   Masts %d / %d" % [s.hull, s.stats.hull, s.sails, s.stats.sails, s.masts, s.stats.masts],
+		"Crew %s   Guns %d   Morale %d" % [crew, s.guns_working, s.morale],
+	])
+	var trouble := PackedStringArray()
+	if s.leak > 0: trouble.append("LEAKING")
+	if s.fire > 0: trouble.append("ON FIRE")
+	if s.rudder > 0: trouble.append("rudder damaged")
+	if s.armed: trouble.append("boarders armed")
+	if not trouble.is_empty():
+		lines.append(", ".join(trouble))
+	return "\n".join(lines)
+
+
+# ---- a round ----------------------------------------------------------------
+
+func _roll() -> void:
+	if busy or battle.result != "":
 		return
-	var me: Dictionary = sim.ships[0]
-	match event.keycode:
-		KEY_W, KEY_UP: me.sail_setting = mini(2, me.sail_setting + 1)
-		KEY_S, KEY_DOWN: me.sail_setting = maxi(0, me.sail_setting - 1)
-		KEY_Q: sim.fire(me, "port")
-		KEY_E: sim.fire(me, "starboard")
-		KEY_1: sim.set_ammo(me, "round")
-		KEY_2: sim.set_ammo(me, "chain")
-		KEY_3: sim.set_ammo(me, "grape")
-		KEY_B: _try_board()
-		KEY_SPACE: speed_index = 0 if speed_index > 0 else 1
+	busy = true
+	%Roll.disabled = true
+	var orders := {}
+	for post in pickers:
+		var id: String = pickers[post].get_selected_metadata()
+		if id != "":
+			orders[post] = id
+	var entries := battle.play_round(orders)
+	for e in entries:
+		_show_entry(e)
+		await get_tree().create_timer(0.35).timeout
+	_refresh()
+	busy = false
+	%Roll.disabled = false
+	if battle.result != "":
+		_end()
 
 
-func _try_board() -> void:
-	if not sim.board(0):
-		_note_text("Too far or too fast to board: get within %d and match her speed." % Data.rules.combat.board_distance)
-
-
-func _effect(ev: Dictionary) -> void:
-	match ev.kind:
-		"broadside":
-			var who := "Your" if ev.who == 0 else "Their"
-			var color := Color(1.0, 0.85, 0.3) if ev.hits > 0 else Color(0.9, 0.9, 0.9)
-			effects.append({"kind": "shot", "from": ev.from, "to": ev.to, "age": 0.0, "color": color})
-			effects.append({"kind": "text", "pos": ev.to, "age": 0.0, "color": Style.c("ink"),
-				"text": "%d hits" % ev.hits if ev.hits > 0 else "miss"})
-			_log("%s broadside (%s, %d guns): %d hits." % [who, Data.rules.combat.ammo[ev.ammo].name.to_lower(), ev.guns, ev.hits])
-			_gun_smoke(sim.ships[ev.who], ev.to, ev.guns)
-			if ev.hits > 0:
-				_burst(ev.to, Vector2.ZERO, Color("#7a5230"), mini(ev.hits * 2, 30), 180.0, Vector2(60, 140), 0.6, Vector2(0.15, 0.3))
-			else:
-				_burst(ev.to, Vector2.ZERO, Style.c("splash"), 14, 180.0, Vector2(30, 80), 0.5, Vector2(0.2, 0.45))
-		"note":
-			effects.append({"kind": "text", "pos": ev.pos + Vector2(0, -30), "age": 0.0, "color": Style.c("bad"), "text": ev.text})
-			_log(("Enemy: " if ev.who == 1 else "You: ") + ev.text)
-
-
-func _note_text(text: String) -> void:
+func _show_entry(e: Dictionary) -> void:
+	var who := "" if e.side < 0 else ("[color=#2b4a7a]You[/color] - " if e.side == 0 else "[color=#7a2e1c]Them[/color] - ")
+	var text: String = who + e.text
+	if not e.check.is_empty():
+		text += "\n      " + Dice.describe(e.check)
+		%DiceFace.text = str(e.check.roll)
+		%DiceFace.add_theme_color_override("font_color", Style.c("good") if e.check.success else Style.c("bad"))
 	_log(text)
+	if e.post == "master_gunner" and e.side >= 0 and not e.check.is_empty():
+		_gun_smoke(e.side, e.check.success)
 
 
-# ---- Drawing ---------------------------------------------------------------
+func _log(text: String) -> void:
+	%Log.append_text(text + "\n")
+
+
+# ---- drawing ---------------------------------------------------------------
+
+func _place_ships() -> void:
+	if sprites.is_empty():
+		return
+	var gap: float = BAND_GAP[battle.band]
+	sprites[battle.gauge].position = sprites[battle.gauge].position.lerp(Vector2(-gap / 2.0, 0), 0.08)
+	sprites[1 - battle.gauge].position = sprites[1 - battle.gauge].position.lerp(Vector2(gap / 2.0, 0), 0.08)
+	for i in 2:
+		var s: Dictionary = battle.sides[i]
+		sprites[i].set_state(s.hull / s.stats.hull, s.sails / s.stats.sails, 1, s.struck)
+
 
 func _draw() -> void:
-	var view := Rect2(camera.position - get_viewport_rect().size / camera.zoom, get_viewport_rect().size / camera.zoom * 2.0)
+	var view := Rect2(camera.position - get_viewport_rect().size, get_viewport_rect().size * 2.0)
 	draw_rect(view, Style.c("sea"))
-	var step := 100.0
-	var x := floorf(view.position.x / step) * step
-	while x < view.end.x:
-		draw_line(Vector2(x, view.position.y), Vector2(x, view.end.y), Style.c("ink_faint"), 1.0)
-		x += step
-	var y := floorf(view.position.y / step) * step
-	while y < view.end.y:
-		draw_line(Vector2(view.position.x, y), Vector2(view.end.x, y), Style.c("ink_faint"), 1.0)
-		y += step
-
-	var me: Dictionary = sim.ships[0]
-	var them: Dictionary = sim.ships[1]
-	_draw_arcs(me, Color(0.2, 0.5, 0.3), them)
-	_draw_arcs(them, Color(0.7, 0.2, 0.2), me)
-	_draw_ship(me, Color("#6b3d1a"))
-	_draw_ship(them, Color(Data.table("factions")[enemy_data.faction].color))
-	for e in effects:
-		var a: float = 1.0 - e.age / 1.5
-		if e.kind == "shot":
-			draw_line(e.from, e.to, Color(e.color, a), 2.0)
-		else:
-			draw_string(ThemeDB.fallback_font, e.pos - Vector2(50, e.age * 30), e.text, HORIZONTAL_ALIGNMENT_CENTER, 100, 16, Color(e.color, a))
+	for x in range(-1200, 1300, 100):
+		draw_line(Vector2(x, -800), Vector2(x, 800), Style.c("ink_faint"), 1.0)
+	var font := Style.font("italic")
+	var ink := Color(Style.c("ink"), 0.6)
+	draw_string(font, Vector2(-80, -150), "wind", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, ink)
+	draw_line(Vector2(-90, -138), Vector2(10, -138), ink, 2.0)
+	draw_colored_polygon(PackedVector2Array([Vector2(20, -138), Vector2(5, -145), Vector2(5, -131)]), ink)
+	for i in sprites.size():
+		var s: Dictionary = battle.sides[i]
+		draw_string(font, sprites[i].position + Vector2(-100, -100), s.name + (" (struck)" if s.struck else ""),
+			HORIZONTAL_ALIGNMENT_CENTER, 200, 18, Style.c("ink"))
 
 
-func _draw_arcs(s: Dictionary, color: Color, target: Dictionary) -> void:
-	var arc: float = Data.rules.combat.broadside_arc
-	var r := CombatSim.gun_range(s)
-	for side in ["port", "starboard"]:
-		var centre: float = s.heading + 90.0 * CombatSim.SIDE_SIGN[side]
-		var pts := PackedVector2Array([s.pos])
-		for i in 9:
-			pts.append(s.pos + Geo.from_bearing(centre - arc + arc * 2.0 * i / 8.0) * r)
-		var ready: bool = s.reload[side] <= 0.0
-		var bears: bool = CombatSim.bearing_side(s, target.pos) == side and s.pos.distance_to(target.pos) <= r
-		var alpha := 0.22 if ready and bears else (0.1 if ready else 0.04)
-		draw_colored_polygon(pts, Color(color, alpha))
-
-
-## Cannon smoke rolling off the firing side, with muzzle flashes along the hull.
-func _gun_smoke(s: Dictionary, aim: Vector2, guns: int) -> void:
-	var dir: Vector2 = (aim - s.pos).normalized()
-	var fwd := Geo.from_bearing(s.heading)
-	var length: float = sprites[sim.ships.find(s)].get_node("Hull").texture.get_height() * 0.6 * 0.8
-	for i in mini(guns, 6):
-		var p: Vector2 = s.pos + fwd * lerpf(-length / 2.0, length / 2.0, (i + 0.5) / mini(guns, 6)) + dir * 8.0
-		_burst(p, dir, Color(Style.c("smoke"), 0.55), 5, 30.0, Vector2(15, 35), 1.6, Vector2(0.6, 1.4))
+func _gun_smoke(i: int, hit: bool) -> void:
+	var from: Vector2 = sprites[i].position
+	var to: Vector2 = sprites[1 - i].position
+	var dir := (to - from).normalized()
+	for k in 5:
+		var p := from + Vector2(0, -40 + k * 20) + dir * 20.0
+		_burst(p, dir, Color(Style.c("smoke"), 0.55), 5, 30.0, Vector2(20, 45), 1.6, Vector2(0.6, 1.4))
 		_burst(p, dir, Style.c("flash"), 3, 20.0, Vector2(60, 110), 0.15, Vector2(0.2, 0.4))
+	if hit:
+		_burst(to, -dir, Color("#7a5230"), 20, 120.0, Vector2(60, 140), 0.6, Vector2(0.15, 0.3))
+	else:
+		_burst(to - dir * 60.0, Vector2.UP, Style.c("splash"), 16, 180.0, Vector2(30, 80), 0.6, Vector2(0.2, 0.45))
 
 
-## A one-shot puff of particles (Godot's CPUParticles2D) that cleans itself up.
 func _burst(pos: Vector2, dir: Vector2, color: Color, amount: int, spread: float, speed: Vector2, life: float, size: Vector2) -> void:
 	var p := CPUParticles2D.new()
 	p.texture = PUFF
@@ -173,7 +237,7 @@ func _burst(pos: Vector2, dir: Vector2, color: Color, amount: int, spread: float
 	p.explosiveness = 0.9
 	p.amount = maxi(amount, 1)
 	p.lifetime = life
-	p.direction = dir if dir != Vector2.ZERO else Vector2.RIGHT
+	p.direction = dir
 	p.spread = spread
 	p.gravity = Vector2.ZERO
 	p.initial_velocity_min = speed.x
@@ -191,138 +255,7 @@ func _burst(pos: Vector2, dir: Vector2, color: Color, amount: int, spread: float
 	get_tree().create_timer(life + 0.3).timeout.connect(p.queue_free)
 
 
-## Name labels above each ship (the ships themselves are ShipSprite nodes).
-func _draw_ship(s: Dictionary, _color: Color) -> void:
-	var length: float = sprites[sim.ships.find(s)].get_node("Hull").texture.get_height() * 0.6
-	var label := "%s%s" % [s.name, " (struck)" if s.struck else ""]
-	draw_string(Style.font("italic"), s.pos + Vector2(-90, -length * 0.6 - 8), label, HORIZONTAL_ALIGNMENT_CENTER, 180, 16, Style.c("ink"))
-
-
-func _fit_camera(delta: float) -> void:
-	var a: Vector2 = sim.ships[0].pos
-	var b: Vector2 = sim.ships[1].pos
-	camera.position = camera.position.lerp((a + b) / 2.0, minf(1.0, delta * 3.0))
-	var vp := get_viewport_rect().size
-	var span := maxf(absf(a.x - b.x) / vp.x, absf(a.y - b.y) / (vp.y * 0.55)) * 1.5  # the HUD covers ~45% of the height
-	var z := clampf(1.0 / maxf(span, 0.001), 0.35, 1.4)
-	camera.zoom = camera.zoom.lerp(Vector2(z, z), minf(1.0, delta * 2.0))
-
-
-# ---- HUD -------------------------------------------------------------------
-
-func _build_hud() -> void:
-	var c: Dictionary = Data.rules.combat
-	var row := %Controls
-	for ammo in ["round", "chain", "grape"]:
-		var b := UIKit.button(row, c.ammo[ammo].name, func(): sim.set_ammo(sim.ships[0], ammo),
-			"%s\nSwitching shot means reloading both broadsides." % c.ammo[ammo].description)
-		b.name = "ammo_" + ammo
-	for i in 3:
-		UIKit.button(row, c.sail_settings[i].name, func(): sim.ships[0].sail_setting = i,
-			["No way on: you'll drift and barely turn.", "Fighting canvas: slower, guns fully crewed.",
-			"All sail: fastest, but hands aloft slow your reloading (x%.1f)." % c.sail_settings[2].reload][i])
-	for preset in c_roles():
-		var p: Dictionary = Data.rules.crew_roles.presets[preset]
-		UIKit.button(row, p.name, func(): sim.set_roles(sim.ships[0], preset),
-			"%s\nSailors %d%%, gunners %d%%, marines %d%%. Re-stationing men restarts your reloading." % [
-			p.description, p.sailors * 100, p.gunners * 100, p.marines * 100])
-	var row2 := %Controls2
-	UIKit.button(row2, "Fire port (Q)", func(): sim.fire(sim.ships[0], "port"))
-	UIKit.button(row2, "Fire starboard (E)", func(): sim.fire(sim.ships[0], "starboard"))
-	UIKit.button(row2, "Board (B)", _try_board, "Close alongside and match her speed first.")
-	UIKit.button(row2, "Strike your colours", func(): sim.strike(0), "Surrender. They'll strip your hold and take half your gold.")
-	UIKit.button(row2, "Pause", func(): speed_index = 0)
-	UIKit.button(row2, "1x", func(): speed_index = 1)
-	UIKit.button(row2, "2x", func(): speed_index = 2)
-
-
-static func c_roles() -> Array:
-	return Data.rules.crew_roles.presets.keys()
-
-
-func _update_hud() -> void:
-	var me: Dictionary = sim.ships[0]
-	var them: Dictionary = sim.ships[1]
-	%Mine.text = _status(me, true)
-	%Theirs.text = _status(them, false)
-	%Info.text = "Distance %d (escape at %d)   Wind from %s   %s" % [sim.distance(), Data.rules.combat.escape_distance,
-		Geo.compass_name(sim.wind_dir), "PAUSED" if speed_index == 0 else "x%d" % SPEEDS[speed_index]]
-	%Compass.wind_dir = sim.wind_dir
-	%Compass.heading = me.heading
-	%Compass.queue_redraw()
-
-
-func _status(s: Dictionary, mine: bool) -> String:
-	var crew := "%d" % s.crew if mine else "about %d" % (int(s.crew / 5.0) * 5)
-	var lines := PackedStringArray([
-		"%s (%s)" % [s.name, Data.table("ships")[s.type].name],
-		"Hull %d / %d   Sails %d / %d   Masts %d / %d" % [s.hull, s.stats.hull, s.sails, s.stats.sails, s.masts, s.stats.masts],
-		"Crew %s   Guns %d   Morale %d" % [crew, s.guns_working, s.morale],
-		"Speed %.1f kn   %s   %s" % [s.speed / Data.rules.combat.px_per_knot, Data.rules.combat.sail_settings[s.sail_setting].name,
-			Data.rules.combat.ammo[s.ammo].name],
-	])
-	if mine:
-		lines.append("Port %s   Starboard %s   Range %d   Sailors %d  Gunners %d  Marines %d" % [_reload_text(s, "port"),
-			_reload_text(s, "starboard"), CombatSim.gun_range(s), CombatSim.sailors(s), CombatSim.gunners(s), s.crew * s.roles.marines])
-		if s.leak > 0.0:
-			lines.append("LEAKING %.1f hull/s" % s.leak)
-	return "\n".join(lines)
-
-
-func _reload_text(s: Dictionary, side: String) -> String:
-	return "READY" if s.reload[side] <= 0.0 else "%.0fs" % s.reload[side]
-
-
-func _log(text: String) -> void:
-	var lines: PackedStringArray = %Log.text.split("\n", false)
-	lines.append(text)
-	%Log.text = "\n".join(lines.slice(maxi(0, lines.size() - 3)))
-
-
-# ---- Boarding and the end --------------------------------------------------
-
-func _boarding() -> void:
-	var me: Dictionary = sim.ships[0]
-	var them: Dictionary = sim.ships[1]
-	var rng := sim.rng
-	var mine := {"crew": me.crew, "swordplay": me.swordplay, "captain_swordplay": me.captain_swordplay, "morale": me.morale,
-		"swivels": me.stats.swivels, "marines": me.roles.marines}
-	var theirs := {"crew": them.crew, "swordplay": them.swordplay, "captain_swordplay": them.captain_swordplay, "morale": them.morale,
-		"swivels": them.stats.swivels, "marines": them.roles.marines}
-	var report := Boarding.opening_volley(mine, theirs, rng)
-	report.push_front("%s! Grapnels fly and the ships crash together." % ("You board them" if sim.boarded_by == 0 else "They board you"))
-	var result := ""
-	var choices: Dictionary = Data.rules.boarding.choices
-	while result == "":
-		var options := []
-		for id in ["push", "hold", "captain"]:
-			options.append({"text": choices[id].name, "tooltip": choices[id].description})
-		options.append({"text": "Cut the grapples and fall back", "tooltip": "Back to the guns, if you can get clear."})
-		var text := "\n".join(report) + "\n\nYour men: %d (morale %d, swordplay %.1f)\nTheirs: about %d (morale %d)" % [
-			mine.crew, mine.morale, mine.swordplay, int(theirs.crew / 5.0) * 5, theirs.morale]
-		var pick: int = await dialog.ask("Boarding", text, options)
-		if pick == 3:
-			result = "cut"
-			break
-		var r := Boarding.fight_round(mine, theirs, ["push", "hold", "captain"][pick], Boarding.enemy_choice(theirs, mine), rng)
-		report = r.lines
-		result = r.result
-	for pair in [[me, mine], [them, theirs]]:
-		pair[0].casualties += pair[0].crew - pair[1].crew
-		pair[0].crew = pair[1].crew
-		pair[0].morale = pair[1].morale
-	me.captain_wounded = mine.get("captain_wounded", false)
-	match result:
-		"won": sim.strike(1)
-		"lost": sim.strike(0)
-		"cut":  # shove off and fight on
-			sim.result = ""
-			sim.boarded_by = -1
-			them.pos += (them.pos - me.pos).normalized() * 120.0
-			ending = false
-			return
-	_end()
-
+# ---- the end -----------------------------------------------------------------
 
 func _end() -> void:
 	var titles := {"enemy_struck": "She strikes her colours!", "player_struck": "You strike your colours",
@@ -332,18 +265,18 @@ func _end() -> void:
 		"player_struck": "The fight is lost. The enemy boards to take what they want.",
 		"enemy_sunk": "The %s slips beneath the waves, cargo and all." % enemy_data.name,
 		"player_sunk": "The sea takes your ship.",
-		"separated": "The distance between you grows until the %s is just a sail on the horizon." % enemy_data.name,
+		"separated": "The distance grows until the %s is just a sail on the horizon." % enemy_data.name,
 	}
-	var me: Dictionary = sim.ships[0]
-	if sim.result.ends_with("sunk"):  # let her go down before the report
-		var who := 1 if sim.result == "enemy_sunk" else 0
-		_burst(sim.ships[who].pos, Vector2.ZERO, Style.c("splash"), 40, 180.0, Vector2(20, 90), 1.2, Vector2(0.3, 0.7))
+	var me: Dictionary = battle.sides[0]
+	if battle.result.ends_with("sunk"):
+		var who := 1 if battle.result == "enemy_sunk" else 0
+		_burst(sprites[who].position, Vector2.UP, Style.c("splash"), 40, 180.0, Vector2(20, 90), 1.2, Vector2(0.3, 0.7))
 		var tw := create_tween().set_parallel()
 		tw.tween_property(sprites[who], "modulate:a", 0.0, 1.8)
 		tw.tween_property(sprites[who], "scale", sprites[who].scale * 0.7, 1.8)
 		await tw.finished
-	var text: String = texts[sim.result] + "\n\nYour casualties: %d.  Hull %d, sails %d." % [me.casualties, me.hull, me.sails]
-	if me.get("captain_wounded", false):
-		text += "\nYour captain was wounded in the fighting."
-	await dialog.ask(titles[sim.result], text, [{"text": "Continue"}])
-	finished.emit({"outcome": sim.result, "player": me, "enemy": sim.ships[1], "enemy_data": enemy_data})
+	var text: String = texts[battle.result] + "\n\nRounds fought: %d.  Your casualties: %d.  Hull %d, sails %d." % [battle.round_no, me.casualties, me.hull, me.sails]
+	if me.captain_wounded:
+		text += "\nYour captain was wounded."
+	await dialog.ask(titles[battle.result], text, [{"text": "Continue"}])
+	finished.emit({"outcome": battle.result, "player": me, "enemy": battle.sides[1], "enemy_data": enemy_data})

@@ -115,13 +115,11 @@ func test_warships_need_standing():
 
 func test_crew_roles_change_the_fight():
 	var side := Encounters.player_side(s)
-	var guns_deck := CombatSim.make_ship(side)
-	var sim := CombatSim.new()
-	sim.set_roles(guns_deck, "gun_deck")
-	var boarders := CombatSim.make_ship(side)
-	sim.set_roles(boarders, "boarders")
-	assert_gte(CombatSim.manned_guns(guns_deck), CombatSim.manned_guns(boarders))
-	assert_gt(Boarding.fighting_factor({"marines": 0.45}), Boarding.fighting_factor({"marines": 0.1}))
+	side.roles = Data.rules.crew_roles.presets.gun_deck.duplicate()
+	var guns := DiceCombat.make_side(side)
+	side.roles = Data.rules.crew_roles.presets.boarders.duplicate()
+	var boarders := DiceCombat.make_side(side)
+	assert_gte(DiceCombat._manned_guns(guns), DiceCombat._manned_guns(boarders))
 
 
 func test_starving_crew_fight_worse():

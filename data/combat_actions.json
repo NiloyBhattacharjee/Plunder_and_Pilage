@@ -1,0 +1,72 @@
+{
+  "_comment": "Battle actions, one list per officer post. skill: the skill (or stat) rolled. dc: fixed target, or vs: the enemy post whose skill opposes the roll. bands: range bands where it's allowed (0 Long, 1 Medium, 2 Close, 3 Grappled). Effects are implemented by id in scripts/combat/dice_combat.gd; numbers live here and in rules.json dice_combat.",
+
+  "captain": {
+    "rally":        {"name": "Rally the crew", "skill": "charisma", "dc": 12, "bands": [0, 1, 2, 3],
+                     "description": "A word, a roar, a promise of plunder. Restores morale."},
+    "intimidate":   {"name": "Show them no mercy", "skill": "intimidation", "vs": "captain", "vs_skill": "authority", "bands": [1, 2, 3],
+                     "description": "Hail them with threats. Their morale drops by how badly they lose the contest."},
+    "demand":       {"name": "Demand their surrender", "skill": "intimidation", "dc": 10, "bands": [0, 1, 2, 3],
+                     "description": "Order them to strike. Harder the steadier they are; your fearsome reputation helps. Success ends the fight."},
+    "duel":         {"name": "Seek out their captain", "skill": "swordplay", "vs": "captain", "vs_skill": "swordplay", "bands": [3],
+                     "description": "Blade to blade on their quarterdeck. Win and their crew breaks; lose and you're wounded."},
+    "steady":       {"name": "Hold steady", "skill": "authority", "dc": 8, "bands": [0, 1, 2, 3],
+                     "description": "Stand where the crew can see you. +1 to all your other officers' rolls this round."},
+    "strike":       {"name": "Strike your colours", "skill": "authority", "dc": 0, "bands": [0, 1, 2, 3],
+                     "description": "Surrender. They'll strip your hold and take half your gold."}
+  },
+  "boatswain": {
+    "close":        {"name": "Close the distance", "skill": "seamanship", "vs": "boatswain", "vs_skill": "seamanship", "bands": [0, 1],
+                     "description": "Bear down on them, one range band closer. Contested if they're trying to keep away."},
+    "open":         {"name": "Open the distance", "skill": "seamanship", "vs": "boatswain", "vs_skill": "seamanship", "bands": [1, 2],
+                     "description": "Bear away, one range band further. Contested if they're closing."},
+    "gauge":        {"name": "Take the weather gauge", "skill": "seamanship", "vs": "boatswain", "vs_skill": "seamanship", "bands": [0, 1, 2],
+                     "description": "Get upwind of them: +2 to manoeuvres and gunnery while you hold it."},
+    "grapple":      {"name": "Lay her alongside and grapple", "skill": "seamanship", "vs": "boatswain", "vs_skill": "seamanship", "bands": [2],
+                     "description": "Grappling hooks and boarding: the fight goes hand to hand."},
+    "flee":         {"name": "Crowd on sail and run", "skill": "seamanship", "vs": "boatswain", "vs_skill": "seamanship", "bands": [0],
+                     "description": "Break away for good. Faster, handier ships run better."},
+    "cut_loose":    {"name": "Cut the grapples", "skill": "seamanship", "dc": 12, "bands": [3],
+                     "description": "Hack through the lines and fall back to close range."},
+    "hold":         {"name": "Hold her steady", "skill": "seamanship", "dc": 8, "bands": [0, 1, 2],
+                     "description": "A steady deck: +2 to your gunner's roll this round."}
+  },
+  "master_gunner": {
+    "round":        {"name": "Broadside: round shot", "skill": "gunnery", "dc": 0, "bands": [0, 1, 2, 3], "ammo": "round",
+                     "description": "Smash her hull, guns and rudder. Too much and your prize sinks."},
+    "chain":        {"name": "Broadside: chain shot", "skill": "gunnery", "dc": 0, "bands": [0, 1, 2], "ammo": "chain",
+                     "description": "Shred her sails and bring down masts. She'll struggle to run or manoeuvre."},
+    "grape":        {"name": "Broadside: grape shot", "skill": "gunnery", "dc": 0, "bands": [1, 2, 3], "ammo": "grape",
+                     "description": "Sweep her deck of men. Softens a crew before boarding."},
+    "chase":        {"name": "Fire the chase guns", "skill": "gunnery", "dc": 0, "bands": [0, 1], "ammo": "round", "needs": "chase_guns",
+                     "description": "Long guns at bow and stern: a smaller shot, but it lands while you chase or flee."},
+    "join_boarders": {"name": "Gun crews join the boarders", "skill": "swordplay", "dc": 8, "bands": [3],
+                     "description": "Leave the guns: +2 to your side's melee this round."}
+  },
+  "navigator": {
+    "read_wind":    {"name": "Read the wind", "skill": "navigation", "dc": 12, "bands": [0, 1, 2],
+                     "description": "Call every shift of the breeze: +3 to your boatswain's roll this round."},
+    "shoals":       {"name": "Steer for the shoals", "skill": "navigation", "dc": 13, "bands": [0, 1, 2], "needs": "shallower",
+                     "description": "Your keel is shallower than hers. Lead her toward the shoals: she can't close or grapple this round, and your running is easier."}
+  },
+  "quartermaster": {
+    "push":         {"name": "Boarders: push forward", "skill": "swordplay", "dc": 0, "bands": [3], "stance": "push",
+                     "description": "Throw everyone at them: +2 to the melee roll, but the losses run high both ways."},
+    "hold_rail":    {"name": "Boarders: hold the rail", "skill": "swordplay", "dc": 0, "bands": [3], "stance": "hold",
+                     "description": "Fight from cover: -2 to the melee roll, but your losses are much lighter."},
+    "arm":          {"name": "Arm the boarders", "skill": "authority", "dc": 10, "bands": [0, 1, 2],
+                     "description": "Cutlasses, pistols, grenadoes up from the arms chest: +2 to your melee rolls for the rest of the fight."},
+    "keep_order":   {"name": "Keep order below", "skill": "authority", "dc": 11, "bands": [0, 1, 2, 3],
+                     "description": "Stop the rot before it spreads: restores a little morale and halves morale losses this round."}
+  },
+  "carpenter": {
+    "plug":         {"name": "Plug the shot holes", "skill": "carpentry", "dc": 10, "bands": [0, 1, 2, 3],
+                     "description": "Stop leaks and fires, and patch the hull."},
+    "rigging":      {"name": "Splice the rigging", "skill": "carpentry", "dc": 12, "bands": [0, 1, 2],
+                     "description": "Repair sails and rigging under fire."}
+  },
+  "surgeon": {
+    "tend":         {"name": "Tend the wounded", "skill": "medicine", "dc": 10, "bands": [0, 1, 2, 3],
+                     "description": "Patch men up and send some back to their stations. Morale rises when they see it."}
+  }
+}
