@@ -1,0 +1,138 @@
+{
+  "_comment": "Mutiny, step by step. scripts/crew.gd grows the unrest (a ringleader recruiting the discontented); these events are the warning signs and the captain's answers. 'priority' with a cooldown: each stage keeps coming back until it's dealt with. See docs/events.md.",
+
+  "unrest_grumbling": {
+    "title": "Grumbling",
+    "text": "The talk in the forecastle stops when you come forward. Men look at their boots. Somebody is stirring them up, and the crew's mood is sour.",
+    "where": "any", "priority": true, "cooldown": 20,
+    "conditions": ["unrest == 1"],
+    "choices": [
+      {"text": "Pay what's owed, now", "conditions": ["wages_owed > 0"], "outcomes": ["paywages", "calm 2", "morale +5 20"], "result": "Coin in hand quiets most of it."},
+      {"text": "Double the rum for a week", "conditions": ["cargo.rum >= 10"], "outcomes": ["cargo rum -10", "calm 1", "morale +5 15"], "result": "Rum and songs. For a while."},
+      {"text": "Ask your officers who's behind it", "check": {"who": "post.quartermaster", "skill": "authority", "dc": 12},
+       "outcomes": ["expose"], "result": "Your quartermaster knows exactly who it is.", "fail_outcomes": [], "fail_result": "Nobody will say."},
+      {"text": "Ignore it: sailors always grumble", "outcomes": [], "result": "It goes on behind your back."}
+    ]
+  },
+
+  "unrest_informer": {
+    "title": "A name",
+    "text": "{informant} catches you alone by the taffrail. 'You should know who's been talking against you, Captain.'",
+    "where": "any", "cooldown": 30, "weight": 30,
+    "conditions": ["unrest >= 1", "not unrest_known"],
+    "roles": {"informant": {"from": "crew", "where": ["opinion >= 10", "not trait.schemer"]}},
+    "choices": [
+      {"text": "Listen", "outcomes": ["expose", "opinion {informant} +5"], "result": "You have a name now."},
+      {"text": "Send them away: you won't have informers", "outcomes": ["honour +1", "opinion {informant} -5"], "result": "{informant} goes, puzzled and a little hurt."}
+    ]
+  },
+
+  "unrest_round_robin": {
+    "title": "A round robin",
+    "text": "A paper is nailed to the mainmast: the crew's grievances, signed in a circle so no one name stands first. Shares, pay, the way the ship is run.",
+    "where": "any", "priority": true, "cooldown": 20,
+    "conditions": ["unrest == 2"],
+    "choices": [
+      {"text": "Meet their demands", "outcomes": ["share +0.1", "paywages", "calm 4", "morale +8 30"], "result": "A bigger share and back pay. They cheer you, and the ringleader loses the audience."},
+      {"text": "Promise to put things right at the next port", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["calm 3", "morale +6 30", "event unrest_broken_promise 30 20"], "result": "They believe you. Be sure to keep it: pay what's owed within the month.",
+       "fail_outcomes": ["morale -5 20"], "fail_result": "They've heard promises before."},
+      {"text": "Tear it down in front of them", "check": {"who": "captain", "skill": "intimidation", "dc": 14},
+       "outcomes": ["fear +2", "calm 2"], "result": "Nobody steps forward to own it.", "fail_outcomes": ["opinion crew -5", "morale -5 30"], "fail_result": "They watch you do it. They'll remember."},
+      {"text": "Call the whole crew to a vote of confidence", "conditions": ["pirate"], "outcomes": ["confidence"], "result": "The articles say a pirate captain serves at the crew's pleasure."}
+    ]
+  },
+
+  "unrest_broken_promise": {
+    "title": "A broken promise",
+    "text": "A month has gone by. The crew remember what you promised.",
+    "where": "any", "chain_only": true,
+    "conditions": ["wages_owed > 20"],
+    "choices": [
+      {"text": "There was no money", "outcomes": ["morale -15 40", "opinion crew -5"], "result": "Nobody believes you twice."}
+    ]
+  },
+
+  "unrest_weapons_missing": {
+    "title": "Weapons missing",
+    "text": "The armourer reports cutlasses and two brace of pistols gone from the arms chest. Someone is getting ready.",
+    "where": "any", "priority": true, "cooldown": 15,
+    "conditions": ["unrest == 3"],
+    "choices": [
+      {"text": "Search the ship from stem to stern", "check": {"who": "post.quartermaster", "skill": "authority", "dc": 13},
+       "outcomes": ["expose", "calm 3", "fear +1"], "result": "The weapons turn up in a sea chest, and so does the name of the man who owns it.",
+       "fail_outcomes": ["morale -5 20"], "fail_result": "Nothing turns up but resentment."},
+      {"text": "Lock the arms chest and double the officers' watch", "outcomes": ["morale -3 20", "calm 1"], "result": "Your officers sleep with pistols under their pillows."},
+      {"text": "Speak to the whole crew, plainly", "check": {"who": "captain", "skill": "charisma", "dc": 14},
+       "outcomes": ["calm 4", "morale +5 20"], "result": "You talk about the voyage, the plunder to come, and the rope that waits for mutineers. Some of them think again.",
+       "fail_outcomes": ["opinion crew -3"], "fail_result": "Fine words, but they don't land."}
+    ]
+  },
+
+  "unrest_confront": {
+    "title": "The ringleader",
+    "text": "You know who has been stirring the crew: {leader}. The question is what to do about it.",
+    "where": "any", "cooldown": 20, "weight": 40,
+    "conditions": ["unrest >= 2", "unrest_known"],
+    "roles": {"leader": {"from": "ringleader"}},
+    "choices": [
+      {"text": "Hang {leader} from the yardarm", "outcomes": ["kill {leader}", "fear +4", "morale -6 30"], "result": "Without a head, the plot dies. The crew will fear you, and some will hate you for it."},
+      {"text": "Maroon {leader} on the next cay", "outcomes": ["leave {leader}", "fear +2", "morale -2 20"], "result": "A pistol, a bottle of water, and the horizon."},
+      {"text": "Put {leader} ashore at the next port", "outcomes": ["leave {leader}"], "result": "Quietly done. The plotters have lost their voice."},
+      {"text": "Buy {leader} off with a bigger share", "conditions": ["gold >= 100"], "outcomes": ["gold -100", "opinion {leader} +30", "calm 2"], "result": "Money talks. For now, {leader} is on your side."}
+    ]
+  },
+
+  "unrest_black_spot": {
+    "title": "The black spot",
+    "text": "{leader} walks up to you on the quarterdeck in front of the whole crew and presses a scrap of paper into your hand, blackened on one side with soot. The black spot: a summons to stand down, or else.",
+    "where": "any", "priority": true, "cooldown": 10,
+    "conditions": ["unrest == 4"],
+    "roles": {"leader": {"from": "ringleader"}},
+    "choices": [
+      {"text": "Laugh at it, and draw your sword", "outcomes": ["mutiny"], "result": "Steel comes out all over the deck."},
+      {"text": "Call a vote of the whole crew", "outcomes": ["confidence"], "result": "Let every hand decide."},
+      {"text": "Buy them off: shares and silver", "conditions": ["gold >= 200"], "outcomes": ["gold -30%", "share +0.1", "calm 6", "morale +10 30"], "result": "Expensive, but the spot goes over the side."},
+      {"text": "Stand down", "outcomes": ["depose"], "result": "You hand {leader} your sword. The crew will choose a new captain."}
+    ]
+  },
+
+  "mutiny_breaks_out": {
+    "title": "Mutiny!",
+    "text": "Shouts and a pistol shot on the main deck. The mutineers have broken open the arms chest and are coming aft for you.",
+    "where": "any", "priority": true, "cooldown": 5,
+    "conditions": ["unrest >= 5"],
+    "choices": [
+      {"text": "Fight", "outcomes": ["mutiny"], "result": "You and whoever stands with you meet them at the break of the quarterdeck."},
+      {"text": "Parley", "check": {"who": "captain", "skill": "charisma", "dc": 15, "bonus": [["honour >= 20", "Your word is good", 2]]},
+       "outcomes": ["share +0.15", "calm 999", "morale +5 30"], "result": "A deal: a bigger share, a fairer ship, and no hangings. The pistols go back in the chest.",
+       "fail_outcomes": ["mutiny"], "fail_result": "They're past talking."},
+      {"text": "Surrender the ship", "outcomes": ["depose"], "result": "You're bundled into the jolly boat. The ship sails on without you."}
+    ]
+  },
+
+  "crew_vote_course": {
+    "title": "The crew want a say",
+    "text": "By the articles, the crew can call a council on any great matter, and they're calling one now. They want more say in where the ship goes and what she hunts.",
+    "where": "any", "cooldown": 90,
+    "conditions": ["pirate", "morale < 45", "crew >= 10"],
+    "choices": [
+      {"text": "Hold the council and abide by it", "outcomes": ["morale +6 30", "opinion crew +2"], "result": "Loud, long and drunken, but they feel heard."},
+      {"text": "Put your captaincy to the vote", "outcomes": ["confidence"], "result": "If they want a new captain, let them say so."},
+      {"text": "The captain decides at sea. That's in the articles too", "check": {"who": "captain", "skill": "authority", "dc": 13},
+       "outcomes": [], "result": "Grudging nods.", "fail_outcomes": ["morale -6 30"], "fail_result": "They take it badly."}
+    ]
+  },
+
+  "sickness_spreading": {
+    "title": "The surgeon's report",
+    "text": "Your surgeon reports more of the crew down sick every day. Fresh food and rest ashore would do more than any physic.",
+    "where": "any", "cooldown": 30,
+    "conditions": ["sick >= 4", "at_sea"],
+    "choices": [
+      {"text": "Make for the nearest port", "outcomes": ["morale +3 15"], "result": "The men are glad of it. Set a course for land."},
+      {"text": "Give the sick double rations and keep going", "conditions": ["food >= 10"], "outcomes": ["food -15", "morale +2 15"], "result": "It helps a little."},
+      {"text": "No time. They'll mend or they won't", "outcomes": ["morale -5 20"], "result": "The healthy hands look at the sick and wonder if they're next."}
+    ]
+  }
+}

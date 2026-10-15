@@ -64,7 +64,14 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
 Everyone is a character on one model, kept in the `People` autoload: the captain, the crew, and later officials, rivals and council captains.
 A character has four leadership stats (authority, experience, intimidation, charisma), seven skills, 1 to 3 traits (some hidden), relations and a history, all 0 to 20.
 Traits change numbers even while hidden; tooltips show those modifiers as "something you don't know". Skills level up with use.
-The captain is just the character whose id is in `ship.state.captain`, so succession (milestone 8) only has to change that id.
+The captain is just the character whose id is in `ship.state.captain`; succession changes that id.
+
+`scripts/crew.gd` treats the crew as a body of people: morale (every part explained in its tooltip, plus timed modifiers from victories,
+defeats, mourning and events), articles (wages, or no prey, no pay, and the crew's share of every plunder; pirate crews vote on changes),
+rum, disease (scurvy, flux, yellow fever; the sick can't work), friendships and feuds, and unrest: a ringleader recruits the discontented,
+one stage a week (grumbling, round robin, weapons missing, black spot, mutiny), with events in `data/events/mutiny.json` for each stage.
+If the captain dies or is deposed, a pirate crew votes and anyone else follows the chain of command; a hard case can seize the ship by force.
+Name a successor in the crew screen to back them. Tuning in `rules.json` `crew`.
 
 ## Saves
 

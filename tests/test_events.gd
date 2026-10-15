@@ -37,6 +37,7 @@ func rich_state(kind: String) -> void:
 			s.officers[post] = free.pop_back()
 	for id in s.officers.values():
 		People.person(id).stats.intimidation = 12
+	s.unrest = {"leader": s.crew[0], "support": [s.crew[0]], "stage": 2, "known": true}
 	s.gold = 2000.0
 	s.cargo.rum = 20.0
 	s.cargo.silver = 5.0

@@ -17,9 +17,10 @@ const VERBS := {  # verb: [min args, max args]
 	"opinion": [2, 2], "relation": [2, 2], "honour": [1, 1], "fear": [1, 1], "notoriety": [1, 1],
 	"cargo": [2, 2], "loot": [2, 2], "food": [1, 1], "water": [1, 1], "hull": [1, 1], "sails": [1, 1], "wages": [1, 1], "paywages": [0, 0],
 	"skill": [3, 3], "trait": [2, 2], "untrait": [2, 2], "reveal": [1, 1],
-	"flag": [1, 2], "unflag": [1, 1], "abandon": [1, 1], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
+	"flag": [1, 2], "unflag": [1, 1], "abandon": [1, 1],
+	"morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
-const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number"]
+const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader"]
 
 var events := {}
 var errors := PackedStringArray()
@@ -178,6 +179,7 @@ func _bind(spec: Dictionary, ctx: Dictionary, vars: Dictionary) -> Variant:
 		"crew": cands = s.crew.duplicate()
 		"officer": cands = s.officers.values().filter(func(id): return People.chars.has(id))
 		"captain": cands = [s.captain]
+		"ringleader": cands = [s.unrest.leader] if s.unrest.leader in s.crew else []
 		"here": cands = [ctx.port] if ctx.port != "" else []
 		"port": cands = Ports.state.keys()
 		"nation": cands = Career.nations()
@@ -283,6 +285,12 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"port_faction": return Ports.port(ctx.port).faction if ctx.port != "" else ""
 		"port_fence": return ctx.port != "" and Ports.port(ctx.port).get("fence", false)
 		"port_is": return ctx.port != "" and Ports.port(ctx.port).faction == _faction(rest, ctx)
+		"morale": return Crew.morale(s, ctx.stats).value
+		"unrest": return s.unrest.stage
+		"unrest_known": return s.unrest.known
+		"sick": return Crew.sick_count(s)
+		"shares": return s.articles.pay == "shares"
+		"crew_share": return s.articles.crew_share * 100.0
 		"true": return true
 	return null
 
@@ -377,7 +385,8 @@ func resolve(inst: Dictionary, index: int, ctx: Dictionary) -> Dictionary:
 		var who := _who(ch.check.get("who", "captain"), ctx, vars)
 		if who != "" and ch.check.skill in People.SKILLS:
 			People.gain_xp(People.person(who), ch.check.skill, cfg().check_xp)
-	var res := {"text": text(ch.get("result" if success else "fail_result", ""), vars, ctx), "effects": [], "fight": {}}
+	var res := {"text": text(ch.get("result" if success else "fail_result", ""), vars, ctx), "effects": [], "fight": {},
+		"mutiny": false, "id": ev.id, "title": text(ev.title, vars, ctx)}
 	for o in ch.get("outcomes" if success else "fail_outcomes", []):
 		var line := _apply(_sub(o, vars, false), ctx, inst.vars, res)  # chains carry the roles, not the built-ins
 		if line != "":
@@ -447,14 +456,15 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			return "%d new hands join" % n if n > 0 else "No berths for more hands"
 		"kill", "leave":
 			var id := _who(a[1], ctx, vars)
-			if id == s.captain:
-				return ""
 			var nm: String = People.person(id).name
-			for post in s.officers.keys():
-				if s.officers[post] == id:
-					s.officers.erase(post)
-			s.crew.erase(id)
-			People.remove(id)
+			if id == s.captain:
+				if verb == "kill":
+					Crew.captain_dies(s, "killed")
+					return "Captain %s is dead" % nm
+				return ""
+			if verb == "kill":
+				Crew.mourn(s, id)
+			Crew.remove_hand(s, id)
 			return "%s %s" % [nm, "is dead" if verb == "kill" else "leaves the ship"]
 		"wound":
 			var c := People.person(_who(a[1], ctx, vars))
@@ -556,6 +566,34 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 		"time":
 			Clock.advance(float(a[1]))
 			return "%d days pass" % int(a[1])
+		"morale":
+			Crew.add_mod(s, "event_" + res.id, res.title, float(a[1]), float(a[2]))
+			return "Morale %+d for %d days" % [int(a[1]), int(a[2])]
+		"calm":
+			var before: int = s.unrest.support.size()
+			Crew.calm(s, int(a[1]))
+			return "%d of the malcontents come round" % (before - s.unrest.support.size()) if before > s.unrest.support.size() else ""
+		"expose":
+			if s.unrest.leader == "":
+				return ""
+			s.unrest.known = true
+			return "You know who is behind it: %s" % People.person(s.unrest.leader).name
+		"mutiny":
+			res.mutiny = true
+		"depose":
+			Crew.captain_dies(s, "stood down", true)
+			return "You step down as captain"
+		"share":
+			s.articles.crew_share = clampf(s.articles.crew_share + float(a[1]), 0.0, 0.8)
+			return "Crew's share of plunder now %d%%" % int(s.articles.crew_share * 100)
+		"confidence":
+			var v := Crew.vote(s, ctx.stats, 0.0, rng)
+			if v.passed:
+				Crew.calm(s, 999)
+				Crew.add_mod(s, "confidence", "Won a vote of confidence", 8, 40)
+				return "The crew back you, %d to %d" % [v.yes, v.no]
+			Crew.captain_dies(s, "voted out by the crew", true)
+			return "The crew vote you out, %d to %d" % [v.no, v.yes]
 	return ""
 
 
@@ -699,7 +737,8 @@ func validate() -> PackedStringArray:
 const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fear", "loyalty", "food", "water", "wages_owed",
 	"prizes", "hostages", "contracts", "year", "month", "date", "guns", "stolen", "cargo", "relation", "captain", "captain_trait",
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
-	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true"]
+	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
+	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share"]
 const TEXT_KEYS := ["date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality"]
 const CAND_KEYS := ["trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
 	"here", "contraband", "shipyard", "at_war", "mine", "price", "held"]

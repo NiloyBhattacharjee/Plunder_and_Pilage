@@ -43,7 +43,7 @@ use the role's name or "they". Historical figures and strangers described in the
 ## Roles
 
 `{"from": source, "where": [conditions on the candidate]}`. Sources: `crew`, `officer`, `captain`, `new` (a stranger who can be hired with `hire {role}`; `"pool": "official"` for officials; `"nation": "{role}"` to draw them from that nation; `"name"` and `"traits"` for historical figures),
-`port`, `here` (the port you're in), `nation`, `enemy` (a nation at war with your home or your commission), `good`, `number` (`"range": [min, max]`).
+`port`, `here` (the port you're in), `nation`, `enemy` (a nation at war with your home or your commission), `ringleader` (the leader of the unrest, if there is one), `good`, `number` (`"range": [min, max]`).
 
 Candidate conditions: characters `trait.X`, `known_trait.X`, `opinion` (of the captain), `officer`, `post`, `nationality`, `age`, `hidden`, any stat or skill;
 ports `faction`, `fence`, `here`, `contraband`, `shipyard`; nations `at_war.X`, `mine`; goods `price`, `held`. Any other key is read from the player's situation.
@@ -53,11 +53,11 @@ ports `faction`, `fence`, `here`, `contraband`, `shipyard`; nations `at_war.X`, 
 `key`, `not key`, or `key op value` with `== != < > <= >=`. Use `{role}` to compare with a bound value.
 
 Numbers: `gold`, `crew` (headcount), `hull`, `sails` (percent), `notoriety`, `honour`, `fear`, `loyalty` (the crew's average opinion of the captain),
-`food`, `water` (days left), `wages_owed`, `prizes`, `hostages`, `contracts`, `year`, `month`, `guns`, `stolen`, `cargo.GOOD`, `relation.FACTION`, `captain.STAT_OR_SKILL`.
+`food`, `water` (days left), `wages_owed`, `morale`, `unrest` (0-5: grumbling, round robin, weapons missing, black spot, mutiny), `sick`, `crew_share` (percent), `prizes`, `hostages`, `contracts`, `year`, `month`, `guns`, `stolen`, `cargo.GOOD`, `relation.FACTION`, `captain.STAT_OR_SKILL`.
 
 Faction words: `relation.X`, `war.X.Y`, `port_is.X` and the candidate key `at_war.X` also accept `port` (the port you're in), `home` and `marque`.
 
-Yes/no: `port_is.FACTION`, `at_sea`, `in_port`, `storm`, `pirate`, `privateer`, `honest`, `wanted`, `pardoned`, `pardon_open.FACTION`, `war.A.B`, `flag.NAME`,
+Yes/no: `unrest_known`, `shares` (no prey, no pay), `port_is.FACTION`, `at_sea`, `in_port`, `storm`, `pirate`, `privateer`, `honest`, `wanted`, `pardoned`, `pardon_open.FACTION`, `war.A.B`, `flag.NAME`,
 `contract.TEMPLATE`, `captain_trait.TRAIT`, `has_officer.POST`, `port_fence`, `true`.
 
 Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `marque`, `home`.
@@ -68,7 +68,7 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 |---|---|
 | `gold +100`, `gold -10%` | Money |
 | `crew +3`, `crew -2` | Recruits from the local mix, or random hands lost |
-| `kill {r}`, `leave {r}`, `wound {r}`, `hire {r}` | One person |
+| `kill {r}`, `leave {r}`, `wound {r}`, `hire {r}` | One person (`kill captain` really kills the captain: someone else takes over) |
 | `opinion {r} +5`, `opinion crew -3` | Their opinion of the captain |
 | `relation spain -5` | Standing. Also `port` (this port's nation), `home`, `marque`, or a `{role}` holding a nation |
 | `honour +2`, `fear +1`, `notoriety +3` | Reputation |
@@ -76,6 +76,9 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `hull -15`, `sails -10`, `wages +50`, `paywages` | Ship and pay (`paywages` pays what you can of the back wages) |
 | `skill {r} gunnery +1`, `trait {r} brave`, `untrait {r} drunkard`, `reveal {r}` | People change |
 | `flag NAME [days]`, `unflag NAME` | Remember something for later events |
+| `morale +10 30` | A morale modifier for 30 days, named after the event |
+| `calm 3`, `expose`, `share +0.1` | Talk 3 plotters round; learn who leads the unrest; change the crew's share |
+| `confidence`, `mutiny`, `depose` | A vote of confidence (lose it and you're out); the mutiny breaks now; the captain steps down |
 | `abandon TEMPLATE` | Fails your active contract of that template (a double-cross, a bribe taken) |
 | `event ID [delay] [window]` | Chain: queue another event, with the same roles, after `delay` days; it waits up to `window` days for its conditions |
 | `fight KIND [faction] [mode]` | A battle: `merchant`, `pirate`, `navy`, `hunter`; mode `defend` (default), `attack`, `ambush`, `flee` |

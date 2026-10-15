@@ -59,7 +59,7 @@ func _process(_delta: float) -> void:
 				flags.select(i)
 	var weather: String = Data.rules.storms[w.storm].name if w.storm != "" else ("Calm" if Weather.calm else "Fair")
 	lines.append("Wind: from %s, %s" % [Geo.compass_name(w.dir), weather])
-	info.tooltip_text = ship.speed_text if not ship.route.is_empty() else ""
+	info.tooltip_text = (ship.speed_text + "\n\n" if not ship.route.is_empty() else "") + Crew.morale(s, ship.stats).text
 	if ship.anchored_at != "":
 		lines.append("At anchor: " + Data.table("ports")[ship.anchored_at].name)
 	elif not ship.route.is_empty():
@@ -70,7 +70,10 @@ func _process(_delta: float) -> void:
 		lines.append("Hove to")
 	lines.append("")
 	lines.append("Hull %d / %d   Sails %d / %d   Fouling %d%%" % [s.hull, ship.stats.hull, s.sails, ship.stats.sails, int(s.fouling * 100)])
-	lines.append("Crew %d (needs %d, berths %d)" % [ShipStats.headcount(s), ShipStats.crew_needed(s, ship.stats), ship.stats.crew_max])
+	var mood := Crew.morale(s, ship.stats)
+	var sick := Crew.sick_count(s)
+	lines.append("Crew %d (needs %d, berths %d)%s" % [ShipStats.headcount(s), ShipStats.crew_needed(s, ship.stats), ship.stats.crew_max, ", %d sick" % sick if sick > 0 else ""])
+	lines.append("Morale %d%s" % [mood.value, ("   Unrest: " + Crew.stage_name(s)) if s.unrest.stage > 0 else ""])
 	lines.append("Food %d (%d days)    Water %d (%d days)" % [s.cargo.get("food", 0), ship.days_of("food"), s.cargo.get("water", 0), ship.days_of("water")])
 	lines.append("Hold %d / %d tons" % [Market.cargo_used(s.cargo), ship.capacity()] + ("   Prizes: " + ", ".join(s.prizes.map(func(p): return p.name)) if not s.prizes.is_empty() else ""))
 	lines.append("Gold %d" % s.gold + ("    Wages owed %d" % s.wages_owed if s.wages_owed > 0 else ""))

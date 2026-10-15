@@ -131,7 +131,10 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	remove_cargo(s, good, qty, n_stolen)
 	s.gold += income
 	ps.stock[good] += qty * Market.weight(good)
-	return {"ok": true, "text": "Sold %d %s for %d." % [qty, _name(good), income], "value": income}
+	var text := "Sold %d %s for %d." % [qty, _name(good), income]
+	if n_stolen > 0:  # plunder: the crew take their share by the articles
+		text += " " + Crew.plunder(s, income * n_stolen / float(qty))
+	return {"ok": true, "text": text.strip_edges(), "value": income}
 
 
 ## Removes cargo and the matching share of what was paid for it. `stolen_part` of it was stolen
@@ -181,7 +184,7 @@ func sell_prize(id: String, index: int, s: Dictionary) -> Dictionary:
 	s.gold += value
 	s.crew.append_array(prize.crew)
 	s.prizes.remove_at(index)
-	return {"ok": true, "text": "Sold the prize %s for %d." % [prize.name, value]}
+	return {"ok": true, "text": ("Sold the prize %s for %d. " % [prize.name, value] + Crew.plunder(s, value)).strip_edges()}
 
 
 func prize_value(id: String, prize: Dictionary) -> int:
@@ -224,7 +227,7 @@ func ransom(id: String, s: Dictionary, index: int) -> Dictionary:
 	var name: String = People.person(h.id).name
 	People.remove(h.id)
 	s.hostages.remove_at(index)
-	return {"ok": true, "text": "%s is ransomed for %d gold." % [name, h.ransom]}
+	return {"ok": true, "text": ("%s is ransomed for %d gold. " % [name, h.ransom] + Crew.plunder(s, h.ransom)).strip_edges()}
 
 
 func recruit_opts(id: String) -> Dictionary:

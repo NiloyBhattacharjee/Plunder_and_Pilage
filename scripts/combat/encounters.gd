@@ -66,14 +66,12 @@ static func player_side(s: Dictionary) -> Dictionary:
 	var brave := crew.filter(func(c): return "brave" in c.traits or "bloodthirsty" in c.traits).size()
 	var cowards := crew.filter(func(c): return "cowardly" in c.traits).size()
 	var share := float(brave - cowards) / maxf(crew.size(), 1.0)
-	var morale := 40.0 + People.value(cap, "authority") + People.value(cap, "charisma") + share * 60.0
-	if s.cargo.get("food", 0.0) <= 0.0 or s.cargo.get("water", 0.0) <= 0.0:
-		morale -= Data.rules.hardship.starving_morale  # starving men fight badly
+	var morale: float = Crew.morale(s, ShipStats.effective(s.type, s.upgrades)).value + share * 30.0  # brave hands steady the rest
 	morale = clampf(morale, 10.0, 95.0)
 	var preset: Dictionary = Data.rules.crew_roles.presets[s.get("roles", "balanced")]
 	return {
 		"name": s.name, "type": s.type, "upgrades": s.upgrades, "hull": s.hull, "sails": s.sails,
-		"crew": ShipStats.headcount(s), "guns_lost": s.get("guns_lost", 0),
+		"crew": Crew.able(s), "guns_lost": s.get("guns_lost", 0),
 		"gunnery": (ShipStats.officer_skill(s, "master_gunner") + avg.call("gunnery")) / 2.0,
 		"swordplay": avg.call("swordplay"), "captain_swordplay": People.value(cap, "swordplay"),
 		"carpentry": ShipStats.officer_skill(s, "carpenter"),
@@ -131,9 +129,13 @@ static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGene
 		if not maimed.is_empty():
 			msgs.append("Maimed: " + ", ".join(maimed) + ".")
 	if after.get("captain_wounded", false):
-		var t := People.wound(ShipStats.captain(s))
-		if t != "":
-			msgs.append("Your captain will carry this fight forever: %s." % Data.table("traits")[t].name.to_lower())
+		if rng.randf() < Data.rules.crew.battle_death_chance:
+			Crew.captain_dies(s, "fell in battle")
+			msgs.append("Captain %s has fallen." % ShipStats.captain(s).name)
+		else:
+			var t := People.wound(ShipStats.captain(s))
+			if t != "":
+				msgs.append("Your captain will carry this fight forever: %s." % Data.table("traits")[t].name.to_lower())
 	for id in after.get("officer_wounds", []):
 		if People.chars.has(id) and id in s.crew:
 			var t := People.wound(People.person(id))
@@ -147,7 +149,7 @@ static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGene
 	return msgs
 
 
-## Removes n random crew (officers included). The captain isn't killed until succession exists (milestone 8).
+## Removes n random crew (officers included). Friends mourn them.
 static func kill_crew(s: Dictionary, n: int, rng: RandomNumberGenerator) -> Array:
 	var named := []
 	for i in mini(n, s.crew.size()):
@@ -161,8 +163,8 @@ static func kill_crew(s: Dictionary, n: int, rng: RandomNumberGenerator) -> Arra
 			named.append("%s (%s)" % [People.person(id).name, Data.rules.officer_roles[post].name])
 		elif People.person(id).traits.has("popular"):
 			named.append(People.person(id).name)
-		s.crew.erase(id)
-		People.remove(id)
+		Crew.mourn(s, id)
+		Crew.remove_hand(s, id)
 	return named
 
 

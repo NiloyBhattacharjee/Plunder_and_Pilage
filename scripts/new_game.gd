@@ -57,6 +57,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 		"career": {"pirate": false, "marque": "", "service": 0.0, "rank": 0, "crown_debt": 0.0, "pardoned_by": []},
 	}
 	auto_appoint(state, 7)
+	Crew.ensure(state)
 	return {"state": state, "start_port": start_port}
 
 

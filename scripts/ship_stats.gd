@@ -71,7 +71,7 @@ static func condition(state: Dictionary, stats: Dictionary) -> Dictionary:
 	parts.append(["Sails %d%%" % int(sails_frac * 100), lerpf(c.min_sail_speed, 1.0, sails_frac)])
 	parts.append(["Fouled hull %d%%" % int(state.fouling * 100), 1.0 - c.fouling_speed_loss * state.fouling])
 	var need := crew_needed(state, stats)
-	var have := headcount(state)
+	var have := Crew.able(state)  # the sick don't haul on ropes
 	if have < need:
 		parts.append(["Short-handed %d / %d" % [have, need], maxf(c.min_crew_speed, float(have) / need)])
 	var seam := People.value(captain(state), "seamanship")

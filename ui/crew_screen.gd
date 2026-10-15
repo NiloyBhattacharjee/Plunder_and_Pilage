@@ -73,6 +73,11 @@ func _build_captain(cap: Dictionary) -> void:
 	UIKit.label(box, "Log", "", Style.c("header"))
 	for line in cap.history:
 		UIKit.label(box, line, "", Style.c("dim"))
+	if not s.captains.is_empty():
+		UIKit.label(box, "")
+		UIKit.label(box, "Captains of the %s" % s.name, "Everyone who has commanded this ship before you.", Style.c("header"))
+		for c in s.captains:
+			UIKit.label(box, "%s, until %s: %s" % [c.name, c.until, c.fate], "", Style.c("dim"))
 
 
 ## Stats, skills and traits for any character, with breakdown tooltips.
@@ -212,6 +217,7 @@ func _build_crew() -> void:
 	if crew.is_empty():
 		UIKit.label(box, "No crew aboard.")
 		return
+	_build_mood(box)
 	var avg := {}
 	for sk in ["seamanship", "gunnery", "swordplay"]:
 		var total := 0
@@ -235,10 +241,8 @@ func _build_crew() -> void:
 	var unknown := crew.filter(func(c): return not c.hidden.is_empty()).size()
 	UIKit.label(box, "%d hands still have traits you haven't discovered. Time at sea brings them out." % unknown, "", Style.c("dim"))
 
-	var by_lead := crew.duplicate()
-	by_lead.sort_custom(func(a, b): return People.leadership(a) > People.leadership(b))
-	_people_list(box, "Possible successors", by_lead.slice(0, 3),
-		"Authority + charisma + experience. If the captain falls, the crew will look to these.")
+	_build_successors(box)
+	_build_bonds(box)
 	var trouble := crew.filter(func(c):
 		var known := People.known_traits(c)
 		var stirs := known.any(func(t): return "ringleader" in Data.table("traits")[t].get("tags", []))
@@ -268,3 +272,83 @@ static func _best_skill(c: Dictionary) -> int:
 	for sk in People.SKILLS:
 		best = maxi(best, People.value(c, sk))
 	return best
+
+
+## Morale and what drives it, the articles, unrest and sickness.
+func _build_mood(box: Node) -> void:
+	var s: Dictionary = ship.state
+	var m := Crew.morale(s, ship.stats)
+	UIKit.label(box, "Morale %d" % m.value, m.text + "\n\nMorale steadies the crew in battle, keeps them from deserting in port, and decides whether anyone listens to a would-be mutineer.",
+		Style.c("header"))
+	var a: Dictionary = s.articles
+	var vote_note := "\nAs a pirate crew, they vote on any change to the articles." if s.career.pirate else ""
+	var row := UIKit.row(box)
+	UIKit.label(row, "Articles:", "The terms the crew signed on for." + vote_note, Style.c("header"))
+	var w := UIKit.button(row, "Wages", func(): _articles("wages", a.crew_share),
+		"Daily wages, paid or owed. Steady, and costly when there's no plunder." + vote_note)
+	w.disabled = a.pay == "wages"
+	var sh := UIKit.button(row, "No prey, no pay", func(): _articles("shares", a.crew_share),
+		"No wages: the crew live on their share of plunder. Cheap, until a month goes by without a prize." + vote_note)
+	sh.disabled = a.pay == "shares"
+	UIKit.label(row, "  Crew's share of plunder: %d%%" % int(round(a.crew_share * 100)),
+		"Taken from every strongbox, ransom, prize sale and sale of stolen goods. A fair share is %d%%; greedy hands care most." % int(Data.rules.crew.fair_share * 100))
+	UIKit.button(row, "-5%", func(): _articles(a.pay, a.crew_share - 0.05), "Less for the crew, more for you. They'll resent it." + vote_note)
+	UIKit.button(row, "+5%", func(): _articles(a.pay, a.crew_share + 0.05), "More for the crew." + vote_note)
+	var u: Dictionary = s.unrest
+	if u.stage > 0:
+		var who := ("%s is behind it" % People.person(u.leader).name) if u.known and u.leader != "" else "Someone is stirring them up; you don't know who"
+		UIKit.label(box, "Unrest: %s. %s, and %s hands are listening." % [Crew.stage_name(s), who, "a handful of" if u.support.size() < 5 else "about %d" % (int(round(u.support.size() / 5.0)) * 5)],
+			"Unrest grows when morale is low and a ringleader (ambitious, greedy or a schemer, with charisma or menace) finds unhappy listeners. It runs: grumbling, a round robin, weapons going missing, the black spot, mutiny.\nPay, rum, plunder, a fair share and fewer floggings bring the listeners back.",
+			Style.c("bad"))
+	var sick: Array = (s.crew + [s.captain]).filter(func(id): return People.person(id).get("sick", "") != "")
+	if not sick.is_empty():
+		UIKit.label(box, "Sick: %s." % ", ".join(sick.map(func(id): return "%s (%s)" % [People.person(id).name, Data.rules.crew.disease[People.person(id).sick].name.to_lower()])),
+			"The sick still eat but can't work: the ship sails as if short-handed. A good surgeon saves lives and speeds recovery; rest in port helps most.\nScurvy comes with long voyages, the flux with short supplies, yellow fever in the summer months.",
+			Style.c("bad"))
+	UIKit.label(box, "")
+
+
+func _articles(pay: String, share: float) -> void:
+	%Status.text = Crew.set_articles(ship.state, ship.stats, pay, share, People.rng)
+	message.emit(%Status.text)
+	refresh()
+
+
+## Who would take over, and the heir you can name to give them the crew's backing.
+func _build_successors(box: Node) -> void:
+	var s: Dictionary = ship.state
+	var steady := RandomNumberGenerator.new()
+	steady.seed = hash(s.captain + str(int(Clock.day)))  # the same estimate every time you look, today
+	var cands := Crew.candidates(s, steady)
+	UIKit.label(box, "")
+	UIKit.label(box, "If the captain falls", "%s\nName a successor to give them your backing: the crew weigh your word by your authority.\nSomeone with intimidation %d or more can seize the ship by force whatever the crew want." % [
+		"A pirate crew vote for a new captain." if Crew.culture(s) == "election" else "The chain of command: your heir if they're an officer, then the quartermaster, then the most experienced officer, unless the crew won't follow them.",
+		Data.rules.crew.seize_intimidation], Style.c("header"))
+	for c in cands.slice(0, 4):
+		var p := People.person(c.id)
+		var line := UIKit.row(box)
+		line.add_child(Portrait.make(p, "officer" if c.id in s.officers.values() else "crew", 40))
+		UIKit.label(line, "%s%s - about %d%% of the crew would back them" % [p.name, " (%s)" % c.why if c.why != "" else "", int(c.support * 100)], People.describe(p))
+		if c.id != s.heir:
+			UIKit.button(line, "Name as successor", func():
+				s.heir = c.id
+				%Status.text = "%s is your chosen successor." % p.name
+				refresh())
+
+
+func _build_bonds(box: Node) -> void:
+	var s: Dictionary = ship.state
+	var friends := []
+	for id in s.crew:
+		for f in Crew.friends_of(s, id):
+			if f > id:
+				friends.append([id, f])
+	var feuds := Crew.feuds(s)
+	if friends.is_empty() and feuds.is_empty():
+		return
+	UIKit.label(box, "")
+	UIKit.label(box, "Friends and feuds", "Friendships form between like-minded hands; feuds between clashing ones. Friends mourn each other and follow each other into a mutiny; feuding hands come to blows.", Style.c("header"))
+	for pair in friends.slice(0, 6):
+		UIKit.label(box, "%s and %s are friends." % [People.person(pair[0]).name, People.person(pair[1]).name], "", Style.c("good"))
+	for pair in feuds.slice(0, 6):
+		UIKit.label(box, "%s and %s can't stand each other." % [People.person(pair[0]).name, People.person(pair[1]).name], "", Style.c("bad"))

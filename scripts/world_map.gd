@@ -115,6 +115,14 @@ func _daily() -> void:
 	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
 	for m in Contracts.daily(s):
 		hud.show_message(m)
+	if s.has("succession") and not busy():
+		run_succession()
+		return
+	if not busy() and s.hull > 0:
+		var inst_any := Events.pick("any", _event_ctx()) if ship.anchored_at != "" else {}
+		if not inst_any.is_empty():
+			run_event(inst_any)
+			return
 	if ship.anchored_at == "" and not busy() and s.hull > 0:
 		var inst := Events.pick("sea", _event_ctx())
 		if not inst.is_empty():
@@ -258,11 +266,85 @@ func run_event(inst: Dictionary) -> void:
 ".join(res.effects)
 	if body != "":
 		await dialog.ask(v.title, body, [{"text": "Continue"}])
-	_in_event = false
 	hud.show_message("%s: %s" % [v.title, ", ".join(res.effects.filter(func(e): return not e.begins_with("d20")))] if not res.effects.is_empty() else v.title)
+	if res.mutiny:
+		await run_mutiny()
+	_in_event = false
+	if ship.state.has("succession"):
+		await run_succession()
+		return
 	if not res.fight.is_empty():
 		start_combat(Encounters.generate(res.fight.faction, rng, res.fight.kind), res.fight.mode)
 		return
+	UIKit.resume_clock()
+
+
+## Blades out on the main deck. Win, and decide what happens to the mutineers.
+func run_mutiny() -> void:
+	var s: Dictionary = ship.state
+	var r := Crew.mutiny(s, rng)
+	var roll := Dice.describe(r.check).replace("[b]", "").replace("[/b]", "").replace("[/color]", "").replace("[color=#2e6b3a]", "").replace("[color=#a3261b]", "")
+	if r.outcome != "crushed":
+		await dialog.ask("Mutiny", r.text + "
+
+" + roll, [{"text": "Continue"}])
+		hud.show_message(r.text)
+		return
+	var pick: int = await dialog.ask("The mutiny is crushed", r.text + "
+
+" + roll, [
+		{"text": "Hang the ringleader", "tooltip": "Fear +3. The other mutineers will hate you a little more."},
+		{"text": "Maroon them all", "tooltip": "Every mutineer is put off the ship. Fear +2. You lose %d hands." % r.rebels.size()},
+		{"text": "Forgive them", "tooltip": "Honour +2. They think better of you; some think you weak."},
+	])
+	hud.show_message(Crew.punish(s, r.rebels, ["hang", "maroon", "forgive"][pick]))
+
+
+## The captain is gone. The crew choose, by vote or by chain of command, unless someone takes the ship by force.
+func run_succession() -> void:
+	var s: Dictionary = ship.state
+	UIKit.pause_clock()
+	_in_event = true
+	var old := ShipStats.captain(s)
+	var cause: String = s.succession.cause
+	if s.crew.is_empty():
+		s.captains.append({"name": old.name, "until": Clock.date_string(), "fate": cause})
+		var line := "
+".join(s.captains.map(func(c): return "%s (until %s, %s)" % [c.name, c.until, c.fate]))
+		await dialog.ask("The end of the %s" % s.name, "Captain %s %s, and there is no one left to take the helm.
+
+The captains of the %s:
+%s" % [
+			old.name, cause, s.name, line], [{"text": "Start a new game"}])
+		get_tree().change_scene_to_file("res://ui/new_game.tscn")
+		return
+	var cands := Crew.candidates(s, rng)
+	var winner := Crew.chosen(s, cands)
+	var lines := PackedStringArray()
+	for c in cands:
+		var p := People.person(c.id)
+		lines.append("%s%s: %d%% of the crew" % [p.name, " (%s)" % c.why if c.why != "" else "", int(c.support * 100)])
+	var how_text: String = "By the articles, the crew vote." if Crew.culture(s) == "election" else "By the chain of command, the next in line takes over, unless the crew won't follow them."
+	var options := [{"text": "%s takes command (%s)" % [People.person(winner.id).name, "elected" if winner.how == "elected" else "chain of command"],
+		"tooltip": People.describe(People.person(winner.id))}]
+	var force: Array = Crew.strongmen(s).filter(func(id): return id != winner.id).slice(0, 2)
+	for id in force:
+		options.append({"text": "%s seizes the ship by force" % People.person(id).name,
+			"tooltip": People.describe(People.person(id)) + "
+
+Nobody will argue with them, but the crew start out resentful (morale %d)." % Data.rules.crew.by_force})
+	var pick: int = await dialog.ask("Captain %s %s" % [old.name, cause], "%s
+
+%s
+
+You will play on as the new captain." % [how_text, "
+".join(lines)], options)
+	var id: String = winner.id if pick == 0 else force[pick - 1]
+	for m in Crew.make_captain(s, id, winner.how if pick == 0 else "force"):
+		hud.show_message(m)
+	ship.refresh_stats()
+	Contracts.changed.emit()
+	_in_event = false
 	UIKit.resume_clock()
 
 
@@ -396,6 +478,11 @@ func _on_combat_finished(result: Dictionary) -> void:
 		shipping.remove(current_npc)
 	current_npc = {}
 	match result.outcome:
+		"enemy_struck", "enemy_sunk":
+			Crew.add_mod(s, "battle", "Victory over the %s" % e.name, Data.rules.crew.victory, Data.rules.crew.victory_days)
+		"player_struck":
+			Crew.add_mod(s, "battle", "We struck our colours", Data.rules.crew.defeat, Data.rules.crew.defeat_days)
+	match result.outcome:
 		"enemy_struck":
 			ShipStats.captain(s).history.append("Took the %s %s, %s." % [Data.table("factions")[e.faction].name, e.name, Clock.date_string()])
 			prize_screen.open(ship, result)
@@ -413,6 +500,9 @@ func _on_combat_finished(result: Dictionary) -> void:
 			_on_foundered()
 			return
 	ship.refresh_stats()
+	if s.has("succession"):
+		await run_succession()
+		return
 	UIKit.resume_clock()
 
 

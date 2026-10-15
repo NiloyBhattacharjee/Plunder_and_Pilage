@@ -156,6 +156,30 @@
 
   "fence": {"legal_mult": 0.5},
   "encounters": {"daily_chance": 0.12, "hostile_relation": -25, "friendly_pirate_relation": 20},
+  "crew": {
+    "morale_base": 50, "wages_paid": 5, "unpaid_per_day": 2.0, "unpaid_max": 30, "no_prey_grace": 25, "no_prey_per_day": 0.6,
+    "fair_share": 0.3, "share_morale": 40, "greedy_share_mult": 2.0,
+    "no_food": -20, "no_water": -25, "rum": 5, "rum_per_crew": 0.02, "comfort": 2.0, "sick": 40,
+    "captain_per_point": 0.5, "opinion_weight": 0.3, "share_mod_per_gold": 0.8, "shares_max_mod": 15, "shares_days": 25,
+    "victory": 10, "victory_days": 30, "defeat": -15, "defeat_days": 40, "mourning_base": 2, "mourning_days": 20,
+    "social_chance": 0.05, "friend": 25, "rival": -25, "rival_fight_chance": 0.02,
+    "desert_morale": 30, "desert_per_point": 0.004,
+    "unrest_morale": 40, "leader_chance": 0.1, "leader_min_stat": 9, "discontent": 15, "recruit_chance": 0.03, "stage_days": 7,
+    "leave_chance": 0.15, "stages": [0.1, 0.2, 0.35, 0.5, 0.6],
+    "stage_names": ["", "Grumbling", "A round robin", "Weapons going missing", "The black spot", "Mutiny!"],
+    "vote_base": 0.5, "vote_benefit": 0.4, "vote_per_opinion": 0.005, "vote_per_morale": 0.006,
+    "kill_margin": 8, "split_below": 0.4,
+    "battle_death_chance": 0.08,
+    "reject_below": 0.3, "seize_intimidation": 14, "heir_bonus": 25, "leader_bonus": 40,
+    "keep_relations": 0.6, "keep_honour_fear": 0.5, "keep_notoriety": 0.7,
+    "elected": 5, "by_force": -20, "new_captain_days": 60,
+    "disease": {
+      "scurvy": {"name": "Scurvy", "after_days_at_sea": 40, "chance": 0.004, "death": 0.004, "recover": 0.03, "recover_port": 0.3},
+      "flux": {"name": "The flux", "supplies_below_days": 3, "chance": 0.008, "death": 0.012, "recover": 0.1, "recover_port": 0.2},
+      "fever": {"name": "Yellow fever", "months": [6, 7, 8, 9, 10], "chance": 0.0012, "port_mult": 2.5, "death": 0.02, "recover": 0.08, "recover_port": 0.1}
+    },
+    "surgeon_death_cut_per_point": 0.04, "surgeon_recover_per_point": 0.05
+  },
   "events": {"sea_daily_chance": 0.1, "port_chance": 0.35, "cooldown_days": 180, "chain_window_days": 90, "check_xp": 2.0},
   "contracts": {
     "max_active": 3, "refresh_days": 14, "offers_per_employer": [1, 3],

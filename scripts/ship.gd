@@ -141,6 +141,8 @@ func _on_day() -> void:
 		message.emit(text)
 	for text in hardship(state, stats, anchored_at, People.rng):
 		message.emit(text)
+	for text in Crew.daily(state, stats, anchored_at, rng):
+		message.emit(text)
 
 
 # The carpenter patches hull and sails at sea, but only so far without a shipyard.
@@ -208,6 +210,7 @@ static func hardship(s: Dictionary, stats: Dictionary, port_id: String, rng: Ran
 			var c := People.person(id)
 			c.relations[s.captain] = c.relations.get(s.captain, 0) - int(ceil(h.starving_grudge * relief))
 			if rng.randf() < rate:
+				Crew.mourn(s, id)
 				_remove_hand(s, id)
 				dead += 1
 		out.append("%s aboard!%s" % ["No water" if thirsty else "No food", " %d men died." % dead if dead > 0 else " The crew curse your name."])
@@ -215,9 +218,10 @@ static func hardship(s: Dictionary, stats: Dictionary, port_id: String, rng: Ran
 		var bill: float = maxf(1.0, s.crew.size() * Data.rules.upkeep.wage_per_crew)
 		var unpaid_days: float = s.wages_owed / bill
 		var gone := []
+		var low_morale: float = maxf(0.0, Data.rules.crew.desert_morale - Crew.morale(s, stats).value) * Data.rules.crew.desert_per_point
 		for id in s.crew.duplicate():
 			var c := People.person(id)
-			var chance: float = minf(h.desert_max_chance, unpaid_days * h.desert_per_unpaid_day)
+			var chance: float = minf(h.desert_max_chance, unpaid_days * h.desert_per_unpaid_day) + low_morale
 			if c.relations.get(s.captain, 0) <= h.desert_grudge_threshold:
 				chance += h.desert_grudge_chance
 			if rng.randf() < chance * relief:
@@ -226,16 +230,12 @@ static func hardship(s: Dictionary, stats: Dictionary, port_id: String, rng: Ran
 				Ports.state[port_id].sailors += 1
 		if not gone.is_empty():
 			out.append("%d hands deserted in %s%s." % [gone.size(), Ports.port(port_id).name,
-				" over unpaid wages" if unpaid_days >= 1.0 else ", nursing grudges against you"])
+				" over unpaid wages" if unpaid_days >= 1.0 else (" sick of the ship" if low_morale > 0.0 else ", nursing grudges against you")])
 	return out
 
 
 static func _remove_hand(s: Dictionary, id: String) -> void:
-	for role in s.officers.keys():
-		if s.officers[role] == id:
-			s.officers.erase(role)
-	s.crew.erase(id)
-	People.remove(id)
+	Crew.remove_hand(s, id)
 
 
 func days_of(supply: String) -> float:

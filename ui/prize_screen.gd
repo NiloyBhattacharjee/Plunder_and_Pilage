@@ -31,6 +31,9 @@ func open(player_ship: Node2D, result: Dictionary) -> void:
 	taken_value = 0.0
 	ship.state.gold += enemy.gold
 	messages.append("Plundered %d gold from the %s's strongbox." % [enemy.gold, enemy.name])
+	var share := Crew.plunder(ship.state, enemy.gold)
+	if share != "":
+		messages.append(share)
 	%Title.text = "The %s is yours" % enemy.name
 	%Status.text = ""
 	_build()

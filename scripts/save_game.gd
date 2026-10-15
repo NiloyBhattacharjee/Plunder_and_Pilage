@@ -4,7 +4,7 @@ class_name SaveGame
 ## Saves live in user:// (on Windows: %APPDATA%/Godot/app_userdata/Plunder and Pillage/saves/).
 
 const QUICKSAVE := "user://saves/quicksave.json"
-const VERSION := 8
+const VERSION := 9
 
 
 static func save_game(world: Node, path := QUICKSAVE) -> Error:
