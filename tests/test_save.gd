@@ -47,3 +47,12 @@ func test_round_trip_restores_world():
 
 func test_missing_file_fails_cleanly():
 	assert_eq(SaveGame.load_game(world, "user://nope.json"), ERR_FILE_NOT_FOUND)
+
+
+func test_continue_without_a_valid_save_starts_a_default_game():
+	WorldMap.start_config = {"load": true}
+	var w = load("res://scenes/world_map.tscn").instantiate()
+	add_child_autofree(w)
+	WorldMap.start_config = {}
+	assert_false(w.ship.state.is_empty())
+	assert_true(People.chars.has(w.ship.state.captain))

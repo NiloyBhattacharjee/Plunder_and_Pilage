@@ -35,7 +35,8 @@ func _ready() -> void:
 
 	ship.terrain = terrain
 	ship.stats_changed.connect(func(): terrain.set_shallow_cost(Data.rules.draught[ship.stats.draught].route_cost))
-	var cfg: Dictionary = start_config if not start_config.is_empty() else Data.rules.start
+	# Loading still builds a default game first; the save then overwrites it (and it's a safe fallback if loading fails).
+	var cfg: Dictionary = start_config if start_config.has("background") else Data.rules.start
 	var game := NewGame.build(cfg)
 	var start_port: String = game.start_port
 	ship.setup(game.state)
@@ -143,7 +144,10 @@ func _load() -> void:
 			screen.close()
 	var err := SaveGame.load_game(self)
 	$PortLayer.queue_redraw()
-	hud.show_message("Game loaded (paused)." if err == OK else "Load failed: %s" % error_string(err))
+	match err:
+		OK: hud.show_message("Game loaded (paused).")
+		ERR_INVALID_DATA: hud.show_message("That save is from an older version of the game and can't be loaded. Started a new game instead.")
+		_: hud.show_message("Load failed: %s" % error_string(err))
 
 
 func _on_foundered() -> void:
