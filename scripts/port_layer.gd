@@ -5,6 +5,7 @@ extends Node2D
 
 
 var port_positions := {}  # port id -> map position, filled by world_map
+var ship_state := {}
 var trade_good := "":
 	set(g):
 		trade_good = g
@@ -23,7 +24,10 @@ func _draw() -> void:
 		var off: Array = port.get("label_offset", [9, 5])  # optional, for ports too close together
 		var text_pos := pos + Vector2(off[0], off[1]) * s
 		var label: String = port.name
-		if trade_good != "":
+		if trade_good == "@standing" and not ship_state.is_empty():
+			var acc := Career.port_access(ship_state, id)
+			label += "  %+d%s" % [ship_state.relations.get(port.faction, 0), "" if acc.open else ", CLOSED"]
+		elif trade_good != "":
 			var k: Dictionary = Ports.known.get(id, {}).get(trade_good, {})
 			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd%s)" % [
 				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]

@@ -107,5 +107,42 @@
       "gunners": 0.45,
       "marines": 0.2
     }
+  },
+  "hunter": {
+    "label": "pirate hunter",
+    "behaviour": "warship",
+    "weight": 0,
+    "ships": [
+      "brig",
+      "frigate"
+    ],
+    "crew_fraction": [
+      0.9,
+      1.0
+    ],
+    "morale": 80,
+    "upgrades": [
+      "cannons_12"
+    ],
+    "cargo_fraction": [
+      0.0,
+      0.05
+    ],
+    "gold": [
+      100,
+      400
+    ],
+    "skill": [
+      9,
+      13
+    ],
+    "prisoner_willingness": 0.1,
+    "relation_hit": 15,
+    "notoriety": 3,
+    "roles": {
+      "sailors": 0.35,
+      "gunners": 0.4,
+      "marines": 0.25
+    }
   }
 }

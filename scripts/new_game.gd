@@ -7,6 +7,7 @@ class_name NewGame
 static func build(cfg: Dictionary) -> Dictionary:
 	People.reset()
 	Ports.reset()
+	Factions.reset()
 	var bg: Dictionary = Data.table("backgrounds")[cfg.background]
 	var nation: Dictionary = Data.table("nations")[cfg.nationality]
 	var start_port: String = bg.get("start_port", nation.start_port)
@@ -51,6 +52,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 		"reputation": {"honour": 0, "fear": 0, "notoriety": 0},
 		"stolen": {}, "prizes": [], "hostages": [], "guns_lost": 0, "roles": "balanced",
 		"flag": Data.table("factions")[nation.faction].flag if nation.faction != "" else "white",
+		"career": {"pirate": false, "marque": "", "service": 0.0, "rank": 0, "crown_debt": 0.0, "pardoned_by": []},
 	}
 	auto_appoint(state, 7)
 	return {"state": state, "start_port": start_port}

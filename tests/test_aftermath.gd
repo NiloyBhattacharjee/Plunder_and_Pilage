@@ -21,18 +21,18 @@ func test_generated_enemy_is_complete():
 
 
 func test_pirates_are_hostile_merchants_are_not():
-	assert_true(Encounters.hostile(Encounters.generate("spain", rng, "pirate"), s))
-	assert_false(Encounters.hostile(Encounters.generate("spain", rng, "merchant"), s))
+	assert_true(Career.npc_hostile(s, Encounters.generate("spain", rng, "pirate"), rng))
+	assert_false(Career.npc_hostile(s, Encounters.generate("spain", rng, "merchant"), rng))
 	var navy := Encounters.generate("spain", rng, "navy")
-	assert_false(Encounters.hostile(navy, s))
+	assert_false(Career.npc_hostile(s, navy, rng))
 	s.relations.spain = -50
-	assert_true(Encounters.hostile(navy, s))
+	assert_true(Career.npc_hostile(s, navy, rng))
 
 
 func test_attacking_costs_standing():
 	var e := Encounters.generate("spain", rng, "merchant")
 	var before: int = s.relations.spain
-	Encounters.attacked(s, e)
+	Career.on_attack(s, e)
 	assert_lt(s.relations.spain, before)
 	assert_gt(s.reputation.notoriety, 0)
 

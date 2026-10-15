@@ -58,6 +58,9 @@ func _build_captain(cap: Dictionary) -> void:
 	UIKit.label(box, "Reputation: honour %+d, fear %+d, notoriety %d" % [rep.honour, rep.fear, rep.notoriety],
 		"Honour grows from mercy and keeping your word; fear from cruelty. Notoriety is how widely your name is known.", Style.c("header"))
 	UIKit.label(box, "Standing: " + ", ".join(s.relations.keys().map(func(f): return "%s %+d" % [Data.table("factions")[f].name, s.relations[f]])))
+	UIKit.label(box, "Career: %s.%s" % [Career.status_text(s), "  The Crown is owed %d." % s.career.crown_debt if s.career.crown_debt > 0 else ""],
+		"Privateers raid their nation's enemies lawfully and pay the Crown a share. Pirates take what they like, and every navy hunts them once they're wanted.")
+	UIKit.label(box, Factions.war_summary(), "", Style.c("dim"))
 	var feelings: Array = s.crew.map(func(id): return People.person(id).relations.get(s.captain, 0))
 	var unhappy: int = feelings.filter(func(v): return v < 0).size()
 	if unhappy > 0:

@@ -42,15 +42,6 @@ static func generate(faction: String, rng: RandomNumberGenerator, kind := "") ->
 	return enemy
 
 
-## Will this ship attack you on sight?
-static func hostile(enemy: Dictionary, s: Dictionary) -> bool:
-	var e: Dictionary = Data.rules.encounters
-	match enemy.behaviour:
-		"aggressive": return s.relations.get("pirates", 0) < e.friendly_pirate_relation
-		"warship": return s.relations.get(enemy.faction, 0) < e.hostile_relation
-	return false
-
-
 ## A rough look through the glass: guns exact, crew estimated.
 static func sighting(enemy: Dictionary, rng: RandomNumberGenerator) -> String:
 	var st := ShipStats.effective(enemy.type, enemy.upgrades)
@@ -143,17 +134,8 @@ static func kill_crew(s: Dictionary, n: int, rng: RandomNumberGenerator) -> Arra
 	return named
 
 
-## Opening fire on a ship that wasn't attacking you.
-static func attacked(s: Dictionary, enemy: Dictionary) -> String:
-	var e: Dictionary = Data.table("encounters")[enemy.kind]
-	s.relations[enemy.faction] = s.relations.get(enemy.faction, 0) - int(e.relation_hit)
-	s.reputation.notoriety += int(e.notoriety)
-	return "Attacking a %s ship costs you standing with %s (-%d)." % [Data.table("factions")[enemy.faction].adjective,
-		Data.table("factions")[enemy.faction].name, e.relation_hit]
-
-
 ## Takes cargo from the prize into your hold, marked as stolen. Returns units taken.
-static func take_cargo(s: Dictionary, enemy: Dictionary, good: String, qty: int, capacity: float) -> int:
+static func take_cargo(s: Dictionary, enemy: Dictionary, good: String, qty: int, capacity: float, stolen := true) -> int:
 	var w := Market.weight(good)
 	qty = mini(qty, mini(enemy.cargo.get(good, 0), int((capacity - Market.cargo_used(s.cargo)) / w + 0.0001)))
 	if qty <= 0:
@@ -162,7 +144,8 @@ static func take_cargo(s: Dictionary, enemy: Dictionary, good: String, qty: int,
 	if enemy.cargo[good] <= 0:
 		enemy.cargo.erase(good)
 	s.cargo[good] = s.cargo.get(good, 0) + qty
-	s.stolen[good] = s.stolen.get(good, 0) + qty
+	if stolen:
+		s.stolen[good] = s.stolen.get(good, 0) + qty
 	return qty
 
 

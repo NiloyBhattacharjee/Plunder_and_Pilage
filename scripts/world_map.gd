@@ -13,6 +13,9 @@ var anchorages := {}      # nearest navigable point to each port
 var follow_ship := true
 var combat: Node = null
 var rng := RandomNumberGenerator.new()
+var current_npc := {}     # the NPC ship you're dealing with, if any
+var chase_id := ""        # the NPC ship you're chasing
+var _chase_timer := 0.0
 
 ## Set by the new-game screen before switching here: {name, nationality, background, ship_name} or {"load": true}.
 static var start_config := {}
@@ -24,6 +27,7 @@ static var start_config := {}
 @onready var crew_screen = $CrewScreen
 @onready var prize_screen = $PrizeScreen
 @onready var dialog = $ChoiceDialog
+@onready var shipping = $Shipping
 
 
 func _ready() -> void:
@@ -56,13 +60,29 @@ func _ready() -> void:
 	hud.enter_port_pressed.connect(func(): port_screen.open(ship.anchored_at, ship))
 	hud.save_pressed.connect(_save)
 	hud.load_pressed.connect(_load)
-	hud.map_mode_changed.connect(func(good): $PortLayer.trade_good = good)
+	hud.map_mode_changed.connect(func(good):
+		$PortLayer.ship_state = ship.state
+		$PortLayer.trade_good = good)
 	port_screen.message.connect(hud.show_message)
 	port_screen.closed.connect($PortLayer.queue_redraw)
 	Clock.day_passed.connect(func(_d): if $PortLayer.trade_good != "": $PortLayer.queue_redraw())
 	hud.crew_pressed.connect(func(): crew_screen.open(ship))
 	crew_screen.message.connect(hud.show_message)
-	Clock.day_passed.connect(func(_d): _maybe_encounter())
+	shipping.setup(terrain, self)
+	shipping.contact.connect(_on_contact)
+	shipping.news.connect(hud.show_message)
+	shipping.alert.connect(func(text):
+		hud.show_message(text + " (Paused. Space to resume.)")
+		Clock.set_speed(0))
+	Factions.changed.connect(func(text):
+		hud.show_message(text)
+		var lost := Career.check_peace(ship.state)
+		if lost != "":
+			hud.show_message(lost))
+	Clock.day_passed.connect(func(_d): _daily())
+	hud.flag_changed.connect(func(f):
+		ship.state.flag = f
+		ship.refresh_stats())
 	hud.show_message("Captain %s and the %s lie at anchor in %s. Click the sea or a port to set a course. C opens the crew and ship." % [
 		ShipStats.captain(ship.state).name, ship.state.name, Data.table("ports")[start_port].name])
 	if start_config.get("load", false):
@@ -71,9 +91,25 @@ func _ready() -> void:
 		port_screen.open.call_deferred(start_port, ship)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if follow_ship:
 		camera.position = ship.position
+	if chase_id != "" and Clock.speed_index > 0:  # keep re-aiming at the ship you're chasing
+		_chase_timer -= delta
+		if _chase_timer <= 0.0:
+			_chase_timer = 0.5
+			var n: Dictionary = shipping.find(chase_id)
+			if n.is_empty():
+				chase_id = ""
+			else:
+				var path := terrain.find_path(ship.position, n.pos)
+				if not path.is_empty():
+					ship.set_route(path)
+
+
+func _daily() -> void:
+	var s: Dictionary = ship.state
+	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -101,6 +137,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _set_course(target: Vector2) -> void:
 	if ship.state.hull <= 0:
+		return
+	chase_id = ""
+	var npc: Dictionary = shipping.npc_at(target, 14.0 / camera.zoom.x)
+	if not npc.is_empty():
+		chase_id = npc.id
+		hud.show_message("Giving chase to the %s." % npc.enemy.name)
+		_chase_timer = 0.0
 		return
 	var port_id := _port_near(target)
 	if port_id != "" and port_id == ship.anchored_at:
@@ -137,8 +180,48 @@ func _zoom(factor: float) -> void:
 
 
 func _on_arrived(id: String) -> void:
-	hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
-	port_screen.open(id, ship)
+	var access := Career.port_access(ship.state, id)
+	if access.open:
+		hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
+		port_screen.open(id, ship)
+		return
+	UIKit.pause_clock()
+	var s: Dictionary = ship.state
+	var p: Dictionary = Ports.port(id)
+	var fools := Career.flag_fools_port(s, id)
+	var pick: int = await dialog.ask("The harbour is closed to you", "%s\nThe fort at %s runs out its guns." % [access.reason, p.name], [
+		{"text": "Turn away", "tooltip": "Find another port."},
+		{"text": "Slip in under false colours (%d%% risk)" % int(access.detect * 100), "disabled": not fools,
+			"tooltip": "Fly the colours of a nation at peace with %s and hope nobody looks too closely.\nCaught: the fort opens fire and your standing drops." % Data.table("factions")[p.faction].name
+				if fools else "Hoist the flag of a nation at peace with %s first (Colours, top left)." % Data.table("factions")[p.faction].name},
+		{"text": "Bribe the harbour master (%d gold)" % access.bribe, "disabled": s.gold < access.bribe,
+			"tooltip": "Usually works. Sometimes he takes the money and calls the guard anyway."},
+	])
+	var pa: Dictionary = Data.rules.port_access
+	var entered := false
+	match pick:
+		1:
+			if rng.randf() < access.detect:
+				var dmg := rng.randi_range(pa.fort_damage[0], pa.fort_damage[1])
+				s.hull = maxf(1.0, s.hull - dmg)
+				s.relations[p.faction] -= int(pa.caught_relation)
+				hud.show_message("Recognised! The fort at %s opens fire as you claw back out to sea. Hull -%d." % [p.name, dmg])
+			else:
+				entered = true
+				hud.show_message("Nobody looks twice at your colours. You're in %s." % p.name)
+		2:
+			s.gold -= access.bribe
+			if rng.randf() < pa.bribe_success:
+				entered = true
+				hud.show_message("The harbour master pockets the gold and looks the other way.")
+			else:
+				hud.show_message("He takes your gold and sends for the guard. You leave in a hurry.")
+	if entered:
+		port_screen.open(id, ship, true)
+	else:
+		ship.anchored_at = ""
+		ship.position = terrain.nearest_sea(ship.position + (ship.position - port_positions[id]).normalized() * 30.0)
+		UIKit.resume_clock()
 
 
 func _save() -> void:
@@ -165,31 +248,30 @@ func busy() -> bool:
 
 # ---- Encounters and battle -------------------------------------------------
 
-func _maybe_encounter() -> void:
-	if busy() or ship.anchored_at != "" or ship.route.is_empty() or ship.state.hull <= 0:
-		return
-	if rng.randf() < Data.rules.encounters.daily_chance:
-		encounter(Encounters.generate(_nearest_port_faction(), rng))
+# ---- Encounters and battle -------------------------------------------------
+
+## An NPC ship has come within hail.
+func _on_contact(npc: Dictionary) -> void:
+	encounter(npc.enemy, npc)
 
 
-func _nearest_port_faction() -> String:
-	var best := ""
-	for id in port_positions:
-		if best == "" or ship.position.distance_to(port_positions[id]) < ship.position.distance_to(port_positions[best]):
-			best = id
-	return Data.table("ports")[best].faction
-
-
-func encounter(enemy: Dictionary) -> void:
+func encounter(enemy: Dictionary, npc := {}) -> void:
 	UIKit.pause_clock()
+	current_npc = npc
 	var s: Dictionary = ship.state
 	var seen := Encounters.sighting(enemy, rng)
-	var hit: int = Data.table("encounters")[enemy.kind].relation_hit
-	var fname: String = Data.table("factions")[enemy.faction].name
-	if Encounters.hostile(enemy, s):
-		var pick: int = await dialog.ask("Enemy sail!", "A %s is bearing down on you.\n%s" % [enemy.label, seen], [
+	var flag_note := ""
+	if not npc.is_empty() and npc.flag != Data.table("factions")[enemy.faction].flag:
+		flag_note = "\nShe was flying %s colours, but up close she's no %s." % [
+			Data.table("factions")[Career.flag_faction(npc.flag)].adjective if Career.flag_faction(npc.flag) != "" else "plain",
+			Data.table("factions")[Career.flag_faction(npc.flag)].adjective if Career.flag_faction(npc.flag) != "" else "honest ship"]
+	var hostile: bool = npc.get("hostile") if npc.get("hostile") != null else Career.npc_hostile(s, enemy, rng)
+	if enemy.behaviour == "merchant":
+		hostile = false
+	if hostile:
+		var pick: int = await dialog.ask("Enemy sail!", "A %s is bearing down on you.\n%s%s" % [enemy.label, seen, flag_note], [
 			{"text": "Clear for action", "tooltip": "Turn and fight."},
-			{"text": "Crowd on sail and run", "tooltip": "Start the fight already running. Outdistance her (%d) and you're free." % Data.rules.combat.escape_distance},
+			{"text": "Crowd on sail and run", "tooltip": "Start the fight already running. Outdistance her (%d) and you're free.\nIn the shallows a deep-keeled ship can't follow." % Data.rules.combat.escape_distance},
 			{"text": "Strike your colours", "tooltip": "Surrender without a fight. They'll strip your hold and take half your gold."},
 		])
 		match pick:
@@ -197,26 +279,50 @@ func encounter(enemy: Dictionary) -> void:
 			1: start_combat(enemy, "flee")
 			2:
 				hud.show_message("You strike without a fight. " + Encounters.surrender_losses(s))
+				current_npc = {}
 				UIKit.resume_clock()
 	else:
-		var pick: int = await dialog.ask("Sail ho!", "A %s.\n%s" % [enemy.label, seen], [
-			{"text": "Attack her", "tooltip": "Standing with %s -%d, notoriety +%d. Her cargo and gold could be yours." % [fname, hit, Data.table("encounters")[enemy.kind].notoriety]},
+		var verdict := Career.judge_attack(s, enemy.faction)
+		var hit: int = Data.table("encounters")[enemy.kind].relation_hit
+		var tip := "%s\nStanding with %s -%d." % [verdict.why, Data.table("factions")[enemy.faction].name, hit]
+		if not verdict.legal:
+			tip += " Every other nation -%d. Notoriety +%d. You'll be a pirate." % [Data.rules.career.piracy_all_nations,
+				Data.rules.career.notoriety_piracy + Data.table("encounters")[enemy.kind].notoriety]
+		elif s.career.marque != "" and enemy.faction != "pirates":
+			tip += " Your service counts toward promotion; the Crown takes %d%% of the prize." % int(Career.crown_cut(s) * 100)
+		if Career.false_colours(s):
+			tip += "\nYou're under false colours: she won't run until it's too late (honour %d)." % Data.rules.flags.false_colours_honour
+		var pick: int = await dialog.ask("Sail ho!", "A %s.\n%s%s" % [enemy.label, seen, flag_note], [
+			{"text": "Attack her" + ("" if verdict.legal else " (piracy)"), "tooltip": tip},
 			{"text": "Let her pass", "tooltip": "Hold your course."},
 		])
 		if pick == 0:
-			hud.show_message(Encounters.attacked(s, enemy))
+			for m in Career.on_attack(s, enemy):
+				hud.show_message(m)
 			start_combat(enemy, "attack")
 		else:
+			current_npc = {}
 			UIKit.resume_clock()
 
 
 func start_combat(enemy: Dictionary, mode: String) -> void:
 	UIKit.pause_clock()
+	var s: Dictionary = ship.state
+	var flag: String = s.get("flag", "white")
+	if Data.rules.flags.has(flag):  # the black flag and the red flag strike fear before a shot is fired
+		var fx: Dictionary = Data.rules.flags[flag]
+		enemy.morale += fx.enemy_morale
+		s.reputation.fear += int(fx.fear)
+		s.reputation.honour += int(fx.honour)
+		hud.show_message("You run up the %s. Her crew blanch." % Data.table("flags")[flag].name.to_lower())
+	elif mode == "attack" and Career.false_colours(s):
+		s.reputation.honour += int(Data.rules.flags.false_colours_honour)
+		mode = "ambush"
 	combat = load("res://scenes/combat.tscn").instantiate()
 	_show_world(false)
 	get_tree().root.add_child(combat)
 	var w := Weather.wind_at(ship.position)
-	combat.start(Encounters.player_side(ship.state), enemy, mode, w.dir, w.strength)
+	combat.start(Encounters.player_side(s), enemy, mode, w.dir, w.strength)
 	combat.get_node("Camera2D").make_current()
 	combat.finished.connect(_on_combat_finished)
 
@@ -236,6 +342,9 @@ func _on_combat_finished(result: Dictionary) -> void:
 	for m in Encounters.apply_battle(s, result.player, rng):
 		hud.show_message(m)
 	var e: Dictionary = result.enemy_data
+	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
+		shipping.remove(current_npc)
+	current_npc = {}
 	match result.outcome:
 		"enemy_struck":
 			ShipStats.captain(s).history.append("Took the %s %s, %s." % [Data.table("factions")[e.faction].name, e.name, Clock.date_string()])

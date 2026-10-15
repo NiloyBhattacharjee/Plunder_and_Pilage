@@ -120,6 +120,16 @@ unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 3
 
+[node name="Governor" type="ScrollContainer" parent="Panel/VBox/Tabs"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 3
+
+[node name="GovBox" type="VBoxContainer" parent="Panel/VBox/Tabs/Governor"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="Footer" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
 

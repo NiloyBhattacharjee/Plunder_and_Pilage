@@ -15,6 +15,7 @@ Weather="*res://scripts/weather.gd"
 Ports="*res://scripts/ports.gd"
 People="*res://scripts/people.gd"
 Style="*res://scripts/style.gd"
+Factions="*res://scripts/factions.gd"
 
 [display]
 

@@ -54,7 +54,7 @@ func setup(player: Dictionary, enemy: Dictionary, wdir: float, wstrength: float,
 	var bearing := rng.randf_range(0.0, 360.0)
 	enemy.pos = player.pos + Geo.from_bearing(bearing) * dist
 	match mode:
-		"attack":  # you close on them; merchants already turning away
+		"attack", "ambush":  # you close on them (under false colours, much closer before they notice)
 			player.heading = bearing
 			enemy.heading = bearing + rng.randf_range(-60.0, 60.0)
 		"defend":  # they bear down on you

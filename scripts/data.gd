@@ -14,6 +14,7 @@ const SCHEMA := {
 	"ships": {"required": ["name", "description", "hull", "sails", "speed_knots", "turning", "cargo", "crew_min", "crew_max",
 		"guns", "gun_weight", "max_gun_weight", "draught", "price", "upkeep", "min_standing", "polar", "masts", "art"]},
 	"flags": {"required": ["name", "path"]},
+	"history": {"required": ["date", "kind", "text"]},
 	"upgrades": {"required": ["name", "description", "cost", "days", "shipyard", "effects"]},
 	"traits": {"required": ["name", "description", "pools"], "refs": {"opposite": "traits"}},
 	"nations": {"required": ["name", "faction", "start_port", "first", "last"], "refs": {"start_port": "ports"}},
@@ -63,6 +64,8 @@ static func validate(all: Dictionary) -> PackedStringArray:
 		var spec: Dictionary = SCHEMA[tname]
 		var refs: Dictionary = spec.get("refs", {})
 		for id in all[tname]:
+			if id.begins_with("_"):  # "_comment" and friends are notes for humans
+				continue
 			var entry: Dictionary = all[tname][id]
 			for field in spec.required:
 				if not entry.has(field):

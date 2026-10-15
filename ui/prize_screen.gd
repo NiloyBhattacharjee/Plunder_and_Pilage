@@ -8,6 +8,7 @@ var ship: Node2D
 var enemy: Dictionary      # encounter data (cargo is taken from here)
 var survivors := 0
 var messages := []
+var taken_value := 0.0   # base value of cargo taken, for the Crown's share and your service
 
 var _ship_fate: OptionButton
 var _prisoner_fate: OptionButton
@@ -27,6 +28,7 @@ func open(player_ship: Node2D, result: Dictionary) -> void:
 	enemy.sails = result.enemy.sails
 	survivors = int(result.enemy.crew)
 	messages = []
+	taken_value = 0.0
 	ship.state.gold += enemy.gold
 	messages.append("Plundered %d gold from the %s's strongbox." % [enemy.gold, enemy.name])
 	%Title.text = "The %s is yours" % enemy.name
@@ -43,7 +45,9 @@ func _build() -> void:
 		Encounters.sighting(enemy, RandomNumberGenerator.new()).split(".")[0], survivors, enemy.gold,
 		Market.cargo_used(s.cargo), ship.capacity()]
 
-	UIKit.label(box, "Her cargo (goods you take are stolen: they sell for full price only through a fence)", "", Style.c("header"))
+	var lawful: bool = enemy.get("legal", true)
+	UIKit.label(box, "Her cargo (%s)" % ("a lawful prize: it sells like any other goods, but the Crown takes its share" if lawful and s.career.marque != ""
+		else ("lawfully taken" if lawful else "stolen goods: they sell for full price only through a fence")), "", Style.c("header"))
 	var g := UIKit.grid(box, 5)
 	if enemy.cargo.is_empty():
 		UIKit.label(box, "  Her hold is empty.", "", Style.c("dim"))
@@ -110,7 +114,8 @@ func _refresh_enabled() -> void:
 
 
 func _take(good: String, qty: int) -> void:
-	var n := Encounters.take_cargo(ship.state, enemy, good, qty, ship.capacity())
+	var n := Encounters.take_cargo(ship.state, enemy, good, qty, ship.capacity(), not enemy.get("legal", true))
+	taken_value += n * Data.table("goods")[good].base_price
 	%Status.text = "Took %d %s." % [n, Data.table("goods")[good].name] if n > 0 else "No room in your hold."
 	_build()
 
@@ -141,5 +146,10 @@ func _finish() -> void:
 			messages.append(err if err != "" else "A prize crew takes the %s." % enemy.name)
 		else:
 			messages.append("The %s burns and sinks." % enemy.name)
+	if enemy.get("legal", true):
+		var value: float = enemy.gold + taken_value
+		if _ship_fate.selected == 0:
+			value += Data.table("ships")[enemy.type].price * Data.rules.prizes.sale_mult
+		messages.append_array(Career.record_prize(s, value))
 	hide()
 	done.emit(messages)

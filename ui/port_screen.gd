@@ -9,6 +9,7 @@ signal closed
 var port_id := ""
 var ship: Node2D
 var rumours_left := 0
+var disguised := false  # came in under false colours or by bribe: keep your head down
 
 
 func _ready() -> void:
@@ -20,9 +21,10 @@ func _ready() -> void:
 	%Rumour.pressed.connect(_rumour)
 
 
-func open(id: String, player_ship: Node2D) -> void:
+func open(id: String, player_ship: Node2D, in_disguise := false) -> void:
 	port_id = id
 	ship = player_ship
+	disguised = in_disguise
 	rumours_left = Data.rules.tavern.rumours_per_visit
 	%Rumours.text = ""
 	%Status.text = ""
@@ -33,6 +35,12 @@ func open(id: String, player_ship: Node2D) -> void:
 
 
 func close() -> void:
+	var s: Dictionary = ship.state
+	if s.career.marque == Ports.port(port_id).faction and s.career.crown_debt > 0 and not disguised:
+		s.relations[s.career.marque] -= int(Data.rules.career.arrears_visit_penalty)  # the Admiralty notes your arrears
+		message.emit("You sail without settling the Crown's share. The Admiralty takes note (standing -%d)." % Data.rules.career.arrears_visit_penalty)
+		if s.career.crown_debt > Data.rules.career.arrears_revoke:
+			message.emit(Career.revoke(s, "for cheating the Crown of its share"))
 	hide()
 	UIKit.resume_clock()
 	closed.emit()
@@ -50,6 +58,7 @@ func refresh() -> void:
 	_build_market()
 	_build_shipyard()
 	_refresh_tavern()
+	_build_governor()
 
 
 func _build_market() -> void:
@@ -61,7 +70,7 @@ func _build_market() -> void:
 	var p := Ports.port(port_id)
 	var ps: Dictionary = Ports.state[port_id]
 	var s: Dictionary = ship.state
-	var haggle := ShipStats.spread_mult(s)
+	var haggle := ShipStats.spread_mult(s) * Career.price_mult(s, port_id)  # haggling, and how they regard you here
 	for good in Data.table("goods"):
 		var tip := Market.breakdown(p, good, ps, ps.laws, haggle)
 		var contraband: bool = good in ps.laws.contraband
@@ -238,6 +247,60 @@ func _install(u: String, cost: int) -> void:
 	ship.refresh_stats()
 	Clock.advance(up.days)
 	_act(func(): return {"ok": true, "text": "Fitted %s in %d days for %d gold." % [up.name, up.days, cost]})
+
+
+func _build_governor() -> void:
+	var box: VBoxContainer = %GovBox
+	UIKit.clear(box)
+	var s: Dictionary = ship.state
+	var p := Ports.port(port_id)
+	var f: String = p.faction
+	UIKit.label(box, "Governor %s" % p.governor, "", Style.c("header"))
+	UIKit.label(box, "Your standing with %s: %+d.  You are: %s." % [Career.fname(f), s.relations.get(f, 0), Career.status_text(s)],
+		"Standing changes prices here (x%.2f), who will deal with you, and whether the harbour stays open." % Career.price_mult(s, port_id))
+	UIKit.label(box, Factions.war_summary(), "", Style.c("dim"))
+	if disguised:
+		UIKit.label(box, "You're here under false colours. The governor's door is not one to knock on.", "", Style.c("bad"))
+		return
+	if f == "pirates":
+		UIKit.label(box, "There is no governor's mansion here, only the council of captains (milestone 8b).", "", Style.c("dim"))
+		return
+
+	UIKit.label(box, "")
+	var c: Dictionary = s.career
+	if c.marque == f:
+		var ranks: Array = Data.rules.career.ranks
+		var next_rank: String = "" if c.rank + 1 >= ranks.size() else " Next: %s at %d service." % [ranks[c.rank + 1].name, ranks[c.rank + 1].service]
+		UIKit.label(box, "Your commission: %s, %d service.%s" % [Career.rank_name(s), c.service, next_rank],
+			"Service is the value of the lawful prizes you've taken. Rank cuts the Crown's share (now %d%%) and raises your standing." % int(Career.crown_cut(s) * 100))
+		UIKit.label(box, "Lawful targets: " + ", ".join(Factions.enemies_of(f).map(func(e): return Career.fname(e))) + ", and any pirate.")
+		var row := UIKit.row(box)
+		var pay := UIKit.button(row, "Pay the Crown's share (%d)" % c.crown_debt, _act.bind(func(): return {"ok": true, "text": Career.pay_crown(s)}),
+			"Leave without paying and the Admiralty marks you down each visit; owe too much and you lose the commission.")
+		pay.disabled = c.crown_debt <= 0 or s.gold <= 0
+		UIKit.button(row, "Hand back your commission", _act.bind(func(): return {"ok": true, "text": Career.revoke(s, "at your own request")}),
+			"You'll be an honest captain again: no lawful targets except pirates.")
+	else:
+		var why := Career.marque_problem(s, f)
+		var enemies := Factions.enemies_of(f)
+		var tip := "Benefits: attack %s ships lawfully; their prizes sell clean; rank brings a smaller Crown's share, better standing and the right to buy warships.\nCosts: the Crown takes %d%% of every prize; %s will hate you; peace voids the letter, and raiding after that is piracy." % [
+			", ".join(enemies.map(func(e): return Career.fname(e))) if not enemies.is_empty() else "no one", int(Data.rules.career.crown_cut * 100),
+			", ".join(enemies.map(func(e): return Career.fname(e))) if not enemies.is_empty() else "nobody"]
+		var b := UIKit.button(box, "Request a letter of marque", _act.bind(func(): return {"ok": true, "text": Career.grant_marque(s, f)}),
+			why if why != "" else tip)
+		b.disabled = why != ""
+		if why != "":
+			UIKit.label(box, why, "", Style.c("dim"))
+
+	if c.pirate:
+		UIKit.label(box, "")
+		var cost := Career.pardon_cost(s, f)
+		var why2 := Career.pardon_problem(s, f)
+		var tip2 := "%s forgives you%s. Notoriety halves; standing with %s rises to at least 0.\nThe Brethren will call you a turncoat (standing -%d), crew who love the trade will resent it, and other nations remember." % [
+			Career.fname(f), "" if cost == 0 else " for %d gold" % cost, Career.fname(f), Data.rules.pardon.pirate_relation_hit]
+		var b2 := UIKit.button(box, ("Accept the King's Pardon (free)" if cost == 0 else "Seek a pardon (%d gold)" % cost),
+			_act.bind(func(): return {"ok": true, "text": " ".join(Career.pardon(s, f))}), why2 if why2 != "" else tip2)
+		b2.disabled = why2 != ""
 
 
 func _refresh_tavern() -> void:

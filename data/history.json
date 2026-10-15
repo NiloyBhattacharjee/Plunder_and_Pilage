@@ -1,0 +1,23 @@
+{
+  "_comment": "Dated turning points of the era. kind: war | peace | pardon | pardon_end. sides: two lists of factions. Events in milestone 7 can add branches; these are the fixed anchors.",
+  "beyond_the_line": {"date": "1680-01-01", "kind": "war", "sides": [["france"], ["spain"]],
+    "text": "No peace beyond the line: French governors still commission buccaneers against Spain."},
+  "truce_of_ratisbon": {"date": "1684-08-15", "kind": "peace", "sides": [["france"], ["spain"]],
+    "text": "The Truce of Ratisbon: France and Spain lay down their arms. French commissions against Spain are void."},
+  "nine_years_war": {"date": "1689-05-17", "kind": "war", "sides": [["england", "dutch", "spain"], ["france"]],
+    "text": "The Nine Years' War: England, the Dutch Republic and Spain against France. Letters of marque are easy to come by."},
+  "peace_of_ryswick": {"date": "1697-09-20", "kind": "peace", "sides": [["england", "dutch", "spain"], ["france"]],
+    "text": "The Peace of Ryswick ends the Nine Years' War. Privateers are out of work."},
+  "spanish_succession": {"date": "1702-05-15", "kind": "war", "sides": [["england", "dutch"], ["france", "spain"]],
+    "text": "The War of the Spanish Succession: England and the Dutch against France and Spain."},
+  "treaty_of_utrecht": {"date": "1713-04-11", "kind": "peace", "sides": [["england", "dutch"], ["france", "spain"]],
+    "text": "The Treaty of Utrecht. Thousands of privateers are paid off; many will turn pirate."},
+  "kings_pardon": {"date": "1717-09-05", "kind": "pardon", "factions": ["england"],
+    "text": "The King's Pardon: any pirate who surrenders to an English governor within the year will be forgiven."},
+  "kings_pardon_ends": {"date": "1718-09-05", "kind": "pardon_end", "factions": ["england"],
+    "text": "The King's Pardon expires. Woodes Rogers' Nassau has no more mercy to give."},
+  "quadruple_alliance": {"date": "1718-12-17", "kind": "war", "sides": [["england", "france", "dutch"], ["spain"]],
+    "text": "The War of the Quadruple Alliance: England, France and the Dutch against Spain."},
+  "treaty_of_the_hague": {"date": "1720-02-17", "kind": "peace", "sides": [["england", "france", "dutch"], ["spain"]],
+    "text": "The Treaty of The Hague ends the war with Spain."}
+}

@@ -157,7 +157,7 @@
   "fence": {"legal_mult": 0.5},
   "encounters": {"daily_chance": 0.12, "hostile_relation": -25, "friendly_pirate_relation": 20},
   "combat": {
-    "px_per_knot": 8, "start_distance": {"attack": 650, "defend": 450, "flee": 700}, "escape_distance": 1150,
+    "px_per_knot": 8, "start_distance": {"attack": 650, "ambush": 380, "defend": 450, "flee": 700}, "escape_distance": 1150,
     "turn_deg_per_point": 4, "accel_per_second": 0.35,
     "sail_settings": [
       {"name": "Sails furled", "speed": 0.0, "reload": 1.0},
@@ -226,5 +226,51 @@
                    "description": "Hands to the sails: best speed and turning in battle. Few guns, feeble boarding."}
     }
   },
-  "wounds": {"crew_chance": 0.15, "traits": ["scarred", "one_eyed", "peg_leg", "hook_hand"]}
+  "wounds": {"crew_chance": 0.15, "traits": ["scarred", "one_eyed", "peg_leg", "hook_hand"]},
+
+  "career": {
+    "marque_min_standing": 10,
+    "crown_cut": 0.15, "crown_cut_per_rank": 0.03,
+    "ranks": [
+      {"name": "Privateer", "service": 0},
+      {"name": "Commissioned Captain", "service": 1500},
+      {"name": "Commodore", "service": 5000},
+      {"name": "Admiral of the Coast", "service": 15000}
+    ],
+    "rank_standing_bonus": 5,
+    "lawful_raid_issuer_bonus": 3,
+    "arrears_visit_penalty": 3,
+    "arrears_revoke": 3000,
+    "pirate_hunting_bonus": 1,
+    "piracy_all_nations": 2,
+    "marque_abuse": 15,
+    "pirate_relation_gain": 4,
+    "notoriety_piracy": 3,
+    "notoriety_wanted": 15,
+    "notoriety_decay_per_day": 0.02
+  },
+  "pardon": {"base_cost": 500, "per_notoriety": 60, "min_standing": -60, "pirate_relation_hit": 25, "notoriety_mult": 0.5,
+             "resent_tags": ["hates_mercy", "greedy"]},
+  "port_access": {
+    "hostile": -25, "closed": -50,
+    "price_per_standing": 0.004, "price_clamp": [0.8, 1.3],
+    "detect_base": 0.1, "detect_per_notoriety": 0.012, "detect_per_vigilance": 0.3,
+    "bribe_base": 100, "bribe_per_notoriety": 20, "bribe_success": 0.85,
+    "fort_damage": [15, 35], "caught_relation": 5
+  },
+  "flags": {
+    "black": {"enemy_morale": -20, "fear": 1, "honour": 0},
+    "red": {"enemy_morale": -35, "fear": 3, "honour": -2},
+    "false_colours_honour": -1,
+    "false_colours_start_distance": 380,
+    "npc_false_flag_chance": 0.3
+  },
+  "shipping": {
+    "merchants": 20, "pirates": 4, "navy_per_faction": 2,
+    "hunters_max": 2, "hunter_spawn_chance": 0.15,
+    "spawn_per_day": 3,
+    "sight_nm": 45, "contact_nm": 9, "chase_nm": 32,
+    "npc_speed_factor": 0.9, "merchant_cargo_fraction": 0.7,
+    "contact_cooldown_days": 1.5, "max_age_days": 60
+  }
 }

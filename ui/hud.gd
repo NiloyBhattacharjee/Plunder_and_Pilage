@@ -7,7 +7,8 @@ signal enter_port_pressed
 signal crew_pressed
 signal save_pressed
 signal load_pressed
-signal map_mode_changed(good: String)  # "" = political
+signal map_mode_changed(good: String)  # "" = political, "@standing" = your standing
+signal flag_changed(flag: String)
 
 var ship: Node2D
 var _messages: PackedStringArray = []
@@ -28,10 +29,17 @@ func _ready() -> void:
 	var modes: OptionButton = %MapMode
 	modes.add_item("Map: Political")
 	modes.set_item_metadata(0, "")
+	modes.add_item("Map: Your standing")
+	modes.set_item_metadata(1, "@standing")
 	for good in Data.table("goods"):
 		modes.add_item("Map: Trade - " + Data.table("goods")[good].name)
 		modes.set_item_metadata(modes.item_count - 1, good)
 	modes.item_selected.connect(func(i): map_mode_changed.emit(modes.get_item_metadata(i)))
+	var flags: OptionButton = %Colours
+	for id in Data.table("flags"):
+		flags.add_item("Colours: " + Data.table("flags")[id].name)
+		flags.set_item_metadata(flags.item_count - 1, id)
+	flags.item_selected.connect(func(i): flag_changed.emit(flags.get_item_metadata(i)))
 
 
 func _process(_delta: float) -> void:
@@ -43,6 +51,12 @@ func _process(_delta: float) -> void:
 	var lines := PackedStringArray()
 	lines.append(Clock.date_string() + ("   [PAUSED]" if Clock.speed_index == 0 else "   x%d" % Clock.SPEEDS[Clock.speed_index]))
 	lines.append("Captain %s, %s %s" % [ShipStats.captain(s).name, Data.table("ships")[s.type].name, s.name])
+	lines.append(Career.status_text(s))
+	var flags: OptionButton = %Colours
+	if flags.get_selected_metadata() != s.get("flag", "white"):
+		for i in flags.item_count:
+			if flags.get_item_metadata(i) == s.get("flag", "white"):
+				flags.select(i)
 	var weather: String = Data.rules.storms[w.storm].name if w.storm != "" else ("Calm" if Weather.calm else "Fair")
 	lines.append("Wind: from %s, %s" % [Geo.compass_name(w.dir), weather])
 	info.tooltip_text = ship.speed_text if not ship.route.is_empty() else ""
