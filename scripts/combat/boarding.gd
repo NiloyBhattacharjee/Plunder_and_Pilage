@@ -8,8 +8,14 @@ static func cfg() -> Dictionary:
 	return Data.rules.boarding
 
 
+## Marines fight at full strength; sailors and gunners pick up a cutlass at a fraction of it.
+static func fighting_factor(side: Dictionary) -> float:
+	var m: float = side.get("marines", 0.15)
+	return m + (1.0 - m) * Data.rules.crew_roles.non_marine_fighting
+
+
 static func strength(side: Dictionary, mult: float) -> float:
-	return side.crew * (0.5 + side.swordplay / 20.0) * (0.5 + maxf(side.morale, 0.0) / 100.0) * mult
+	return side.crew * fighting_factor(side) * (0.5 + side.swordplay / 20.0) * (0.5 + maxf(side.morale, 0.0) / 100.0) * mult
 
 
 ## Swivel guns sweep the enemy deck as the ships come together. Returns lines for the report.

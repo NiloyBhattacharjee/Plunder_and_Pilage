@@ -122,8 +122,8 @@ func _build_ship() -> void:
 		UIKit.label(g, r[1], tip)
 	var d: Dictionary = Data.rules.draught[st.draught]
 	UIKit.label(g, "Draught", "Deeper keels avoid shallow water when routing and risk running aground in it.")
-	UIKit.label(g, "%s (aground risk %.0f%% per day in shallows)" % [d.name, 100 * ShipStats.grounding_risk(s, st)],
-		"Base risk %.0f%% per day, cut by navigation." % (100 * d.ground_risk_per_day))
+	UIKit.label(g, "%s (aground risk %.0f%% a day in shallows, %.0f%% on reefs)" % [d.name, 100 * ShipStats.grounding_risk(s, st),
+		100 * ShipStats.grounding_risk(s, st, true)], "Base risk %.0f%% / %.0f%% per day, cut by navigation." % [100 * d.ground_risk_per_day, 100 * d.reef_risk_per_day])
 	UIKit.label(g, "Hull fouling", "Weed and barnacles slow the ship. Careen at a shipyard to clean the hull.")
 	UIKit.label(g, "%d%%" % int(s.fouling * 100))
 	var officers: int = s.officers.size()
@@ -211,6 +211,14 @@ func _build_crew() -> void:
 	for c in crew:
 		nations[c.nationality] = nations.get(c.nationality, 0) + 1
 	UIKit.label(box, "Origins: " + ", ".join(nations.keys().map(func(n): return "%s %d" % [Data.table("nations")[n].name, nations[n]])), "", UIKit.DIM)
+	var roles := UIKit.row(box)
+	UIKit.label(roles, "Battle stations:", "How the crew is split in a fight: sailors work the ship, gunners serve the guns, marines lead boardings.", UIKit.HEADER)
+	for preset in Data.rules.crew_roles.presets:
+		var p: Dictionary = Data.rules.crew_roles.presets[preset]
+		var b := UIKit.button(roles, p.name, func():
+			s.roles = preset
+			refresh(), "%s\nSailors %d%%, gunners %d%%, marines %d%%." % [p.description, p.sailors * 100, p.gunners * 100, p.marines * 100])
+		b.disabled = s.get("roles", "balanced") == preset
 	var unknown := crew.filter(func(c): return not c.hidden.is_empty()).size()
 	UIKit.label(box, "%d hands still have traits you haven't discovered. Time at sea brings them out." % unknown, "", UIKit.DIM)
 

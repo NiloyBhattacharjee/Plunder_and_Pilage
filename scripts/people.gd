@@ -45,7 +45,8 @@ func reset() -> void:
 	next_id = 1
 
 
-## Random character. opts: nationality, mix ({nationality: weight}), pool ("crew"/"official"), age range.
+## Random character. opts: nationality, mix ({nationality: weight}), pool ("crew"/"official"),
+## bonus ({skills: {skill: +n}, traits: {trait: chance}}: what a particular port's hands are like).
 func generate(opts := {}) -> Dictionary:
 	var cfg: Dictionary = Data.rules.people
 	var nat: String = opts.get("nationality", _weighted(opts.get("mix", {"english": 1})))
@@ -66,11 +67,19 @@ func generate(opts := {}) -> Dictionary:
 	var specialty: String = _pick(SKILLS)  # most hands are good at one thing
 	c.skills[specialty] = mini(20, c.skills[specialty] + cfg.specialty_bonus)
 
+	var bonus: Dictionary = opts.get("bonus", {})
+	for sk in bonus.get("skills", {}):
+		c.skills[sk] = mini(20, c.skills[sk] + int(bonus.skills[sk]))
+	for t in bonus.get("traits", {}):
+		if rng.randf() < bonus.traits[t] and not _conflicts(c.traits, t):
+			c.traits.append(t)
+	c.portrait = {"seed": rng.randi()}  # rebuilds the same face after loading
+
 	var pool: String = opts.get("pool", "crew")
 	var candidates := Data.table("traits").keys().filter(func(t): return pool in Data.table("traits")[t].pools)
 	for i in rng.randi_range(cfg.traits[0], cfg.traits[1]):
 		var t: String = _pick(candidates)
-		if not t in c.traits and not _conflicts(c.traits, t):
+		if not t in c.traits and not _conflicts(c.traits, t) and c.traits.size() < 3:
 			c.traits.append(t)
 			if rng.randf() < Data.table("traits")[t].get("hidden_chance", 0.0):
 				c.hidden.append(t)
@@ -125,6 +134,17 @@ func reveal_trait(c: Dictionary) -> String:
 	if c.hidden.is_empty():
 		return ""
 	var t: String = c.hidden.pop_at(rng.randi() % c.hidden.size())
+	return t
+
+
+## A lasting wound: scar, lost eye, leg or hand. Returns the trait id, or "" if they've had them all.
+func wound(c: Dictionary) -> String:
+	var options: Array = Data.rules.wounds.traits.filter(func(t): return not t in c.traits)
+	if options.is_empty():
+		return ""
+	var t: String = options[rng.randi() % options.size()]
+	c.traits.append(t)
+	c.history.append("Wounded: %s, %s." % [Data.table("traits")[t].name.to_lower(), Clock.date_string()])
 	return t
 
 

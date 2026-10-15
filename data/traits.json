@@ -57,5 +57,14 @@
   "in_debt":      {"name": "Secretly in debt", "pools": ["official"], "hidden_chance": 0.9,
                    "description": "Owes money to dangerous people.", "tags": ["desperate"]},
   "vengeful":     {"name": "Vengeful", "pools": ["crew", "official"], "hidden_chance": 0.4,
-                   "description": "Never forgets a slight.", "tags": ["grudges"]}
+                   "description": "Never forgets a slight.", "tags": ["grudges"]},
+
+  "scarred":      {"name": "Scarred", "pools": ["wound"], "hidden_chance": 0.0,
+                   "description": "A blade left its mark across the face.", "effects": {"intimidation": 1, "charisma": -1}},
+  "one_eyed":     {"name": "One-eyed", "pools": ["wound"], "hidden_chance": 0.0,
+                   "description": "Lost an eye to a splinter. Wears a patch and a glare.", "effects": {"gunnery": -2, "intimidation": 2}},
+  "peg_leg":      {"name": "Peg leg", "pools": ["wound"], "hidden_chance": 0.0,
+                   "description": "A round shot took the leg below the knee.", "effects": {"swordplay": -2, "seamanship": -2, "intimidation": 1}},
+  "hook_hand":    {"name": "Hook", "pools": ["wound"], "hidden_chance": 0.0,
+                   "description": "An iron hook where a hand used to be.", "effects": {"swordplay": -1, "carpentry": -2, "intimidation": 3}}
 }

@@ -28,6 +28,7 @@ static func generate(faction: String, rng: RandomNumberGenerator, kind := "") ->
 		"carpentry": rng.randi_range(skill[0], skill[1]),
 		"captain": captain, "captain_swordplay": People.value(captain, "swordplay"),
 		"morale": float(e.morale), "gold": rng.randi_range(e.gold[0], e.gold[1]), "cargo": {},
+		"roles": e.get("roles", Data.rules.crew_roles.presets.balanced).duplicate(),
 	}
 	var tons: float = st.cargo * rng.randf_range(e.cargo_fraction[0], e.cargo_fraction[1])
 	var goods := _faction_goods(f)
@@ -70,10 +71,14 @@ static func player_side(s: Dictionary) -> Dictionary:
 		for c in crew:
 			total += People.value(c, skill)
 		return float(total) / crew.size()
-	var brave := crew.filter(func(c): return "brave" in c.traits).size()
+	var brave := crew.filter(func(c): return "brave" in c.traits or "bloodthirsty" in c.traits).size()
 	var cowards := crew.filter(func(c): return "cowardly" in c.traits).size()
 	var share := float(brave - cowards) / maxf(crew.size(), 1.0)
-	var morale := clampf(40.0 + People.value(cap, "authority") + People.value(cap, "charisma") + share * 60.0, 20.0, 95.0)
+	var morale := 40.0 + People.value(cap, "authority") + People.value(cap, "charisma") + share * 60.0
+	if s.cargo.get("food", 0.0) <= 0.0 or s.cargo.get("water", 0.0) <= 0.0:
+		morale -= Data.rules.hardship.starving_morale  # starving men fight badly
+	morale = clampf(morale, 10.0, 95.0)
+	var preset: Dictionary = Data.rules.crew_roles.presets[s.get("roles", "balanced")]
 	return {
 		"name": s.name, "type": s.type, "upgrades": s.upgrades, "hull": s.hull, "sails": s.sails,
 		"crew": ShipStats.headcount(s), "guns_lost": s.get("guns_lost", 0),
@@ -81,6 +86,7 @@ static func player_side(s: Dictionary) -> Dictionary:
 		"swordplay": avg.call("swordplay"), "captain_swordplay": People.value(cap, "swordplay"),
 		"carpentry": ShipStats.officer_skill(s, "carpenter"),
 		"morale": morale, "swivels": ShipStats.effective(s.type, s.upgrades).swivels, "behaviour": "player",
+		"roles": {"sailors": preset.sailors, "gunners": preset.gunners, "marines": preset.marines},
 	}
 
 
@@ -100,6 +106,20 @@ static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGene
 		if not names.is_empty():
 			text += " Among the dead: " + ", ".join(names) + "."
 		msgs.append(text)
+		var maimed := []  # some of the saved carry the battle with them for life
+		for i in lost - dead:
+			if s.crew.is_empty() or rng.randf() >= Data.rules.wounds.crew_chance:
+				continue
+			var c := People.person(s.crew[rng.randi() % s.crew.size()])
+			var t := People.wound(c)
+			if t != "":
+				maimed.append("%s (%s)" % [c.name, Data.table("traits")[t].name.to_lower()])
+		if not maimed.is_empty():
+			msgs.append("Maimed: " + ", ".join(maimed) + ".")
+	if after.get("captain_wounded", false):
+		var t := People.wound(ShipStats.captain(s))
+		if t != "":
+			msgs.append("Your captain will carry this fight forever: %s." % Data.table("traits")[t].name.to_lower())
 	return msgs
 
 

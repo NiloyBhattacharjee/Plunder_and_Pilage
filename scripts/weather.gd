@@ -21,9 +21,10 @@ func wind_at(pos: Vector2) -> Dictionary:
 	for s in storms:
 		if pos.distance_to(s.pos) < s.radius:
 			var spec: Dictionary = Data.rules.storms[s.kind]
-			# Northern-hemisphere storms turn anticlockwise: wind comes from 90 degrees clockwise of the bearing to the eye.
-			return {"dir": fposmod(Geo.bearing(pos - s.pos) + 90.0, 360.0),
-				"strength": spec.wind_strength, "storm": s.kind}
+			# Fronts (northers) blow from one direction; true storms turn anticlockwise in the northern
+			# hemisphere, so the wind comes from 90 degrees clockwise of the bearing to the eye.
+			var dir: float = spec.wind_from if spec.has("wind_from") else fposmod(Geo.bearing(pos - s.pos) + 90.0, 360.0)
+			return {"dir": dir, "strength": spec.wind_strength, "storm": s.kind}
 	return {"dir": wind_dir, "strength": wind_strength, "storm": ""}
 
 

@@ -80,8 +80,10 @@ func _on_tick(dd: float) -> void:
 			speed_text += "\nHeld back by the prize %s: %.1f kn" % [prize.name, pk]
 	$Hull.rotation = deg_to_rad(heading)
 
-	if terrain and terrain.at(position) == TerrainGrid.SHALLOW:
-		_check_grounding(dd)
+	if terrain:
+		var here := terrain.at(position)
+		if here == TerrainGrid.SHALLOW or here == TerrainGrid.REEF:
+			_check_grounding(dd, here == TerrainGrid.REEF)
 
 	var step := Geo.knots_to_px_per_day(speed_knots) * dd
 	while step > 0.0 and not route.is_empty():
@@ -102,7 +104,7 @@ func _on_tick(dd: float) -> void:
 
 func _storm_damage(dd: float) -> void:
 	if wind.storm != _last_storm and wind.storm != "":
-		message.emit("%s! The %s is taking a beating." % [Data.rules.storms[wind.storm].name, state.name])
+		message.emit(Data.rules.storms[wind.storm].message.format({"ship": state.name}))
 	_last_storm = wind.storm
 	if wind.storm == "" or state.hull <= 0:
 		return
@@ -117,12 +119,12 @@ func _storm_damage(dd: float) -> void:
 
 
 # Deep keels in shallow water: a chance per day of touching bottom. A good navigator cuts it.
-func _check_grounding(dd: float) -> void:
-	if rng.randf() < ShipStats.grounding_risk(state, stats) * dd:
+func _check_grounding(dd: float, reef: bool) -> void:
+	if rng.randf() < ShipStats.grounding_risk(state, stats, reef) * dd:
 		var dmg: Array = Data.rules.grounding.hull_damage
-		var hit := rng.randi_range(dmg[0], dmg[1])
+		var hit := rng.randi_range(dmg[0], dmg[1]) * (2 if reef else 1)
 		state.hull = maxf(1.0, state.hull - hit)
-		message.emit("The %s touched bottom in the shallows! Hull -%d." % [state.name, hit])
+		message.emit("The %s %s! Hull -%d." % [state.name, "struck a reef" if reef else "touched bottom in the shallows", hit])
 
 
 func _on_day() -> void:
@@ -134,6 +136,8 @@ func _on_day() -> void:
 	if at_sea:
 		_carpenter_repairs()
 	for text in daily_people(state, at_sea and not route.is_empty(), People.rng):
+		message.emit(text)
+	for text in hardship(state, stats, anchored_at, People.rng):
 		message.emit(text)
 
 
@@ -185,6 +189,51 @@ static func daily_people(s: Dictionary, sailing: bool, rng: RandomNumberGenerato
 			out.append("You learn something about %s: %s. %s" % [c.name, Data.table("traits")[t].name,
 				Data.table("traits")[t].description])
 	return out
+
+
+## The cost of running out, and of unpaid or resentful hands: thirst and hunger kill and breed grudges;
+## in port, men with grudges or owed wages slip away. Better quarters (comfort) soften both.
+static func hardship(s: Dictionary, stats: Dictionary, port_id: String, rng: RandomNumberGenerator) -> Array:
+	var h: Dictionary = Data.rules.hardship
+	var out := []
+	var relief := clampf(1.0 - stats.get("comfort", 0) * h.comfort_relief_per_point, 0.2, 1.0)
+	var thirsty: bool = s.cargo.get("water", 0.0) <= 0.0
+	var hungry: bool = s.cargo.get("food", 0.0) <= 0.0
+	if thirsty or hungry:
+		var rate: float = (h.thirst_death_rate if thirsty else 0.0) + (h.hunger_death_rate if hungry else 0.0)
+		var dead := 0
+		for id in s.crew.duplicate():
+			var c := People.person(id)
+			c.relations[s.captain] = c.relations.get(s.captain, 0) - int(ceil(h.starving_grudge * relief))
+			if rng.randf() < rate:
+				_remove_hand(s, id)
+				dead += 1
+		out.append("%s aboard!%s" % ["No water" if thirsty else "No food", " %d men died." % dead if dead > 0 else " The crew curse your name."])
+	if port_id != "":
+		var bill: float = maxf(1.0, s.crew.size() * Data.rules.upkeep.wage_per_crew)
+		var unpaid_days: float = s.wages_owed / bill
+		var gone := []
+		for id in s.crew.duplicate():
+			var c := People.person(id)
+			var chance: float = minf(h.desert_max_chance, unpaid_days * h.desert_per_unpaid_day)
+			if c.relations.get(s.captain, 0) <= h.desert_grudge_threshold:
+				chance += h.desert_grudge_chance
+			if rng.randf() < chance * relief:
+				gone.append(c.name)
+				_remove_hand(s, id)
+				Ports.state[port_id].sailors += 1
+		if not gone.is_empty():
+			out.append("%d hands deserted in %s%s." % [gone.size(), Ports.port(port_id).name,
+				" over unpaid wages" if unpaid_days >= 1.0 else ", nursing grudges against you"])
+	return out
+
+
+static func _remove_hand(s: Dictionary, id: String) -> void:
+	for role in s.officers.keys():
+		if s.officers[role] == id:
+			s.officers.erase(role)
+	s.crew.erase(id)
+	People.remove(id)
 
 
 func days_of(supply: String) -> float:

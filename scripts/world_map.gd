@@ -39,7 +39,9 @@ func _ready() -> void:
 	camera.limit_bottom = int(Data.map.size[1])
 
 	ship.terrain = terrain
-	ship.stats_changed.connect(func(): terrain.set_shallow_cost(Data.rules.draught[ship.stats.draught].route_cost))
+	ship.stats_changed.connect(func():
+		var d: Dictionary = Data.rules.draught[ship.stats.draught]
+		terrain.set_shallow_cost(d.route_cost, d.reef_route_cost))
 	# Loading still builds a default game first; the save then overwrites it (and it's a safe fallback if loading fails).
 	var cfg: Dictionary = start_config if start_config.has("background") else Data.rules.start
 	var game := NewGame.build(cfg)
@@ -233,8 +235,6 @@ func _on_combat_finished(result: Dictionary) -> void:
 	var s: Dictionary = ship.state
 	for m in Encounters.apply_battle(s, result.player, rng):
 		hud.show_message(m)
-	if result.player.get("captain_wounded", false):
-		ShipStats.captain(s).history.append("Wounded in battle with the %s, %s." % [result.enemy_data.name, Clock.date_string()])
 	var e: Dictionary = result.enemy_data
 	match result.outcome:
 		"enemy_struck":

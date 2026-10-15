@@ -167,3 +167,54 @@ Levels: 1. **Competition** (race for the same contracts and markets), 2. **Feud*
 Build with Addition 1 in **Milestone 8b**, or straight after as **Milestone 8c** if 8b gets too big. Basic rivals and bounties from milestone 11 should use this system rather than a separate one.
 
 After the milestone, report how alliances and rivalries connect to other systems and where the trade-offs feel weak or one-sided.
+
+---
+
+## Addition 3: Art pipeline
+
+### Goal
+Solo developer, not an artist. Art should look good and stay consistent, relying on code and simple layered assets instead of large amounts of hand-drawn art. Build the systems from the start so art can be swapped or restyled without changing game code.
+
+### General rules
+- **Placeholders first.** Simple shapes and free CC0 assets (e.g. Kenney.nl) until gameplay works. No final art before milestone 4 or 5.
+- **Everything swappable.** Code refers to art through data (ids and paths in data files), never hard-coded paths. Changing a sprite or portrait part = replacing a file.
+- **One style everywhere.** Working direction: **old sea chart look**: parchment and ink map, ships as small drawn icons, paper-textured panels, period fonts. Colours and line styles live in one shared place (a Godot Theme plus a small palette file).
+- **Track licences.** Asset manifest (`assets/CREDITS.md`) listing every third-party asset, source, author and licence. Commercial-use licences only.
+
+### 1. Procedural map
+- Built from Natural Earth (public domain) via a Python preprocessing tool (clip, simplify, project, export).
+- Land as Polygon2D, coastlines as Line2D style, with: a water shader (subtle waves, darker deep water, lighter shallows and reefs), parchment overlay, ink coastlines (maybe hatching), optional lat/long grid and compass rose.
+- Ports stored as real lon/lat, projected the same way.
+- Shallows, reefs and hidden coves are data on top of the map, for gameplay and drawing.
+- Support fog of war / uncharted areas (faded or blank parchment) for later exploration.
+
+### 2. Ships
+- One top-down sprite per ship type, rotated in code, with separate layers: **hull** (damaged versions or overlay), **sails** (furled, half, full, torn), **flag** (per faction, black flag, red flag, false flags; flags are gameplay).
+- Optional later: Blender models rendered top-down into sprites; folder structure should allow replacing hand-made sprites without code changes.
+- Combat may use larger versions of the same sprites.
+
+### 3. Layered character portraits
+- Layers: background, body/clothing, head, skin tone, eyes, nose, mouth, hair, facial hair, hat, accessories (earring, eyepatch, hook), scars, tattoos.
+- Parts per layer defined in data, with tags (navy coat, merchant clothes, pirate, governor's wig, priest) so portraits match role and nationality.
+- **Each character stores a portrait seed** (plus fixed choices) so the same face rebuilds after loading.
+- **Portraits change with the story:** scars/eyepatch/hook when wounded, ageing (grey hair, wrinkles), clothing changes with rank or wealth.
+- Start with placeholder parts; 40-60 parts give thousands of faces.
+
+### 4. Icons and UI
+- Icons for goods, buildings, traits, skills, upgrades, loaded by id from data; one consistent family.
+- One Godot Theme: parchment panels, ink borders, wax-seal buttons, period fonts from Google Fonts (IM Fell English for text, Pirata One for titles). Body text must stay readable; decorative fonts for headings only.
+
+### 5. Effects
+- Godot particles for cannon smoke, muzzle flashes, splashes, fire, sinking, storm rain. Small and consistent with the chart style (inky smoke).
+
+### 6. AI-generated art
+- Not as final game assets. Concept/mood reference only, outside the game files.
+
+### 7. Folder structure
+`assets/map/`, `assets/ships/<ship_type>/`, `assets/flags/`, `assets/portraits/<layer>/`, `assets/icons/<category>/`, `assets/ui/`, `assets/fx/`, `tools/`.
+
+### Milestones
+- **M1:** procedural Natural Earth map, asset manifest and folder structure.
+- **M3:** layered portrait system with placeholder parts; portrait seed on every character.
+- **M4:** ship sprites with separate hull, sail and flag layers; basic combat effects.
+- **Around M5:** stop and help choose the final art style; list the assets needed with rough counts (make, buy or commission).

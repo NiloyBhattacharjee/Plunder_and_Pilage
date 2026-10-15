@@ -29,7 +29,8 @@
       "spawn_area": [0.0, 0.0, 1.0, 1.0],
       "heading": 250, "heading_spread": 30,
       "radius_nm": 35, "speed_knots": 6, "days": [1, 3],
-      "wind_strength": 1.3, "hull_damage_per_day": 2, "sail_damage_per_day": 3
+      "wind_strength": 1.3, "hull_damage_per_day": 2, "sail_damage_per_day": 3,
+      "message": "Squall! The {ship} is taking a beating."
     },
     "hurricane": {
       "name": "Hurricane",
@@ -37,7 +38,26 @@
       "spawn_area": [0.85, 0.35, 1.0, 0.75],
       "heading": 285, "heading_spread": 15,
       "radius_nm": 110, "speed_knots": 12, "days": [5, 9],
-      "wind_strength": 1.6, "hull_damage_per_day": 30, "sail_damage_per_day": 25
+      "wind_strength": 1.6, "hull_damage_per_day": 30, "sail_damage_per_day": 25,
+      "message": "Hurricane! The {ship} is fighting for her life."
+    },
+    "calm": {
+      "name": "Becalmed",
+      "daily_chance_by_month": [0.02, 0.02, 0.03, 0.04, 0.06, 0.08, 0.08, 0.07, 0.05, 0.04, 0.03, 0.02],
+      "spawn_area": [0.1, 0.2, 0.9, 1.0],
+      "heading": 270, "heading_spread": 40,
+      "radius_nm": 140, "speed_knots": 2, "days": [3, 7],
+      "wind_strength": 0.15, "hull_damage_per_day": 0, "sail_damage_per_day": 0,
+      "message": "The wind dies away. The {ship} lies becalmed, sails hanging limp."
+    },
+    "norther": {
+      "name": "Norther",
+      "daily_chance_by_month": [0.06, 0.05, 0.04, 0.02, 0, 0, 0, 0, 0, 0.02, 0.04, 0.06],
+      "spawn_area": [0.0, 0.0, 0.35, 0.3],
+      "heading": 150, "heading_spread": 20,
+      "radius_nm": 260, "speed_knots": 8, "days": [2, 4],
+      "wind_strength": 1.35, "wind_from": 350, "hull_damage_per_day": 1, "sail_damage_per_day": 2,
+      "message": "A norther comes howling down from the Gulf. Cold wind, steep seas."
     }
   },
   "storm_shelter": 0.25,
@@ -45,9 +65,9 @@
   "market": {
     "normal_stock": {"produces": 160, "neutral": 60, "wants": 20},
     "size_mult": {"small": 0.6, "medium": 1.0, "large": 1.6},
-    "elasticity": 0.7,
+    "elasticity": 0.6,
     "price_clamp": [0.25, 4.0],
-    "spread": 0.12,
+    "spread": 0.15,
     "reversion": 0.05,
     "noise": 0.04
   },
@@ -61,7 +81,11 @@
   ],
   "smuggling": {
     "seizure_per_10_units": 0.08,
-    "fine_mult": 0.5
+    "fine_mult": 0.5,
+    "seizure_relation": 5,
+    "seizure_vigilance": 0.12,
+    "sale_vigilance": 0.03,
+    "vigilance_decay_per_day": 0.004
   },
   "shipyard": {
     "cost_per_hull": 3,
@@ -77,14 +101,22 @@
     "hire_cost": 12,
     "regen_per_day": 0.05,
     "round_cost": 15,
-    "rumours_per_visit": 2
+    "rumours_per_visit": 2,
+    "false_rumour_chance": 0.3,
+    "false_rumour_per_charisma": 0.012,
+    "notables": 3,
+    "notables_refresh_days": 30,
+    "notable_cost_per_skill": 4,
+    "interview_cost": 5,
+    "interview_base": 0.3,
+    "interview_per_charisma": 0.03
   },
 
   "draught": {
-    "shallow":   {"name": "Shallow",    "route_cost": 1.0,  "ground_risk_per_day": 0.0},
-    "medium":    {"name": "Medium",     "route_cost": 1.5,  "ground_risk_per_day": 0.05},
-    "deep":      {"name": "Deep",       "route_cost": 4.0,  "ground_risk_per_day": 0.2},
-    "very_deep": {"name": "Very deep",  "route_cost": 20.0, "ground_risk_per_day": 0.6}
+    "shallow":   {"name": "Shallow",    "route_cost": 1.0,  "ground_risk_per_day": 0.0,  "reef_route_cost": 6,  "reef_risk_per_day": 0.15},
+    "medium":    {"name": "Medium",     "route_cost": 1.5,  "ground_risk_per_day": 0.05, "reef_route_cost": 10, "reef_risk_per_day": 0.4},
+    "deep":      {"name": "Deep",       "route_cost": 4.0,  "ground_risk_per_day": 0.2,  "reef_route_cost": 25, "reef_risk_per_day": 0.8},
+    "very_deep": {"name": "Very deep",  "route_cost": 20.0, "ground_risk_per_day": 0.6,  "reef_route_cost": 50, "reef_risk_per_day": 1.0}
   },
   "grounding": {"hull_damage": [6, 18], "navigation_reduction_per_point": 0.035},
   "condition": {
@@ -172,5 +204,27 @@
                  "description": "Ruthless. Every captain in the Caribbean will hear of it. Some of your own crew won't forgive it."}
     },
     "ransom_per_authority": 40
-  }
+  },
+
+  "hardship": {
+    "thirst_death_rate": 0.03, "hunger_death_rate": 0.01, "starving_grudge": 1, "starving_morale": 15,
+    "desert_grudge_threshold": -8, "desert_grudge_chance": 0.08,
+    "desert_per_unpaid_day": 0.01, "desert_max_chance": 0.25,
+    "comfort_relief_per_point": 0.04
+  },
+  "crew_roles": {
+    "sailor_need_fraction": 0.5,
+    "non_marine_fighting": 0.6,
+    "presets": {
+      "balanced": {"name": "Balanced", "sailors": 0.45, "gunners": 0.4, "marines": 0.15,
+                   "description": "A fair share at sails, guns and the rail."},
+      "gun_deck": {"name": "Gun deck", "sailors": 0.3, "gunners": 0.6, "marines": 0.1,
+                   "description": "Every gun crewed and fast reloads. Clumsy handling, weak boarding."},
+      "boarders": {"name": "Boarders", "sailors": 0.3, "gunners": 0.25, "marines": 0.45,
+                   "description": "Muskets and cutlasses ready. Few guns manned."},
+      "runners":  {"name": "Runners", "sailors": 0.7, "gunners": 0.25, "marines": 0.05,
+                   "description": "Hands to the sails: best speed and turning in battle. Few guns, feeble boarding."}
+    }
+  },
+  "wounds": {"crew_chance": 0.15, "traits": ["scarred", "one_eyed", "peg_leg", "hook_hand"]}
 }

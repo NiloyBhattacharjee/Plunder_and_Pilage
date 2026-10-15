@@ -115,6 +115,10 @@ tooltip_text = "Fewer mouths to feed and wages to pay, but a short-handed ship."
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="Notables" type="VBoxContainer" parent="Panel/VBox/Tabs/Tavern"]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="Hostages" type="HBoxContainer" parent="Panel/VBox/Tabs/Tavern"]
 unique_name_in_owner = true
 layout_mode = 2

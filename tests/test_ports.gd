@@ -77,7 +77,7 @@ func test_buy_ship_moves_crew_and_drops_upgrades():
 	s.gold = 20000.0
 	s.upgrades = ["racing_rig"]
 	var crew_before: Array = s.crew.duplicate()
-	var r := Ports.buy_ship("brig", s)
+	var r := Ports.buy_ship("port_royal", "brig", s)
 	assert_true(r.ok)
 	assert_eq(s.type, "brig")
 	assert_eq(s.upgrades, [])
@@ -90,7 +90,7 @@ func test_cannot_buy_ship_too_small_for_crew():
 	s.crew.resize(0)
 	for i in 60:
 		s.crew.append(People.add(People.generate()))
-	assert_false(Ports.buy_ship("schooner", s).ok)
+	assert_false(Ports.buy_ship("bridgetown", "schooner", s).ok)
 
 
 func test_rumour_teaches_a_price_elsewhere():

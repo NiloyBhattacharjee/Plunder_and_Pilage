@@ -49,7 +49,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 		"cargo": Data.rules.start.cargo.duplicate(), "cargo_cost": {},
 		"relations": relations,
 		"reputation": {"honour": 0, "fear": 0, "notoriety": 0},
-		"stolen": {}, "prizes": [], "hostages": [], "guns_lost": 0,
+		"stolen": {}, "prizes": [], "hostages": [], "guns_lost": 0, "roles": "balanced",
 	}
 	auto_appoint(state, 7)
 	return {"state": state, "start_port": start_port}

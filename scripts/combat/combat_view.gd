@@ -178,6 +178,11 @@ func _build_hud() -> void:
 		UIKit.button(row, c.sail_settings[i].name, func(): sim.ships[0].sail_setting = i,
 			["No way on: you'll drift and barely turn.", "Fighting canvas: slower, guns fully crewed.",
 			"All sail: fastest, but hands aloft slow your reloading (x%.1f)." % c.sail_settings[2].reload][i])
+	for preset in c_roles():
+		var p: Dictionary = Data.rules.crew_roles.presets[preset]
+		UIKit.button(row, p.name, func(): sim.set_roles(sim.ships[0], preset),
+			"%s\nSailors %d%%, gunners %d%%, marines %d%%. Re-stationing men restarts your reloading." % [
+			p.description, p.sailors * 100, p.gunners * 100, p.marines * 100])
 	var row2 := %Controls2
 	UIKit.button(row2, "Fire port (Q)", func(): sim.fire(sim.ships[0], "port"))
 	UIKit.button(row2, "Fire starboard (E)", func(): sim.fire(sim.ships[0], "starboard"))
@@ -186,6 +191,10 @@ func _build_hud() -> void:
 	UIKit.button(row2, "Pause", func(): speed_index = 0)
 	UIKit.button(row2, "1x", func(): speed_index = 1)
 	UIKit.button(row2, "2x", func(): speed_index = 2)
+
+
+static func c_roles() -> Array:
+	return Data.rules.crew_roles.presets.keys()
 
 
 func _update_hud() -> void:
@@ -210,7 +219,8 @@ func _status(s: Dictionary, mine: bool) -> String:
 			Data.rules.combat.ammo[s.ammo].name],
 	])
 	if mine:
-		lines.append("Port %s   Starboard %s   Range %d" % [_reload_text(s, "port"), _reload_text(s, "starboard"), CombatSim.gun_range(s)])
+		lines.append("Port %s   Starboard %s   Range %d   Sailors %d  Gunners %d  Marines %d" % [_reload_text(s, "port"),
+			_reload_text(s, "starboard"), CombatSim.gun_range(s), CombatSim.sailors(s), CombatSim.gunners(s), s.crew * s.roles.marines])
 		if s.leak > 0.0:
 			lines.append("LEAKING %.1f hull/s" % s.leak)
 	return "\n".join(lines)
@@ -232,8 +242,10 @@ func _boarding() -> void:
 	var me: Dictionary = sim.ships[0]
 	var them: Dictionary = sim.ships[1]
 	var rng := sim.rng
-	var mine := {"crew": me.crew, "swordplay": me.swordplay, "captain_swordplay": me.captain_swordplay, "morale": me.morale, "swivels": me.stats.swivels}
-	var theirs := {"crew": them.crew, "swordplay": them.swordplay, "captain_swordplay": them.captain_swordplay, "morale": them.morale, "swivels": them.stats.swivels}
+	var mine := {"crew": me.crew, "swordplay": me.swordplay, "captain_swordplay": me.captain_swordplay, "morale": me.morale,
+		"swivels": me.stats.swivels, "marines": me.roles.marines}
+	var theirs := {"crew": them.crew, "swordplay": them.swordplay, "captain_swordplay": them.captain_swordplay, "morale": them.morale,
+		"swivels": them.stats.swivels, "marines": them.roles.marines}
 	var report := Boarding.opening_volley(mine, theirs, rng)
 	report.push_front("%s! Grapnels fly and the ships crash together." % ("You board them" if sim.boarded_by == 0 else "They board you"))
 	var result := ""

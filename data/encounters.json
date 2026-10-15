@@ -28,7 +28,12 @@
     ],
     "prisoner_willingness": 0.3,
     "relation_hit": 10,
-    "notoriety": 2
+    "notoriety": 2,
+    "roles": {
+      "sailors": 0.7,
+      "gunners": 0.25,
+      "marines": 0.05
+    }
   },
   "pirate": {
     "label": "pirate",
@@ -59,7 +64,12 @@
     ],
     "prisoner_willingness": 0.6,
     "relation_hit": 3,
-    "notoriety": 1
+    "notoriety": 1,
+    "roles": {
+      "sailors": 0.4,
+      "gunners": 0.3,
+      "marines": 0.3
+    }
   },
   "navy": {
     "label": "navy patrol",
@@ -91,6 +101,11 @@
     ],
     "prisoner_willingness": 0.15,
     "relation_hit": 20,
-    "notoriety": 4
+    "notoriety": 4,
+    "roles": {
+      "sailors": 0.35,
+      "gunners": 0.45,
+      "marines": 0.2
+    }
   }
 }

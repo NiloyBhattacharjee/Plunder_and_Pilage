@@ -5,7 +5,7 @@
     "description": "The wickedest city in the world. Buccaneer gold built its taverns, and its governor was once a buccaneer himself.",
     "produces": ["sugar", "rum", "logwood"],
     "wants": ["cloth", "tools", "wine", "gunpowder"],
-    "shipyard": 2, "sailors": 60, "ships_for_sale": ["sloop", "brigantine", "brig"],
+    "shipyard": 2, "sailors": 60, "ships_for_sale": ["sloop", "brigantine", "brig"], "recruits": {"skills": {"swordplay": 2}, "traits": {"veteran": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.3}
   },
   "bridgetown": {
@@ -14,7 +14,7 @@
     "description": "Upwind of everything. Planters grow rich on sugar and fear for their ships every hurricane season.",
     "produces": ["sugar", "rum", "molasses", "cotton"],
     "wants": ["tools", "cloth", "hides", "wine", "food"],
-    "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner"],
+    "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner"], "recruits": {"skills": {}, "traits": {"green": 0.2, "family_man": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.4}
   },
   "basseterre": {
@@ -32,7 +32,7 @@
     "description": "Key to the New World. The treasure fleet gathers here under the guns of El Morro before the run home.",
     "produces": ["tobacco", "hides", "sugar"],
     "wants": ["cloth", "wine", "tools", "weapons"],
-    "shipyard": 2, "sailors": 20, "ships_for_sale": ["sloop", "brig", "frigate", "galleon"],
+    "shipyard": 2, "sailors": 20, "ships_for_sale": ["sloop", "brig", "frigate", "galleon"], "recruits": {"skills": {"gunnery": 2}, "traits": {"former_navy": 0.15, "devout": 0.1}},
     "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.6}
   },
   "santo_domingo": {
@@ -50,7 +50,7 @@
     "description": "The strongest walls on the Main. Gold and emeralds from New Granada pass through on their way to Spain.",
     "produces": ["gold", "silver", "cocoa"],
     "wants": ["cloth", "wine", "weapons", "tools"],
-    "shipyard": 2, "sailors": 20, "ships_for_sale": ["brig", "frigate", "galleon"],
+    "shipyard": 2, "sailors": 20, "ships_for_sale": ["brig", "frigate", "galleon"], "recruits": {"skills": {"gunnery": 2}, "traits": {"former_navy": 0.15}},
     "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.7}
   },
   "portobelo": {
@@ -86,7 +86,7 @@
     "description": "A rock of buccaneers under a French flag. The governor asks few questions if his share arrives on time.",
     "produces": ["hides", "tobacco", "food"],
     "wants": ["gunpowder", "weapons", "wine", "cloth"],
-    "shipyard": 1, "sailors": 50, "ships_for_sale": ["sloop", "brigantine"],
+    "shipyard": 1, "sailors": 50, "ships_for_sale": ["sloop", "brigantine"], "recruits": {"skills": {"swordplay": 3, "gunnery": 1}, "traits": {"bloodthirsty": 0.1, "veteran": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.1}
   },
   "saint_pierre": {
@@ -95,7 +95,7 @@
     "description": "The Paris of the Antilles, under the shadow of Mont Pelée. Rich in sugar and cocoa, short of everything else.",
     "produces": ["sugar", "cocoa", "indigo"],
     "wants": ["tools", "cloth", "wine"],
-    "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner", "brig"],
+    "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner", "brig"], "recruits": {"skills": {"medicine": 1}, "traits": {"devout": 0.1}},
     "laws": {"contraband": ["cloth", "tools"], "vigilance": 0.3}
   },
   "willemstad": {
@@ -104,7 +104,7 @@
     "description": "The Dutch trade with everyone, legally or not. Spanish colonists buy here what Spain cannot send them.",
     "produces": ["cloth", "tools", "gunpowder"],
     "wants": ["cocoa", "tobacco", "hides", "silver", "water"],
-    "shipyard": 2, "sailors": 30, "ships_for_sale": ["schooner", "fluyt", "brig", "frigate"],
+    "shipyard": 2, "sailors": 30, "ships_for_sale": ["schooner", "fluyt", "brig", "frigate"], "recruits": {"skills": {"seamanship": 2, "trade": 1}, "traits": {"sea_legs": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.2}
   },
   "st_eustatius": {
@@ -113,7 +113,7 @@
     "description": "A free port on a volcanic rock. Warehouses line the beach and nobody checks whose flag a buyer sails under.",
     "produces": ["weapons", "gunpowder", "cloth", "wine"],
     "wants": ["sugar", "tobacco", "cotton", "indigo", "water"],
-    "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "fluyt"],
+    "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "fluyt"], "recruits": {"skills": {"seamanship": 1, "trade": 2}, "traits": {}},
     "laws": {"contraband": [], "vigilance": 0.1}
   },
   "nassau": {
@@ -122,7 +122,7 @@
     "description": "A ruined settlement turned pirate roost. The shoals of the Bahama Banks keep the navies' big ships away.",
     "produces": ["hides", "logwood"],
     "wants": ["rum", "gunpowder", "weapons", "wine", "tools", "food"],
-    "shipyard": 1, "sailors": 45, "ships_for_sale": ["sloop", "schooner"],
+    "shipyard": 1, "sailors": 45, "ships_for_sale": ["sloop", "schooner"], "recruits": {"skills": {"swordplay": 2}, "traits": {"drunkard": 0.15, "greedy": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.0}
   }
 }

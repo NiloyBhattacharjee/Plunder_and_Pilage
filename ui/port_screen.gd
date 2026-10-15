@@ -154,12 +154,13 @@ func _build_shipyard() -> void:
 		UIKit.label(g, "hull %d, hold %d, guns %d" % [t.hull, t.cargo, t.guns], tip)
 		UIKit.label(g, "crew %d-%d, %s draught" % [t.crew_min, t.crew_max, Data.rules.draught[t.draught].name.to_lower()], tip)
 		UIKit.label(g, "net %d" % (t.price - trade_in), "Price minus what your ship fetches in trade.")
+		var why := Ports.cannot_buy_ship(port_id, type_id, s)
 		var b := UIKit.button(g, "Buy", _act.bind(func():
-			var res := Ports.buy_ship(type_id, s)
+			var res := Ports.buy_ship(port_id, type_id, s)
 			if res.ok:
 				ship.refresh_stats()
-			return res), "Your upgrades stay with the old ship.")
-		b.disabled = t.price - trade_in > s.gold
+			return res), why if why != "" else "Your upgrades stay with the old ship.")
+		b.disabled = why != ""
 
 	UIKit.label(box, "")
 	UIKit.label(box, "Upgrades", "", UIKit.HEADER)
@@ -249,6 +250,18 @@ func _refresh_tavern() -> void:
 	%Rumour.text = "Buy a round and listen (%d gold, %d left this visit)" % [t.round_cost, rumours_left]
 	%Rumour.disabled = rumours_left <= 0 or ship.state.gold < t.round_cost
 	%Dismiss10.tooltip_text = "Pays off your 10 least useful hands (never officers). Fewer mouths and wages, but a short-handed ship sails slower."
+	UIKit.clear(%Notables)
+	var ps2: Dictionary = Ports.state[port_id]
+	if not ps2.notables.is_empty():
+		UIKit.label(%Notables, "Hands worth a closer look (hover for what you know):", "", UIKit.HEADER)
+		var ng := UIKit.grid(%Notables, 4)
+		for i in ps2.notables.size():
+			var c: Dictionary = ps2.notables[i]
+			UIKit.label(ng, "%s, %s" % [c.name, Data.table("nations")[c.nationality].name], People.describe(c))
+			UIKit.label(ng, People.trait_names(c), People.describe(c))
+			UIKit.button(ng, "Interview (%d)" % t.interview_cost, _act.bind(func(): return Ports.interview(port_id, i, ship.state)),
+				"Buy them a drink. Your charisma decides how much they let slip.")
+			UIKit.button(ng, "Hire (%d)" % Ports.notable_cost(c), _act.bind(func(): return Ports.hire_notable(port_id, i, ship.state, ship.stats.crew_max)))
 	for c in %Hostages.get_children():
 		c.queue_free()
 	var s: Dictionary = ship.state
@@ -283,9 +296,16 @@ func _pay_wages() -> void:
 	_act(func(): return {"ok": true, "text": "Paid %d in owed wages." % paid})
 
 
+func _officer_charisma(role: String) -> int:
+	var id: String = ship.state.officers.get(role, "")
+	return People.value(People.person(id), "charisma") if id != "" else 0
+
+
 func _rumour() -> void:
 	rumours_left -= 1
 	ship.state.gold -= Data.rules.tavern.round_cost
-	var text := Ports.rumour(port_id, int(Clock.day))
+	var t: Dictionary = Data.rules.tavern
+	var charisma := maxi(People.value(ShipStats.captain(ship.state), "charisma"), _officer_charisma("quartermaster"))
+	var text := Ports.rumour(port_id, int(Clock.day), maxf(0.05, t.false_rumour_chance - charisma * t.false_rumour_per_charisma))
 	%Rumours.text += "\"%s\"\n" % text
 	_act(func(): return {"ok": true, "text": "Rumour: " + text})

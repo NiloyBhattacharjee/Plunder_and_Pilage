@@ -37,6 +37,8 @@ static func make_ship(data: Dictionary) -> Dictionary:
 	s.reload = {"port": 0.0, "starboard": 0.0}
 	s.ammo = "round"
 	s.crew = float(s.crew)
+	if not s.has("roles"):
+		s.roles = Data.rules.crew_roles.presets.balanced.duplicate()
 	s.crew_start = s.crew
 	s.hull_start = float(s.hull)
 	s.casualties = 0.0
@@ -103,7 +105,8 @@ func target_speed(s: Dictionary, heading := -1.0) -> float:
 	var h: float = s.heading if heading < 0.0 else heading
 	var c: Dictionary = Data.rules.condition
 	var sails_frac := clampf(s.sails / float(s.stats.sails), 0.0, 1.0)
-	var crew_frac := clampf(s.crew / float(s.stats.crew_min), c.min_crew_speed, 1.0)
+	var need: float = s.stats.crew_min * Data.rules.crew_roles.sailor_need_fraction
+	var crew_frac := clampf(sailors(s) / maxf(need, 1.0), c.min_crew_speed, 1.0)
 	return (s.stats.speed_knots * Sailing.polar_factor(s.stats.polar, Geo.angle_between(h, wind_dir)) * wind_strength
 		* cfg().sail_settings[s.sail_setting].speed * lerpf(c.min_sail_speed, 1.0, sails_frac)
 		* float(s.masts) / s.stats.masts * crew_frac * cfg().px_per_knot)
@@ -114,13 +117,22 @@ static func gun_range(s: Dictionary, ammo := "") -> float:
 	return (cfg().gun_range_base + cfg().gun_range_per_lb * s.stats.gun_weight) * cfg().ammo[a].range
 
 
-## Guns that can fire in one broadside: half the working guns, if there are hands to serve them.
+static func sailors(s: Dictionary) -> float:
+	return s.crew * s.roles.sailors
+
+
+static func gunners(s: Dictionary) -> float:
+	return s.crew * s.roles.gunners
+
+
+## Guns that can fire in one broadside: half the working guns, if there are gunners to serve them.
 static func manned_guns(s: Dictionary) -> int:
-	return mini(int(s.guns_working / 2.0), int(s.crew / cfg().crew_per_gun))
+	return mini(int(s.guns_working / 2.0), int(gunners(s) / cfg().crew_per_gun))
 
 
 static func reload_time(s: Dictionary) -> float:
-	var shorthanded := maxf(1.0, s.stats.crew_min / maxf(s.crew, 1.0))
+	var needed: float = s.guns_working / 2.0 * cfg().crew_per_gun
+	var shorthanded := clampf(needed / maxf(gunners(s), 1.0), 1.0, 2.5)
 	return cfg().reload_seconds * (1.3 - s.gunnery * 0.03) * cfg().sail_settings[s.sail_setting].reload * shorthanded
 
 
@@ -139,6 +151,14 @@ func hit_chance(s: Dictionary, t: Dictionary, dist: float) -> float:
 
 
 ## Switching shot means drawing the old charges: both broadsides start reloading.
+## Re-stationing the crew mid-battle: men leave the guns, so both broadsides start reloading.
+func set_roles(s: Dictionary, preset: String) -> void:
+	var p: Dictionary = Data.rules.crew_roles.presets[preset]
+	s.roles = {"sailors": p.sailors, "gunners": p.gunners, "marines": p.marines}
+	for side in s.reload:
+		s.reload[side] = maxf(s.reload[side], reload_time(s))
+
+
 func set_ammo(s: Dictionary, ammo: String) -> void:
 	if s.ammo == ammo:
 		return

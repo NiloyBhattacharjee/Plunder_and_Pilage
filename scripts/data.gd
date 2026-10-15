@@ -12,7 +12,7 @@ const SCHEMA := {
 	"goods": {"required": ["name", "base_price"]},
 	"factions": {"required": ["name", "adjective", "color", "ship_names"]},
 	"ships": {"required": ["name", "description", "hull", "sails", "speed_knots", "turning", "cargo", "crew_min", "crew_max",
-		"guns", "gun_weight", "max_gun_weight", "draught", "price", "upkeep", "polar"]},
+		"guns", "gun_weight", "max_gun_weight", "draught", "price", "upkeep", "min_standing", "polar", "masts"]},
 	"upgrades": {"required": ["name", "description", "cost", "days", "shipyard", "effects"]},
 	"traits": {"required": ["name", "description", "pools"], "refs": {"opposite": "traits"}},
 	"nations": {"required": ["name", "faction", "start_port", "first", "last"], "refs": {"start_port": "ports"}},

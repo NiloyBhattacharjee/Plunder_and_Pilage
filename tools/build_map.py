@@ -2,10 +2,10 @@
 
 Outputs:
   data/map/coastline.json  land + shallow polygons in map pixels (for drawing)
-  data/map/terrain.png     coarse mask, 1 px per cell: 0 deep, 128 shallow, 255 land (for logic)
+  data/map/terrain.png     coarse mask, 1 px per cell: 0 deep, 128 shallow, 192 reef, 255 land (for logic)
 
 Usage: tools/.venv/Scripts/python tools/build_map.py
-Needs tools/cache/ne_10m_land.geojson, ne_10m_minor_islands.geojson, ne_10m_bathymetry_K_200.geojson
+Needs tools/cache/ne_10m_land.geojson, ne_10m_minor_islands.geojson, ne_10m_bathymetry_K_200.geojson, ne_10m_reefs.geojson
 from https://github.com/nvkelso/natural-earth-vector/tree/master/geojson
 """
 import json
@@ -29,6 +29,7 @@ PX_PER_DEG = 100.0          # 100 px = 1 degree of latitude = 60 nautical miles
 CELL_PX = 4                 # terrain mask resolution
 SIMPLIFY_DEG = 0.01         # ~1 km; keeps small Lesser Antilles islands recognisable
 MIN_AREA_DEG2 = 0.0004      # drop specks smaller than ~2x2 km
+REEF_WIDTH_DEG = 0.03       # reefs are lines in Natural Earth; widen them to ~3 km bands
 X_SCALE = math.cos(math.radians(LAT_REF)) * PX_PER_DEG
 
 
@@ -64,10 +65,11 @@ def main():
     shallow = window.difference(deep).difference(land)
     land = land.simplify(SIMPLIFY_DEG)
     shallow = shallow.simplify(SIMPLIFY_DEG)
+    reefs = load("ne_10m_reefs", window).buffer(REEF_WIDTH_DEG).difference(land).simplify(SIMPLIFY_DEG)
 
     w, h = to_px(LON_MAX, LAT_MIN)
     OUT.mkdir(parents=True, exist_ok=True)
-    land_px, shallow_px = polygons(land), polygons(shallow)
+    land_px, shallow_px, reef_px = polygons(land), polygons(shallow), polygons(reefs)
     (OUT / "coastline.json").write_text(json.dumps({
         "source": "Natural Earth 1:10m (public domain), built by tools/build_map.py",
         "projection": {"lon_min": LON_MIN, "lat_max": LAT_MAX, "lat_ref": LAT_REF, "px_per_deg": PX_PER_DEG},
@@ -75,13 +77,14 @@ def main():
         "cell_px": CELL_PX,
         "land": land_px,
         "shallow": shallow_px,
+        "reefs": reef_px,
     }, separators=(",", ":")))
 
-    # Rasterise at cell resolution. Shallow first, land on top.
+    # Rasterise at cell resolution. Shallow first, then reefs, land on top.
     cw, ch = math.ceil(w / CELL_PX), math.ceil(h / CELL_PX)
     img = Image.new("L", (cw, ch), 0)
     draw = ImageDraw.Draw(img)
-    for value, polys in ((128, shallow_px), (255, land_px)):
+    for value, polys in ((128, shallow_px), (192, reef_px), (255, land_px)):
         for flat in polys:
             pts = [(flat[i] / CELL_PX, flat[i + 1] / CELL_PX) for i in range(0, len(flat), 2)]
             if len(pts) >= 3:
@@ -90,7 +93,7 @@ def main():
 
     print(f"map {round(w)}x{round(h)} px, mask {cw}x{ch}, "
           f"{len(land_px)} land polys ({sum(len(p) for p in land_px) // 2} pts), "
-          f"{len(shallow_px)} shallow polys ({sum(len(p) for p in shallow_px) // 2} pts)")
+          f"{len(shallow_px)} shallow polys ({sum(len(p) for p in shallow_px) // 2} pts), {len(reef_px)} reef polys")
 
     # Sanity check: every port must have sea within ~10 nm, or the game can't find an anchorage.
     ports = json.loads((ROOT / "data" / "ports.json").read_text(encoding="utf-8"))

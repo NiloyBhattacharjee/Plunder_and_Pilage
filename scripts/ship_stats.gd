@@ -86,10 +86,12 @@ static func condition(state: Dictionary, stats: Dictionary) -> Dictionary:
 	return {"mult": mult, "text": "\n".join(lines)}
 
 
-## Chance per day spent in shallow water of touching bottom. A good navigator cuts it.
-static func grounding_risk(state: Dictionary, stats: Dictionary) -> float:
+## Chance per day of touching bottom in shallows (or on reefs, which threaten even sloops). A good navigator cuts it.
+static func grounding_risk(state: Dictionary, stats: Dictionary, reef := false) -> float:
 	var nav := officer_skill(state, "navigator")
-	return Data.rules.draught[stats.draught].ground_risk_per_day * maxf(0.0, 1.0 - nav * Data.rules.grounding.navigation_reduction_per_point)
+	var d: Dictionary = Data.rules.draught[stats.draught]
+	var base: float = d.reef_risk_per_day if reef else d.ground_risk_per_day
+	return base * maxf(0.0, 1.0 - nav * Data.rules.grounding.navigation_reduction_per_point)
 
 
 ## Multiplier on the merchant's spread: the better haggler of captain and quartermaster narrows it.

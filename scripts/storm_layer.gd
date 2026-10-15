@@ -1,7 +1,8 @@
 extends Node2D
 ## Draws storms as translucent circles over the chart, redrawn every frame as they drift.
 
-const COLORS := {"squall": Color(0.3, 0.3, 0.4, 0.25), "hurricane": Color(0.5, 0.1, 0.2, 0.3)}
+const COLORS := {"squall": Color(0.3, 0.3, 0.4, 0.25), "hurricane": Color(0.5, 0.1, 0.2, 0.3),
+	"calm": Color(0.85, 0.8, 0.55, 0.25), "norther": Color(0.3, 0.45, 0.65, 0.22)}
 
 
 func _process(_delta: float) -> void:

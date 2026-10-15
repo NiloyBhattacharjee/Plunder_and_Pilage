@@ -24,7 +24,9 @@ func reset() -> void:
 		var stock := {}
 		for good in Data.table("goods"):
 			stock[good] = Market.normal_stock(p, good, [])
-		state[id] = {"stock": stock, "mods": [], "sailors": float(p.sailors), "laws": p.laws.duplicate(true)}
+		state[id] = {"stock": stock, "mods": [], "sailors": float(p.sailors), "laws": p.laws.duplicate(true),
+			"notables": [], "notables_age": 0}
+		refresh_notables(id)
 
 
 func port(id: String) -> Dictionary:
@@ -41,6 +43,12 @@ func daily() -> void:
 		var ps: Dictionary = state[id]
 		Market.daily_update(p, ps, rng)
 		ps.sailors = minf(p.sailors, ps.sailors + p.sailors * Data.rules.tavern.regen_per_day)
+		# customs forget slowly: vigilance drifts back to the port's normal level
+		var base: float = p.laws.vigilance
+		ps.laws.vigilance = move_toward(ps.laws.vigilance, base, Data.rules.smuggling.vigilance_decay_per_day)
+		ps.notables_age += 1
+		if ps.notables_age >= Data.rules.tavern.notables_refresh_days:
+			refresh_notables(id)
 		for ev in Data.rules.market_events:
 			if rng.randf() < ev.daily_chance:
 				start_market_event(id, ev)
@@ -106,11 +114,20 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	if n_stolen > 0:  # stolen goods sell cheap unless there's a fence
 		var stolen_income := Market.quote(port(id), good, ps.stock[good] + n_clean * Market.weight(good), n_stolen, false, spread_mult)
 		income += int(stolen_income * fence_mult(id))
+	var sm: Dictionary = Data.rules.smuggling
+	var contraband: bool = good in ps.laws.contraband
 	if rng.randf() < Market.seizure_chance(ps.laws, good, qty):
-		var fine := int(round(income * Data.rules.smuggling.fine_mult))
+		var fine := int(round(income * sm.fine_mult))
 		remove_cargo(s, good, have)
 		s.gold = maxf(0.0, s.gold - fine)
-		return {"ok": false, "text": "Customs officers seized all your %s and fined you %d!" % [_name(good), fine]}
+		var f: String = port(id).faction
+		s.relations[f] = s.relations.get(f, 0) - int(sm.seizure_relation)
+		s.reputation.notoriety += 1
+		ps.laws.vigilance = minf(1.0, ps.laws.vigilance + sm.seizure_vigilance)
+		return {"ok": false, "text": "Customs officers seized all your %s and fined you %d! %s will remember (standing -%d), and customs here are watching closer." % [
+			_name(good), fine, Data.table("factions")[f].name, sm.seizure_relation]}
+	if contraband:  # even a clean sale gets noticed
+		ps.laws.vigilance = minf(1.0, ps.laws.vigilance + sm.sale_vigilance)
 	remove_cargo(s, good, qty, n_stolen)
 	s.gold += income
 	ps.stock[good] += qty * Market.weight(good)
@@ -134,6 +151,22 @@ static func remove_cargo(s: Dictionary, good: String, qty: float, stolen_part :=
 		s.cargo_cost.erase(good)
 	else:
 		s.cargo[good] = left
+
+
+## Why a yard won't sell you this ship, or "". Warships need the owners' trust.
+func cannot_buy_ship(id: String, type_id: String, s: Dictionary) -> String:
+	var t: Dictionary = Data.table("ships")[type_id]
+	var f: String = port(id).faction
+	if s.relations.get(f, 0) < t.min_standing:
+		return "%s won't sell a %s to someone with your standing (needs %+d, you have %+d)." % [
+			Data.table("factions")[f].name, t.name.to_lower(), t.min_standing, s.relations.get(f, 0)]
+	if t.price - ShipStats.trade_in_value(s) > s.gold:
+		return "You can't afford her, even trading in your ship."
+	if Market.cargo_used(s.cargo) > ShipStats.effective(type_id, []).cargo:
+		return "Your cargo won't fit in her hold. Sell some first."
+	if ShipStats.headcount(s) > t.crew_max:
+		return "Too many crew for her berths. Pay some off first."
+	return ""
 
 
 ## Stolen goods fetch full price only through a fence (pirate havens, some free ports).
@@ -194,7 +227,62 @@ func ransom(id: String, s: Dictionary, index: int) -> Dictionary:
 	return {"ok": true, "text": "%s is ransomed for %d gold." % [name, h.ransom]}
 
 
-## Signs on n new hands, each a generated character. Their nationality follows the port's mix.
+func recruit_opts(id: String) -> Dictionary:
+	return {"mix": Data.rules.people.recruit_mix[port(id).faction], "bonus": port(id).get("recruits", {})}
+
+
+## A few hands worth a closer look: you see their skills, but not every trait until you interview them.
+func refresh_notables(id: String) -> void:
+	var ps: Dictionary = state[id]
+	ps.notables = []
+	ps.notables_age = 0
+	for i in Data.rules.tavern.notables:
+		var c := People.generate(recruit_opts(id))
+		var best: String = People.SKILLS[0]
+		for sk in People.SKILLS:
+			if c.skills[sk] > c.skills[best]:
+				best = sk
+		c.skills[best] = mini(20, c.skills[best] + 3)  # they stand out for a reason
+		ps.notables.append(c)
+
+
+static func notable_cost(c: Dictionary) -> int:
+	var best := 0
+	for sk in People.SKILLS:
+		best = maxi(best, People.value(c, sk))
+	return int(Data.rules.tavern.hire_cost + best * Data.rules.tavern.notable_cost_per_skill)
+
+
+func hire_notable(id: String, index: int, s: Dictionary, crew_max: int) -> Dictionary:
+	var c: Dictionary = state[id].notables[index]
+	var cost := notable_cost(c)
+	if ShipStats.headcount(s) >= crew_max:
+		return {"ok": false, "text": "No berth for them."}
+	if s.gold < cost:
+		return {"ok": false, "text": "You can't afford their price."}
+	s.gold -= cost
+	c.history.append("Signed on at %s, %s." % [port(id).name, Clock.date_string()])
+	s.crew.append(People.add(c))
+	state[id].notables.remove_at(index)
+	return {"ok": true, "text": "%s signs your articles for %d." % [c.name, cost]}
+
+
+## Buy them a drink and size them up: a chance to learn one hidden trait. Captain's charisma helps.
+func interview(id: String, index: int, s: Dictionary) -> Dictionary:
+	var t: Dictionary = Data.rules.tavern
+	var c: Dictionary = state[id].notables[index]
+	if s.gold < t.interview_cost:
+		return {"ok": false, "text": "Not even the price of a drink."}
+	s.gold -= t.interview_cost
+	c.interviewed = true
+	var chance: float = t.interview_base + People.value(ShipStats.captain(s), "charisma") * t.interview_per_charisma
+	if not c.hidden.is_empty() and rng.randf() < chance:
+		var found: String = People.reveal_trait(c)
+		return {"ok": true, "text": "Over a drink, %s lets slip that they're %s." % [c.name, Data.table("traits")[found].name.to_lower()]}
+	return {"ok": true, "text": "%s gives nothing away%s." % [c.name, "" if not c.hidden.is_empty() else " (there's nothing more to learn)"]}
+
+
+## Signs on n new hands, each a generated character shaped by the port they come from.
 func hire(id: String, n: int, s: Dictionary, crew_max: int) -> Dictionary:
 	var ps: Dictionary = state[id]
 	var cost_each: float = Data.rules.tavern.hire_cost
@@ -202,9 +290,8 @@ func hire(id: String, n: int, s: Dictionary, crew_max: int) -> Dictionary:
 	n = mini(n, int(s.gold / cost_each))
 	if n <= 0:
 		return {"ok": false, "text": "No one to hire: no sailors left, no money, or no room aboard."}
-	var mix: Dictionary = Data.rules.people.recruit_mix[port(id).faction]
 	for i in n:
-		s.crew.append(People.add(People.generate({"mix": mix})))
+		s.crew.append(People.add(People.generate(recruit_opts(id))))
 	ps.sailors -= n
 	s.gold -= n * cost_each
 	return {"ok": true, "text": "Signed on %d sailors for %d." % [n, n * cost_each]}
@@ -232,15 +319,12 @@ static func _usefulness(id: String) -> int:
 
 
 ## Trades in the current ship for a new one. Crew, cargo and officers move across; upgrades stay with the old ship.
-func buy_ship(type_id: String, s: Dictionary) -> Dictionary:
+func buy_ship(id: String, type_id: String, s: Dictionary) -> Dictionary:
+	var why := cannot_buy_ship(id, type_id, s)
+	if why != "":
+		return {"ok": false, "text": why}
 	var new_stats := ShipStats.effective(type_id, [])
 	var cost: int = Data.table("ships")[type_id].price - ShipStats.trade_in_value(s)
-	if cost > s.gold:
-		return {"ok": false, "text": "You can't afford her, even trading in your ship."}
-	if Market.cargo_used(s.cargo) > new_stats.cargo:
-		return {"ok": false, "text": "Your cargo won't fit in her hold. Sell some first."}
-	if ShipStats.headcount(s) > new_stats.crew_max:
-		return {"ok": false, "text": "Too many crew for her berths. Pay some off first."}
 	var old_name: String = Data.table("ships")[s.type].name
 	s.gold -= cost
 	s.type = type_id
@@ -251,25 +335,38 @@ func buy_ship(type_id: String, s: Dictionary) -> Dictionary:
 	return {"ok": true, "text": "Traded your %s for a %s, paying %d." % [old_name, new_stats.name, cost]}
 
 
-## A tavern rumour: news of a market event somewhere, or a tip about prices. The player learns those prices.
-func rumour(here: String, day: int) -> String:
+## A tavern rumour: news of a market event somewhere, or a tip about prices. The player learns those prices,
+## but some rumours are wrong; you find out when you get there. `false_chance` comes from your charisma.
+func rumour(here: String, day: int, false_chance := 0.0) -> String:
 	var others := state.keys().filter(func(id): return id != here)
 	var with_news := others.filter(func(id): return not state[id].mods.is_empty())
 	var id: String
 	var good: String
 	var text: String
+	var price_tip := false
 	if not with_news.is_empty() and rng.randf() < 0.6:
 		id = with_news[rng.randi() % with_news.size()]
 		var m: Dictionary = state[id].mods[rng.randi() % state[id].mods.size()]
 		good = m.good
 		text = m.rumour.format({"good": _name(good), "port": port(id).name})
 	else:
+		price_tip = true
 		id = others[rng.randi() % others.size()]
 		var goods: Array = port(id).produces + port(id).wants
 		good = goods[rng.randi() % goods.size()]
 		text = "A captain fresh from %s says %s buys at %s and sells at %s there." % [
 			port(id).name, _name(good), Market.fmt(price(id, good, true)), Market.fmt(price(id, good, false))]
-	record_prices(id, day - rng.randi_range(1, 6), [good])  # rumours are a few days old
+	var heard := day - rng.randi_range(1, 6)  # rumours are a few days old
+	record_prices(id, heard, [good])
+	known[id][good].source = "rumour"
+	if rng.randf() < false_chance:  # a tall tale: the numbers you heard are off
+		var off := rng.randf_range(1.4, 1.9) if rng.randf() < 0.5 else rng.randf_range(0.4, 0.7)
+		known[id][good].buy *= off
+		known[id][good].sell *= off
+		known[id][good].fake = true
+		if price_tip:
+			text = text.replace(Market.fmt(price(id, good, true)), Market.fmt(known[id][good].buy)).replace(
+				Market.fmt(price(id, good, false)), Market.fmt(known[id][good].sell))
 	return text
 
 

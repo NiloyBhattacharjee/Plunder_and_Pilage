@@ -1,14 +1,16 @@
 class_name TerrainGrid
 extends RefCounted
 ## Coarse terrain mask (data/map/terrain.png) for gameplay queries and route finding.
-## Each mask pixel is one cell of `cell_px` map pixels: 0 deep, 128 shallow, 255 land.
+## Each mask pixel is one cell of `cell_px` map pixels: 0 deep, 128 shallow, 192 reef, 255 land.
+## Types are ordered by danger, so "at least as bad as" comparisons work.
 
-enum { DEEP, SHALLOW, LAND }
+enum { DEEP, SHALLOW, REEF, LAND }
 
 var image: Image
 var cell_px: int
 var astar := AStarGrid2D.new()  # Godot's built-in grid pathfinder
 var _shallow_cells: Array[Vector2i] = []
+var _reef_cells: Array[Vector2i] = []
 var shallow_cost := 1.0
 
 
@@ -25,13 +27,17 @@ func _init(mask: Image, cell: int) -> void:
 			match _cell_type(Vector2i(x, y)):
 				LAND: astar.set_point_solid(Vector2i(x, y))
 				SHALLOW: _shallow_cells.append(Vector2i(x, y))
+				REEF: _reef_cells.append(Vector2i(x, y))
+	set_shallow_cost(1.0, 6.0)
 
 
-## How much routes avoid shallow water: 1 for shallow-draught ships, higher for deep keels.
-func set_shallow_cost(cost: float) -> void:
+## How much routes avoid shallows and reefs: deep keels avoid both far more than sloops.
+func set_shallow_cost(cost: float, reef_cost := 6.0) -> void:
 	shallow_cost = cost
 	for c in _shallow_cells:
 		astar.set_point_weight_scale(c, cost)
+	for c in _reef_cells:
+		astar.set_point_weight_scale(c, reef_cost)
 
 
 func at(pos: Vector2) -> int:
@@ -46,7 +52,9 @@ func _cell_type(c: Vector2i) -> int:
 	if not astar.region.has_point(c):
 		return LAND  # off-map counts as land so nothing sails away
 	var v := image.get_pixelv(c).r8
-	return LAND if v > 200 else (SHALLOW if v > 64 else DEEP)
+	if v > 224: return LAND
+	if v > 160: return REEF
+	return SHALLOW if v > 64 else DEEP
 
 
 ## Nearest navigable cell centre to `pos`, searching outward ring by ring. Returns pos if none nearby.
@@ -90,10 +98,12 @@ func _smooth(path: PackedVector2Array) -> PackedVector2Array:
 	return out  # excludes the start point: the ship is already there
 
 
-# A smoothed leg must not cut across shallows the weighted route went around (unless it starts or ends in them).
+# A smoothed leg must not cut across water the weighted route went around (unless it starts or ends there):
+# reefs for every ship, shallows too for deep keels.
 func _clear_leg(a: Vector2, b: Vector2) -> bool:
-	var avoid := shallow_cost > 1.0 and at(a) != SHALLOW and at(b) != SHALLOW
-	return clear_line(a, b, SHALLOW if avoid else LAND)
+	var worst := maxi(at(a), at(b))
+	var blocked := SHALLOW if shallow_cost > 1.0 else REEF
+	return clear_line(a, b, maxi(blocked, worst + 1) if worst < LAND else LAND)
 
 
 ## True if the straight line from a to b never touches terrain of type `blocked` or worse.

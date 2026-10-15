@@ -26,8 +26,8 @@ func _draw() -> void:
 		var label: String = port.name
 		if trade_good != "":
 			var k: Dictionary = Ports.known.get(id, {}).get(trade_good, {})
-			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd)" % [
-				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day)]
+			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd%s)" % [
+				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]
 		draw_circle(pos, 6.0 * s, Color(Data.table("factions")[port.faction].color))
 		draw_circle(pos, 6.0 * s, INK, false, 1.5 * s)
 		draw_string_outline(ThemeDB.fallback_font, text_pos, label,
