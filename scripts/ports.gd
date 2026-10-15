@@ -31,8 +31,8 @@ func port(id: String) -> Dictionary:
 	return Data.table("ports")[id]
 
 
-func price(id: String, good: String, buying: bool) -> float:
-	return Market.unit_price(port(id), good, state[id].stock[good], buying)
+func price(id: String, good: String, buying: bool, spread_mult := 1.0) -> float:
+	return Market.unit_price(port(id), good, state[id].stock[good], buying, spread_mult)
 
 
 func daily() -> void:
@@ -74,32 +74,32 @@ func best_known_sale(good: String, exclude: String) -> Dictionary:
 	return best
 
 
-func buy(id: String, good: String, qty: int, s: Dictionary, capacity: float) -> Dictionary:
+func buy(id: String, good: String, qty: int, s: Dictionary, capacity: float, spread_mult := 1.0) -> Dictionary:
 	var ps: Dictionary = state[id]
 	var w := Market.weight(good)
 	qty = mini(qty, Market.max_buy(good, ps.stock[good]))
 	qty = mini(qty, int((capacity - Market.cargo_used(s.cargo)) / w + 0.0001))
-	qty = mini(qty, int(s.gold / price(id, good, true)))
-	var cost := Market.quote(port(id), good, ps.stock[good], qty, true)
+	qty = mini(qty, int(s.gold / price(id, good, true, spread_mult)))
+	var cost := Market.quote(port(id), good, ps.stock[good], qty, true, spread_mult)
 	while qty > 0 and cost > s.gold:  # rising prices during the trade can push the total over budget
 		qty -= 1
-		cost = Market.quote(port(id), good, ps.stock[good], qty, true)
+		cost = Market.quote(port(id), good, ps.stock[good], qty, true, spread_mult)
 	if qty <= 0:
 		return {"ok": false, "text": "Can't buy: no money, no room in the hold, or none left."}
 	s.gold -= cost
 	s.cargo[good] = s.cargo.get(good, 0) + qty
 	s.cargo_cost[good] = s.cargo_cost.get(good, 0.0) + cost
 	ps.stock[good] -= qty * w
-	return {"ok": true, "text": "Bought %d %s for %d." % [qty, _name(good), cost]}
+	return {"ok": true, "text": "Bought %d %s for %d." % [qty, _name(good), cost], "value": cost}
 
 
-func sell(id: String, good: String, qty: int, s: Dictionary) -> Dictionary:
+func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0) -> Dictionary:
 	var ps: Dictionary = state[id]
 	var have: float = s.cargo.get(good, 0.0)
 	qty = mini(qty, int(have))
 	if qty <= 0:
 		return {"ok": false, "text": "Nothing to sell."}
-	var income := Market.quote(port(id), good, ps.stock[good], qty, false)
+	var income := Market.quote(port(id), good, ps.stock[good], qty, false, spread_mult)
 	if rng.randf() < Market.seizure_chance(ps.laws, good, qty):
 		var fine := int(round(income * Data.rules.smuggling.fine_mult))
 		remove_cargo(s, good, have)
@@ -108,7 +108,7 @@ func sell(id: String, good: String, qty: int, s: Dictionary) -> Dictionary:
 	remove_cargo(s, good, qty)
 	s.gold += income
 	ps.stock[good] += qty * Market.weight(good)
-	return {"ok": true, "text": "Sold %d %s for %d." % [qty, _name(good), income]}
+	return {"ok": true, "text": "Sold %d %s for %d." % [qty, _name(good), income], "value": income}
 
 
 ## Removes cargo and the matching share of what was paid for it.
@@ -124,17 +124,61 @@ static func remove_cargo(s: Dictionary, good: String, qty: float) -> void:
 		s.cargo[good] = left
 
 
+## Signs on n new hands, each a generated character. Their nationality follows the port's mix.
 func hire(id: String, n: int, s: Dictionary, crew_max: int) -> Dictionary:
 	var ps: Dictionary = state[id]
 	var cost_each: float = Data.rules.tavern.hire_cost
-	n = mini(n, mini(int(ps.sailors), crew_max - s.crew))
+	n = mini(n, mini(int(ps.sailors), crew_max - ShipStats.headcount(s)))
 	n = mini(n, int(s.gold / cost_each))
 	if n <= 0:
 		return {"ok": false, "text": "No one to hire: no sailors left, no money, or no room aboard."}
+	var mix: Dictionary = Data.rules.people.recruit_mix[port(id).faction]
+	for i in n:
+		s.crew.append(People.add(People.generate({"mix": mix})))
 	ps.sailors -= n
-	s.crew += n
 	s.gold -= n * cost_each
 	return {"ok": true, "text": "Signed on %d sailors for %d." % [n, n * cost_each]}
+
+
+## Pays off the n least useful hands (never officers). They go back to the port's pool.
+func dismiss(id: String, n: int, s: Dictionary) -> Dictionary:
+	var officers: Array = s.officers.values()
+	var pool: Array = s.crew.filter(func(c): return not c in officers)
+	pool.sort_custom(func(a, b): return _usefulness(a) < _usefulness(b))
+	var gone: Array = pool.slice(0, n)
+	for c in gone:
+		s.crew.erase(c)
+		People.remove(c)
+	state[id].sailors += gone.size()
+	return {"ok": not gone.is_empty(), "text": "Paid off %d hands." % gone.size()}
+
+
+static func _usefulness(id: String) -> int:
+	var c := People.person(id)
+	var best := 0
+	for sk in People.SKILLS:
+		best = maxi(best, People.value(c, sk))
+	return best + People.value(c, "experience")
+
+
+## Trades in the current ship for a new one. Crew, cargo and officers move across; upgrades stay with the old ship.
+func buy_ship(type_id: String, s: Dictionary) -> Dictionary:
+	var new_stats := ShipStats.effective(type_id, [])
+	var cost: int = Data.table("ships")[type_id].price - ShipStats.trade_in_value(s)
+	if cost > s.gold:
+		return {"ok": false, "text": "You can't afford her, even trading in your ship."}
+	if Market.cargo_used(s.cargo) > new_stats.cargo:
+		return {"ok": false, "text": "Your cargo won't fit in her hold. Sell some first."}
+	if ShipStats.headcount(s) > new_stats.crew_max:
+		return {"ok": false, "text": "Too many crew for her berths. Pay some off first."}
+	var old_name: String = Data.table("ships")[s.type].name
+	s.gold -= cost
+	s.type = type_id
+	s.upgrades = []
+	s.hull = float(new_stats.hull)
+	s.sails = float(new_stats.sails)
+	s.fouling = 0.0
+	return {"ok": true, "text": "Traded your %s for a %s, paying %d." % [old_name, new_stats.name, cost]}
 
 
 ## A tavern rumour: news of a market event somewhere, or a tip about prices. The player learns those prices.

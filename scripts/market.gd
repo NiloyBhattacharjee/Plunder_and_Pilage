@@ -41,18 +41,19 @@ static func supply_factor(port: Dictionary, stock: float) -> float:
 	return clampf(pow(reference / maxf(stock, 0.5), cfg().elasticity), cfg().price_clamp[0], cfg().price_clamp[1])
 
 
-static func unit_price(port: Dictionary, good: String, stock: float, buying: bool) -> float:
-	var half: float = cfg().spread / 2.0
+## spread_mult < 1 narrows the merchant's margin (a good haggler).
+static func unit_price(port: Dictionary, good: String, stock: float, buying: bool, spread_mult := 1.0) -> float:
+	var half: float = cfg().spread * spread_mult / 2.0
 	var mid: float = Data.table("goods")[good].base_price * supply_factor(port, stock)
 	return mid * (1.0 + half if buying else 1.0 - half)
 
 
 ## Total price of buying (or income from selling) qty units. Each unit moves stock, so big trades get worse prices.
-static func quote(port: Dictionary, good: String, stock: float, qty: int, buying: bool) -> int:
+static func quote(port: Dictionary, good: String, stock: float, qty: int, buying: bool, spread_mult := 1.0) -> int:
 	var w := weight(good)
 	var total := 0.0
 	for i in qty:
-		total += unit_price(port, good, stock - i * w if buying else stock + i * w, buying)
+		total += unit_price(port, good, stock - i * w if buying else stock + i * w, buying, spread_mult)
 	return int(round(total))
 
 
@@ -81,7 +82,7 @@ static func daily_update(port: Dictionary, pstate: Dictionary, rng: RandomNumber
 
 
 ## Tooltip text explaining a price, Paradox style.
-static func breakdown(port: Dictionary, good: String, pstate: Dictionary, laws: Dictionary) -> String:
+static func breakdown(port: Dictionary, good: String, pstate: Dictionary, laws: Dictionary, spread_mult := 1.0) -> String:
 	var stock: float = pstate.stock[good]
 	var lines := PackedStringArray()
 	lines.append("Base price: %s" % fmt(Data.table("goods")[good].base_price))
@@ -91,7 +92,9 @@ static func breakdown(port: Dictionary, good: String, pstate: Dictionary, laws: 
 			lines.append("  %s: normal stock x%.1f (%d days left)" % [m.reason, m.mult, m.days_left])
 	lines.append("Current stock: %d tons" % stock)
 	lines.append("Supply: price x%.2f" % supply_factor(port, stock))
-	lines.append("Merchant spread: %d%%" % int(cfg().spread * 100))
+	lines.append("Merchant spread: %d%%" % int(cfg().spread * spread_mult * 100))
+	if spread_mult < 1.0:
+		lines.append("  Haggling: x%.2f" % spread_mult)
 	if good in laws.contraband:
 		lines.append("CONTRABAND here. Selling risks seizure and a fine.")
 	return "\n".join(lines)

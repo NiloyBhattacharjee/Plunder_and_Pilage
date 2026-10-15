@@ -4,6 +4,7 @@ extends CanvasLayer
 const MAX_MESSAGES := 6
 
 signal enter_port_pressed
+signal crew_pressed
 signal save_pressed
 signal load_pressed
 signal map_mode_changed(good: String)  # "" = political
@@ -20,6 +21,8 @@ func _ready() -> void:
 	for i in Clock.SPEEDS.size():
 		%Speeds.get_child(i).pressed.connect(Clock.set_speed.bind(i))
 	%EnterPort.pressed.connect(enter_port_pressed.emit)
+	%Crew.pressed.connect(crew_pressed.emit)
+	info.mouse_filter = Control.MOUSE_FILTER_PASS  # so the speed breakdown tooltip shows
 	%Save.pressed.connect(save_pressed.emit)
 	%Load.pressed.connect(load_pressed.emit)
 	var modes: OptionButton = %MapMode
@@ -39,8 +42,10 @@ func _process(_delta: float) -> void:
 	%EnterPort.visible = ship.anchored_at != ""
 	var lines := PackedStringArray()
 	lines.append(Clock.date_string() + ("   [PAUSED]" if Clock.speed_index == 0 else "   x%d" % Clock.SPEEDS[Clock.speed_index]))
+	lines.append("Captain %s, %s %s" % [ShipStats.captain(s).name, Data.table("ships")[s.type].name, s.name])
 	var weather: String = Data.rules.storms[w.storm].name if w.storm != "" else ("Calm" if Weather.calm else "Fair")
 	lines.append("Wind: from %s, %s" % [Geo.compass_name(w.dir), weather])
+	info.tooltip_text = ship.speed_text if not ship.route.is_empty() else ""
 	if ship.anchored_at != "":
 		lines.append("At anchor: " + Data.table("ports")[ship.anchored_at].name)
 	elif not ship.route.is_empty():
@@ -50,7 +55,8 @@ func _process(_delta: float) -> void:
 	else:
 		lines.append("Hove to")
 	lines.append("")
-	lines.append("Hull %d / %d    Crew %d" % [s.hull, ship.stats.hull, s.crew])
+	lines.append("Hull %d / %d   Sails %d / %d   Fouling %d%%" % [s.hull, ship.stats.hull, s.sails, ship.stats.sails, int(s.fouling * 100)])
+	lines.append("Crew %d (needs %d, berths %d)" % [ShipStats.headcount(s), ShipStats.crew_needed(s, ship.stats), ship.stats.crew_max])
 	lines.append("Food %d (%d days)    Water %d (%d days)" % [s.cargo.get("food", 0), ship.days_of("food"), s.cargo.get("water", 0), ship.days_of("water")])
 	lines.append("Hold %d / %d tons" % [Market.cargo_used(s.cargo), ship.capacity()])
 	lines.append("Gold %d" % s.gold + ("    Wages owed %d" % s.wages_owed if s.wages_owed > 0 else ""))

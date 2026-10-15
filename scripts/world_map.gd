@@ -1,3 +1,4 @@
+class_name WorldMap
 extends Node2D
 ## World map scene: builds the chart from data, routes the ship on click, and runs the camera.
 ## Controls: left-click sea or a port to sail there. Right/middle-drag pans, wheel zooms, F follows the ship.
@@ -11,10 +12,14 @@ var port_positions := {}  # where the port marker is drawn
 var anchorages := {}      # nearest navigable point to each port
 var follow_ship := true
 
+## Set by the new-game screen before switching here: {name, nationality, background, ship_name} or {"load": true}.
+static var start_config := {}
+
 @onready var ship: Node2D = $Ship
 @onready var camera: Camera2D = $Camera2D
 @onready var hud = $HUD
 @onready var port_screen = $PortScreen
+@onready var crew_screen = $CrewScreen
 
 
 func _ready() -> void:
@@ -28,8 +33,12 @@ func _ready() -> void:
 	camera.limit_right = int(Data.map.size[0])
 	camera.limit_bottom = int(Data.map.size[1])
 
-	var start_port: String = Data.rules.start.port
 	ship.terrain = terrain
+	ship.stats_changed.connect(func(): terrain.set_shallow_cost(Data.rules.draught[ship.stats.draught].route_cost))
+	var cfg: Dictionary = start_config if not start_config.is_empty() else Data.rules.start
+	var game := NewGame.build(cfg)
+	var start_port: String = game.start_port
+	ship.setup(game.state)
 	ship.position = anchorages[start_port]
 	ship.anchored_at = start_port
 	ship.arrived.connect(_on_arrived)
@@ -43,9 +52,14 @@ func _ready() -> void:
 	port_screen.message.connect(hud.show_message)
 	port_screen.closed.connect($PortLayer.queue_redraw)
 	Clock.day_passed.connect(func(_d): if $PortLayer.trade_good != "": $PortLayer.queue_redraw())
-	hud.show_message("Your sloop lies at anchor in %s. Click the sea or a port to set a course." %
-		Data.table("ports")[start_port].name)
-	port_screen.open.call_deferred(start_port, ship)
+	hud.crew_pressed.connect(func(): crew_screen.open(ship))
+	crew_screen.message.connect(hud.show_message)
+	hud.show_message("Captain %s and the %s lie at anchor in %s. Click the sea or a port to set a course. C opens the crew and ship." % [
+		ShipStats.captain(ship.state).name, ship.state.name, Data.table("ports")[start_port].name])
+	if start_config.get("load", false):
+		_load.call_deferred()
+	else:
+		port_screen.open.call_deferred(start_port, ship)
 
 
 func _process(_delta: float) -> void:
@@ -54,7 +68,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if port_screen.visible:
+	if port_screen.visible or crew_screen.visible:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		match event.button_index:
@@ -71,6 +85,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_2: Clock.set_speed(2)
 			KEY_3: Clock.set_speed(3)
 			KEY_F: follow_ship = true
+			KEY_C: crew_screen.open(ship)
 			KEY_F5: _save()
 			KEY_F9: _load()
 
@@ -123,8 +138,9 @@ func _save() -> void:
 
 
 func _load() -> void:
-	if port_screen.visible:
-		port_screen.hide()
+	for screen in [port_screen, crew_screen]:
+		if screen.visible:
+			screen.close()
 	var err := SaveGame.load_game(self)
 	$PortLayer.queue_redraw()
 	hud.show_message("Game loaded (paused)." if err == OK else "Load failed: %s" % error_string(err))

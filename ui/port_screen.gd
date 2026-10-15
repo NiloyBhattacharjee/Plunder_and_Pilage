@@ -1,13 +1,10 @@
 extends CanvasLayer
 ## Port screen: market, shipyard and tavern. Time is paused while it's open;
-## only actions that take time (repairs) move the clock.
-## Hover over prices for a breakdown of why they are what they are.
+## only actions that take time (repairs, careening, refits) move the clock.
+## Hover over prices and stats for a breakdown of why they are what they are.
 
 signal message(text: String)
 signal closed
-
-const BAD := Color("#c0392b")
-const GOOD := Color("#2e8b57")
 
 var port_id := ""
 var ship: Node2D
@@ -16,11 +13,9 @@ var rumours_left := 0
 
 func _ready() -> void:
 	%SetSail.pressed.connect(close)
-	%Repair10.pressed.connect(_repair.bind(10))
-	%RepairAll.pressed.connect(_repair.bind(100000))
 	%Hire1.pressed.connect(_act.bind(func(): return Ports.hire(port_id, 1, ship.state, ship.stats.crew_max)))
 	%Hire10.pressed.connect(_act.bind(func(): return Ports.hire(port_id, 10, ship.state, ship.stats.crew_max)))
-	%Dismiss10.pressed.connect(_dismiss)
+	%Dismiss10.pressed.connect(_act.bind(func(): return Ports.dismiss(port_id, 10, ship.state)))
 	%PayWages.pressed.connect(_pay_wages)
 	%Rumour.pressed.connect(_rumour)
 
@@ -31,8 +26,7 @@ func open(id: String, player_ship: Node2D) -> void:
 	rumours_left = Data.rules.tavern.rumours_per_visit
 	%Rumours.text = ""
 	%Status.text = ""
-	if Clock.speed_index > 0:
-		Clock.toggle_pause()
+	UIKit.pause_clock()
 	Ports.record_prices(port_id, int(Clock.day))
 	refresh()
 	show()
@@ -40,8 +34,7 @@ func open(id: String, player_ship: Node2D) -> void:
 
 func close() -> void:
 	hide()
-	if Clock.speed_index == 0:
-		Clock.toggle_pause()
+	UIKit.resume_clock()
 	closed.emit()
 
 
@@ -54,81 +47,186 @@ func refresh() -> void:
 	%Info.text = "Governor: %s\n%s\n%s\nGold %d   Hold %d / %d tons" % [p.governor, p.description, law_text,
 		ship.state.gold, Market.cargo_used(ship.state.cargo), ship.capacity()]
 	_build_market()
-	_refresh_shipyard()
+	_build_shipyard()
 	_refresh_tavern()
 
 
 func _build_market() -> void:
 	var grid: GridContainer = %MarketGrid
-	for c in grid.get_children():
-		grid.remove_child(c)
-		c.queue_free()
+	UIKit.clear(grid)
 	for h in ["Good", "In hold", "Buy", "Sell", "Best known elsewhere", "", "Buy", "", "", "Sell", ""]:
-		_label(grid, h, "", Color(0.8, 0.75, 0.6))
+		UIKit.label(grid, h, "", UIKit.HEADER)
 
 	var p := Ports.port(port_id)
 	var ps: Dictionary = Ports.state[port_id]
 	var s: Dictionary = ship.state
+	var haggle := ShipStats.spread_mult(s)
 	for good in Data.table("goods"):
-		var tip := Market.breakdown(p, good, ps, ps.laws)
+		var tip := Market.breakdown(p, good, ps, ps.laws, haggle)
 		var contraband: bool = good in ps.laws.contraband
-		var sell := Ports.price(port_id, good, false)
-		_label(grid, Data.table("goods")[good].name + (" (contraband)" if contraband else ""), tip, BAD if contraband else Color.WHITE)
+		var sell := Ports.price(port_id, good, false, haggle)
+		UIKit.label(grid, Data.table("goods")[good].name + (" (contraband)" if contraband else ""), tip, UIKit.BAD if contraband else Color.WHITE)
 
 		var have: float = s.cargo.get(good, 0.0)
 		var hold := ""
 		if have > 0:
 			hold = "%d" % have
-			if s.cargo_cost.has(good) and s.cargo_cost[good] > 0:
+			if s.cargo_cost.get(good, 0.0) > 0:
 				hold += " (paid %s)" % Market.fmt(s.cargo_cost[good] / have)
-		_label(grid, hold)
-		_label(grid, Market.fmt(Ports.price(port_id, good, true)), tip)
-		_label(grid, Market.fmt(sell), tip)
+		UIKit.label(grid, hold)
+		UIKit.label(grid, Market.fmt(Ports.price(port_id, good, true, haggle)), tip)
+		UIKit.label(grid, Market.fmt(sell), tip)
 
 		var best := Ports.best_known_sale(good, port_id)
 		if best.is_empty():
-			_label(grid, "-")
+			UIKit.label(grid, "-")
 		else:
-			var age := int(Clock.day) - int(best.day)
-			_label(grid, "%s at %s, %dd ago" % [Market.fmt(best.sell), Ports.port(best.port).name, age], "",
-				GOOD if best.sell > sell * 1.15 else Color(0.85, 0.85, 0.85))
+			UIKit.label(grid, "%s at %s, %dd ago" % [Market.fmt(best.sell), Ports.port(best.port).name, int(Clock.day) - int(best.day)], "",
+				UIKit.GOOD if best.sell > sell * 1.15 else UIKit.DIM)
 
 		var lot := 10 if Market.weight(good) < 1.0 else 1  # provisions trade in larger lots
 		for q in [lot, lot * 10, 100000]:
-			_button(grid, "+%d" % q if q < 100000 else "Max", _act.bind(func(): return Ports.buy(port_id, good, q, s, ship.capacity())))
+			UIKit.button(grid, "+%d" % q if q < 100000 else "Max", _act.bind(func(): return _traded(Ports.buy(port_id, good, q, s, ship.capacity(), haggle))))
 		for q in [lot, lot * 10, 100000]:
-			var b := _button(grid, "-%d" % q if q < 100000 else "All", _act.bind(func(): return Ports.sell(port_id, good, q, s)))
+			var b := UIKit.button(grid, "-%d" % q if q < 100000 else "All", _act.bind(func(): return _traded(Ports.sell(port_id, good, q, s, haggle))))
 			if contraband:
 				b.tooltip_text = "Risk of seizure: %d%%" % int(100 * Market.seizure_chance(ps.laws, good, mini(q, int(have))))
 			b.disabled = have < 1
 
 
-func _refresh_shipyard() -> void:
+func _build_shipyard() -> void:
+	var box: VBoxContainer = %YardBox
+	UIKit.clear(box)
 	var level: int = Ports.port(port_id).shipyard
-	var per_day: int = Data.rules.shipyard.hull_per_day[level]
-	var cost: float = Data.rules.shipyard.cost_per_hull
-	var missing := int(ship.stats.hull - ship.state.hull)
 	if level == 0:
-		%YardInfo.text = "There is no shipyard here."
-	else:
-		%YardInfo.text = "Hull %d / %d. %s shipyard: repairs %d hull a day at %s gold per point.\nRepairs take time; the crew still eat and draw wages while you wait." % [
-			ship.state.hull, ship.stats.hull, ["", "Small", "Large"][level], per_day, Market.fmt(cost)]
-	for pair in [[%Repair10, 10], [%RepairAll, missing]]:
-		var amount := mini(pair[1], missing)
-		var days := ceili(float(amount) / per_day) if per_day > 0 else 0
-		pair[0].text = "Repair %d (%d gold, %d day%s)" % [amount, amount * cost, days, "" if days == 1 else "s"]
-		pair[0].disabled = level == 0 or amount <= 0 or ship.state.gold < amount * cost
+		UIKit.label(box, "There is no shipyard here. Your carpenter can patch the ship at sea, but only so far.")
+		return
+	var s: Dictionary = ship.state
+	var st: Dictionary = ship.stats
+	var y: Dictionary = Data.rules.shipyard
+	var per_day: int = y.hull_per_day[level]
+	UIKit.label(box, "%s shipyard. Work here takes days; the crew still eat and draw wages while you wait." % ["", "Small", "Large"][level], "", UIKit.DIM)
+
+	UIKit.label(box, "")
+	UIKit.label(box, "Condition", "", UIKit.HEADER)
+	UIKit.label(box, "Hull %d / %d   Sails %d / %d   Fouling %d%%" % [s.hull, st.hull, s.sails, st.sails, int(s.fouling * 100)])
+	var r := UIKit.row(box)
+	for days in [1, 0]:
+		var job := _repair_job(per_day, days)
+		var b := UIKit.button(r, ("Work 1 day (%d gold)" if days == 1 else "Full repair (%d gold, " + str(job.days) + " days)") % job.cost,
+			_repair.bind(days), "Repairs up to %d hull and %d sails a day." % [per_day, per_day])
+		b.disabled = job.cost <= 0 or job.cost > s.gold
+	var careen_cost := int(y.careen_cost_per_hull * st.hull)
+	var cb := UIKit.button(r, "Careen (%d gold, %d days)" % [careen_cost, y.careen_days], _careen.bind(careen_cost),
+		"Heel her over on the beach and scrape the hull clean. Removes all fouling.")
+	cb.disabled = s.fouling < 0.01 or careen_cost > s.gold
+
+	UIKit.label(box, "")
+	var trade_in := ShipStats.trade_in_value(s)
+	UIKit.label(box, "Ships for sale (your %s is worth %d in trade)" % [Data.table("ships")[s.type].name, trade_in], "", UIKit.HEADER)
+	var g := UIKit.grid(box, 6)
+	for type_id in Ports.port(port_id).ships_for_sale:
+		if type_id == s.type:
+			continue
+		var t: Dictionary = Data.table("ships")[type_id]
+		var tip := "%s\n\n%s" % [t.description, _compare(type_id)]
+		UIKit.label(g, t.name, tip)
+		UIKit.label(g, "%d gold" % t.price, tip)
+		UIKit.label(g, "hull %d, hold %d, guns %d" % [t.hull, t.cargo, t.guns], tip)
+		UIKit.label(g, "crew %d-%d, %s draught" % [t.crew_min, t.crew_max, Data.rules.draught[t.draught].name.to_lower()], tip)
+		UIKit.label(g, "net %d" % (t.price - trade_in), "Price minus what your ship fetches in trade.")
+		var b := UIKit.button(g, "Buy", _act.bind(func():
+			var res := Ports.buy_ship(type_id, s)
+			if res.ok:
+				ship.refresh_stats()
+			return res), "Your upgrades stay with the old ship.")
+		b.disabled = t.price - trade_in > s.gold
+
+	UIKit.label(box, "")
+	UIKit.label(box, "Upgrades", "", UIKit.HEADER)
+	var ug := UIKit.grid(box, 4)
+	for u in Data.table("upgrades"):
+		var up: Dictionary = Data.table("upgrades")[u]
+		var reason := ShipStats.cannot_install(s, u, level)
+		var cost := ShipStats.upgrade_cost(u, s.type)
+		var tip := "%s\n%s" % [up.description, _effects_text(up.effects)]
+		UIKit.label(ug, up.name + (" (fitted)" if u in s.upgrades else ""), tip, UIKit.GOOD if u in s.upgrades else Color.WHITE)
+		UIKit.label(ug, "%d gold, %d day%s" % [cost, up.days, "" if up.days == 1 else "s"], tip)
+		UIKit.label(ug, reason, "", UIKit.DIM)
+		var b := UIKit.button(ug, "Fit", _install.bind(u, cost), "Replaces other guns." if up.get("group", "") == "cannons" else "")
+		b.disabled = reason != "" or cost > s.gold
+
+
+func _compare(type_id: String) -> String:
+	var now: Dictionary = ship.stats
+	var new_st := ShipStats.effective(type_id, [])
+	var lines := PackedStringArray(["Compared with your ship (before upgrades):"])
+	for k in ["hull", "sails", "speed_knots", "turning", "cargo", "crew_min", "crew_max", "guns", "gun_weight", "upkeep"]:
+		var d = new_st[k] - now[k]
+		lines.append("%s: %s (%s%s)" % [ShipStats.LABELS[k], ShipStats._fmt(new_st[k]), "+" if d >= 0 else "", ShipStats._fmt(d)])
+	return "\n".join(lines)
+
+
+static func _effects_text(fx: Dictionary) -> String:
+	var parts := PackedStringArray()
+	for k in fx.get("set", {}):
+		parts.append("%s = %s" % [ShipStats.LABELS.get(k, k), fx.set[k]])
+	for k in fx.get("add", {}):
+		parts.append("%s %+d" % [ShipStats.LABELS.get(k, k), fx.add[k]])
+	for k in fx.get("mult", {}):
+		parts.append("%s x%.2f" % [ShipStats.LABELS.get(k, k), fx.mult[k]])
+	return ", ".join(parts)
+
+
+# days = 1: one day of work; days = 0: everything.
+func _repair_job(per_day: int, days: int) -> Dictionary:
+	var y: Dictionary = Data.rules.shipyard
+	var hull_missing := int(ship.stats.hull - ship.state.hull)
+	var sails_missing := int(ship.stats.sails - ship.state.sails)
+	var need_days := ceili(maxf(hull_missing, sails_missing) / per_day)
+	var d := need_days if days == 0 else mini(1, need_days)
+	var h := mini(hull_missing, per_day * d)
+	var sl := mini(sails_missing, per_day * d)
+	return {"days": d, "hull": h, "sails": sl, "cost": int(h * y.cost_per_hull + sl * y.cost_per_sail)}
+
+
+func _repair(days: int) -> void:
+	var job := _repair_job(Data.rules.shipyard.hull_per_day[Ports.port(port_id).shipyard], days)
+	ship.state.gold -= job.cost
+	ship.state.hull += job.hull
+	ship.state.sails += job.sails
+	Clock.advance(job.days)  # the world moves on while you wait: upkeep, storms, prices
+	_act(func(): return {"ok": true, "text": "Repaired %d hull and %d sails in %d days for %d gold." % [job.hull, job.sails, job.days, job.cost]})
+
+
+func _careen(cost: int) -> void:
+	var days: int = Data.rules.shipyard.careen_days
+	ship.state.gold -= cost
+	ship.state.fouling = 0.0
+	Clock.advance(days)
+	_act(func(): return {"ok": true, "text": "Careened the %s in %d days for %d gold. Her hull is clean." % [ship.state.name, days, cost]})
+
+
+func _install(u: String, cost: int) -> void:
+	var up: Dictionary = Data.table("upgrades")[u]
+	ship.state.gold -= cost
+	ShipStats.install(ship.state, u)
+	ship.refresh_stats()
+	Clock.advance(up.days)
+	_act(func(): return {"ok": true, "text": "Fitted %s in %d days for %d gold." % [up.name, up.days, cost]})
 
 
 func _refresh_tavern() -> void:
 	var ps: Dictionary = Ports.state[port_id]
 	var t: Dictionary = Data.rules.tavern
-	%TavernInfo.text = "Sailors looking for a berth: %d. Signing bounty %d each.\nCrew %d / %d. Each sailor eats, drinks and draws %s a day in wages." % [
-		ps.sailors, t.hire_cost, ship.state.crew, ship.stats.crew_max, Market.fmt(Data.rules.upkeep.wage_per_crew)]
+	%TavernInfo.text = "Sailors looking for a berth: %d. Signing bounty %d each.\nCrew %d (needs %d, berths %d). Each hand eats, drinks and draws %s a day in wages.\nNew hands may hide their true nature until they've been at sea a while." % [
+		ps.sailors, t.hire_cost, ShipStats.headcount(ship.state), ShipStats.crew_needed(ship.state, ship.stats),
+		ship.stats.crew_max, Market.fmt(Data.rules.upkeep.wage_per_crew)]
 	%PayWages.text = "Pay wages owed (%d)" % ship.state.wages_owed
 	%PayWages.disabled = ship.state.wages_owed <= 0 or ship.state.gold <= 0
 	%Rumour.text = "Buy a round and listen (%d gold, %d left this visit)" % [t.round_cost, rumours_left]
 	%Rumour.disabled = rumours_left <= 0 or ship.state.gold < t.round_cost
+	%Dismiss10.tooltip_text = "Pays off your 10 least useful hands (never officers). Fewer mouths and wages, but a short-handed ship sails slower."
 
 
 func _act(action: Callable) -> void:
@@ -140,21 +238,12 @@ func _act(action: Callable) -> void:
 	refresh()
 
 
-func _repair(amount: int) -> void:
-	var per_day: int = Data.rules.shipyard.hull_per_day[Ports.port(port_id).shipyard]
-	var cost: float = Data.rules.shipyard.cost_per_hull
-	amount = mini(amount, int(ship.stats.hull - ship.state.hull))
-	var days := ceili(float(amount) / per_day)
-	ship.state.gold -= amount * cost
-	ship.state.hull += amount
-	Clock.advance(days)  # the world moves on while you wait: upkeep, storms, prices
-	_act(func(): return {"ok": true, "text": "Repaired %d hull in %d days for %d gold." % [amount, days, amount * cost]})
-
-
-func _dismiss() -> void:
-	var n := mini(10, ship.state.crew - 1)
-	ship.state.crew -= n
-	_act(func(): return {"ok": n > 0, "text": "Paid off %d sailors." % n})
+## The captain learns to haggle by trading: XP grows with the value of each deal.
+func _traded(result: Dictionary) -> Dictionary:
+	var cap := ShipStats.captain(ship.state)
+	if People.gain_xp(cap, "trade", result.get("value", 0) / 200.0):
+		result.text += " Your Trade skill improves to %d." % cap.skills.trade
+	return result
 
 
 func _pay_wages() -> void:
@@ -170,22 +259,3 @@ func _rumour() -> void:
 	var text := Ports.rumour(port_id, int(Clock.day))
 	%Rumours.text += "\"%s\"\n" % text
 	_act(func(): return {"ok": true, "text": "Rumour: " + text})
-
-
-func _label(parent: Node, text: String, tip := "", color := Color.WHITE) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_color_override("font_color", color)
-	if tip != "":
-		l.tooltip_text = tip
-		l.mouse_filter = Control.MOUSE_FILTER_PASS  # labels ignore the mouse by default, so no tooltip
-	parent.add_child(l)
-	return l
-
-
-func _button(parent: Node, text: String, cb: Callable) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.pressed.connect(cb)
-	parent.add_child(b)
-	return b

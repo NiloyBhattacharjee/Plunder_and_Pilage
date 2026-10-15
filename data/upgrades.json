@@ -1,0 +1,80 @@
+{
+  "copper_sheathing": {
+    "name": "Copper sheathing",
+    "description": "Copper plates below the waterline. A little faster, and fouls far more slowly. Expensive.",
+    "cost": 400, "cost_per_hull": 6, "days": 6, "shipyard": 2,
+    "effects": {"mult": {"speed_knots": 1.04, "fouling_rate": 0.25}}
+  },
+  "reinforced_hull": {
+    "name": "Reinforced hull",
+    "description": "Extra frames and planking. Much tougher, but heavier and slower.",
+    "cost": 200, "cost_per_hull": 3, "days": 5, "shipyard": 1,
+    "effects": {"mult": {"hull": 1.3, "speed_knots": 0.94}}
+  },
+  "racing_rig": {
+    "name": "Racing rig",
+    "description": "Taller masts and more canvas. Faster, but it takes more hands to work her.",
+    "cost": 150, "cost_per_hull": 2, "days": 3, "shipyard": 1,
+    "effects": {"mult": {"speed_knots": 1.08, "crew_min": 1.25}}
+  },
+  "expanded_hold": {
+    "name": "Expanded hold",
+    "description": "Rip out a gun deck for cargo space. More hold, fewer gun ports.",
+    "cost": 100, "cost_per_hull": 1, "days": 3, "shipyard": 1,
+    "effects": {"mult": {"cargo": 1.3, "guns": 0.7}}
+  },
+  "better_quarters": {
+    "name": "Better quarters",
+    "description": "Hammock space, a galley stove, a proper sick bay. The crew will thank you; the hold won't.",
+    "cost": 80, "cost_per_hull": 1, "days": 2, "shipyard": 1,
+    "effects": {"mult": {"cargo": 0.9}, "add": {"comfort": 10}}
+  },
+  "swivel_guns": {
+    "name": "Swivel guns",
+    "description": "Small rail-mounted guns that sweep a deck clear before and during boarding. Need gunners.",
+    "cost": 120, "cost_per_hull": 0, "days": 1, "shipyard": 1,
+    "effects": {"add": {"swivels": 6, "crew_min": 4}}
+  },
+  "chase_guns": {
+    "name": "Chase guns",
+    "description": "Long guns at bow and stern, for firing while chasing or fleeing.",
+    "cost": 150, "cost_per_hull": 0, "days": 1, "shipyard": 1,
+    "effects": {"add": {"chase_guns": 2}}
+  },
+  "cannons_4": {
+    "name": "4-pounder guns", "group": "cannons", "gun_weight": 4,
+    "description": "Light guns. Little punch, but they save weight for cargo and speed.",
+    "cost": 20, "cost_per_gun": 15, "days": 2, "shipyard": 1,
+    "effects": {"set": {"gun_weight": 4}}
+  },
+  "cannons_6": {
+    "name": "6-pounder guns", "group": "cannons", "gun_weight": 6,
+    "description": "Standard guns for small ships.",
+    "cost": 20, "cost_per_gun": 25, "days": 2, "shipyard": 1,
+    "effects": {"set": {"gun_weight": 6}}
+  },
+  "cannons_9": {
+    "name": "9-pounder guns", "group": "cannons", "gun_weight": 9,
+    "description": "A real broadside. Heavier, so a little less cargo and speed.",
+    "cost": 20, "cost_per_gun": 40, "days": 3, "shipyard": 1,
+    "effects": {"set": {"gun_weight": 9}, "mult": {"cargo": 0.97, "speed_knots": 0.99}}
+  },
+  "cannons_12": {
+    "name": "12-pounder guns", "group": "cannons", "gun_weight": 12,
+    "description": "Frigate guns. Smash hulls, at a cost in weight.",
+    "cost": 20, "cost_per_gun": 60, "days": 3, "shipyard": 2,
+    "effects": {"set": {"gun_weight": 12}, "mult": {"cargo": 0.94, "speed_knots": 0.98}}
+  },
+  "cannons_18": {
+    "name": "18-pounder guns", "group": "cannons", "gun_weight": 18,
+    "description": "Heavy guns. Only big hulls can carry them.",
+    "cost": 20, "cost_per_gun": 90, "days": 4, "shipyard": 2,
+    "effects": {"set": {"gun_weight": 18}, "mult": {"cargo": 0.9, "speed_knots": 0.96}}
+  },
+  "cannons_24": {
+    "name": "24-pounder guns", "group": "cannons", "gun_weight": 24,
+    "description": "Ship-of-the-line guns. Devastating, and very heavy.",
+    "cost": 20, "cost_per_gun": 130, "days": 4, "shipyard": 2,
+    "effects": {"set": {"gun_weight": 24}, "mult": {"cargo": 0.85, "speed_knots": 0.94}}
+  }
+}

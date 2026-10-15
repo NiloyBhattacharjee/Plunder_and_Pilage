@@ -7,11 +7,17 @@ const DATA_DIR := "res://data/"
 # Required fields per table, and fields that must reference ids in another table.
 # A bad entry fails loudly at startup naming the file, entry and field.
 const SCHEMA := {
-	"ports": {"required": ["name", "faction", "lat", "lon", "size", "produces", "wants", "shipyard", "sailors", "laws"],
-		"refs": {"faction": "factions", "produces": "goods", "wants": "goods", "laws.contraband": "goods"}},
+	"ports": {"required": ["name", "faction", "lat", "lon", "size", "produces", "wants", "shipyard", "sailors", "laws", "ships_for_sale"],
+		"refs": {"faction": "factions", "produces": "goods", "wants": "goods", "laws.contraband": "goods", "ships_for_sale": "ships"}},
 	"goods": {"required": ["name", "base_price"]},
 	"factions": {"required": ["name", "color"]},
-	"ships": {"required": ["name", "speed_knots", "polar", "hull", "crew_max", "cargo"]},
+	"ships": {"required": ["name", "description", "hull", "sails", "speed_knots", "turning", "cargo", "crew_min", "crew_max",
+		"guns", "gun_weight", "max_gun_weight", "draught", "price", "upkeep", "polar"]},
+	"upgrades": {"required": ["name", "description", "cost", "days", "shipyard", "effects"]},
+	"traits": {"required": ["name", "description", "pools"], "refs": {"opposite": "traits"}},
+	"nations": {"required": ["name", "faction", "start_port", "first", "last"], "refs": {"start_port": "ports"}},
+	"backgrounds": {"required": ["name", "description", "stats", "skills", "traits", "gold", "ship", "crew", "relations"],
+		"refs": {"ship": "ships", "traits": "traits"}},
 }
 
 var tables := {}

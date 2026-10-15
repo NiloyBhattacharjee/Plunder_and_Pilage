@@ -8,6 +8,8 @@ enum { DEEP, SHALLOW, LAND }
 var image: Image
 var cell_px: int
 var astar := AStarGrid2D.new()  # Godot's built-in grid pathfinder
+var _shallow_cells: Array[Vector2i] = []
+var shallow_cost := 1.0
 
 
 func _init(mask: Image, cell: int) -> void:
@@ -20,8 +22,16 @@ func _init(mask: Image, cell: int) -> void:
 	astar.update()
 	for y in image.get_height():
 		for x in image.get_width():
-			if _cell_type(Vector2i(x, y)) == LAND:
-				astar.set_point_solid(Vector2i(x, y))
+			match _cell_type(Vector2i(x, y)):
+				LAND: astar.set_point_solid(Vector2i(x, y))
+				SHALLOW: _shallow_cells.append(Vector2i(x, y))
+
+
+## How much routes avoid shallow water: 1 for shallow-draught ships, higher for deep keels.
+func set_shallow_cost(cost: float) -> void:
+	shallow_cost = cost
+	for c in _shallow_cells:
+		astar.set_point_weight_scale(c, cost)
 
 
 func at(pos: Vector2) -> int:
@@ -73,16 +83,23 @@ func _smooth(path: PackedVector2Array) -> PackedVector2Array:
 	var i := 0
 	while i < path.size() - 1:
 		var j := i + 1
-		while j + 1 < path.size() and clear_line(path[i], path[j + 1]):
+		while j + 1 < path.size() and _clear_leg(path[i], path[j + 1]):
 			j += 1
 		out.append(path[j])
 		i = j
 	return out  # excludes the start point: the ship is already there
 
 
-func clear_line(a: Vector2, b: Vector2) -> bool:
+# A smoothed leg must not cut across shallows the weighted route went around (unless it starts or ends in them).
+func _clear_leg(a: Vector2, b: Vector2) -> bool:
+	var avoid := shallow_cost > 1.0 and at(a) != SHALLOW and at(b) != SHALLOW
+	return clear_line(a, b, SHALLOW if avoid else LAND)
+
+
+## True if the straight line from a to b never touches terrain of type `blocked` or worse.
+func clear_line(a: Vector2, b: Vector2, blocked := LAND) -> bool:
 	var steps := int(a.distance_to(b) / (cell_px * 0.5)) + 1
 	for k in steps + 1:
-		if at(a.lerp(b, float(k) / steps)) == LAND:
+		if at(a.lerp(b, float(k) / steps)) >= blocked:
 			return false
 	return true

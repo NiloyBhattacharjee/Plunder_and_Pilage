@@ -6,7 +6,9 @@ var s: Dictionary
 func before_each():
 	Ports.reset()
 	Ports.rng.seed = 7
-	s = {"crew": 40, "gold": 1000.0, "wages_owed": 0.0, "cargo": {"food": 100.0}, "cargo_cost": {}}
+	s = NewGame.build({"nationality": "english", "background": "ex_navy"}).state
+	s.gold = 1000.0
+	s.cargo = {"food": 100.0}
 
 
 func test_buy_respects_hold_space():
@@ -27,6 +29,11 @@ func test_buying_raises_the_local_price():
 	var before := Ports.price("port_royal", "sugar", true)
 	Ports.buy("port_royal", "sugar", 30, s, 200.0)
 	assert_gt(Ports.price("port_royal", "sugar", true), before)
+
+
+func test_haggling_narrows_the_spread():
+	assert_lt(Ports.price("port_royal", "rum", true, 0.5), Ports.price("port_royal", "rum", true, 1.0))
+	assert_gt(Ports.price("port_royal", "rum", false, 0.5), Ports.price("port_royal", "rum", false, 1.0))
 
 
 func test_sell_pays_and_tracks_cost_basis():
@@ -50,11 +57,40 @@ func test_contraband_can_be_seized():
 	assert_lt(s.gold, gold_before, "plus a fine")
 
 
-func test_hire_limited_by_berths():
+func test_hire_creates_people_up_to_berths():
+	var before: int = s.crew.size()
 	var r := Ports.hire("port_royal", 100, s, 75)
 	assert_true(r.ok)
-	assert_eq(s.crew, 75)
-	assert_almost_eq(s.gold, 1000.0 - 35 * Data.rules.tavern.hire_cost, 0.01)
+	assert_eq(ShipStats.headcount(s), 75)
+	assert_true(People.chars.has(s.crew[-1]), "each hand is a real character")
+	assert_almost_eq(s.gold, 1000.0 - (75 - 1 - before) * Data.rules.tavern.hire_cost, 0.01)
+
+
+func test_dismiss_never_removes_officers():
+	var officers: Array = s.officers.values()
+	Ports.dismiss("port_royal", s.crew.size(), s)
+	for id in officers:
+		assert_true(id in s.crew)
+
+
+func test_buy_ship_moves_crew_and_drops_upgrades():
+	s.gold = 20000.0
+	s.upgrades = ["racing_rig"]
+	var crew_before: Array = s.crew.duplicate()
+	var r := Ports.buy_ship("brig", s)
+	assert_true(r.ok)
+	assert_eq(s.type, "brig")
+	assert_eq(s.upgrades, [])
+	assert_eq(s.crew, crew_before)
+	assert_eq(s.hull, float(Data.table("ships").brig.hull))
+
+
+func test_cannot_buy_ship_too_small_for_crew():
+	s.gold = 20000.0
+	s.crew.resize(0)
+	for i in 60:
+		s.crew.append(People.add(People.generate()))
+	assert_false(Ports.buy_ship("schooner", s).ok)
 
 
 func test_rumour_teaches_a_price_elsewhere():

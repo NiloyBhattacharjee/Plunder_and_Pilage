@@ -72,26 +72,15 @@ size_flags_horizontal = 3
 theme_override_constants/h_separation = 14
 columns = 11
 
-[node name="Shipyard" type="VBoxContainer" parent="Panel/VBox/Tabs"]
+[node name="Shipyard" type="ScrollContainer" parent="Panel/VBox/Tabs"]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="YardInfo" type="Label" parent="Panel/VBox/Tabs/Shipyard"]
+[node name="YardBox" type="VBoxContainer" parent="Panel/VBox/Tabs/Shipyard"]
 unique_name_in_owner = true
 layout_mode = 2
-autowrap_mode = 3
-
-[node name="YardButtons" type="HBoxContainer" parent="Panel/VBox/Tabs/Shipyard"]
-layout_mode = 2
-
-[node name="Repair10" type="Button" parent="Panel/VBox/Tabs/Shipyard/YardButtons"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="RepairAll" type="Button" parent="Panel/VBox/Tabs/Shipyard/YardButtons"]
-unique_name_in_owner = true
-layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Tavern" type="VBoxContainer" parent="Panel/VBox/Tabs"]
 visible = false
