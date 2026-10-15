@@ -1,0 +1,7 @@
+{
+  "england": {"name": "England",               "color": "#b8352c"},
+  "spain":   {"name": "Spain",                 "color": "#d9a520"},
+  "france":  {"name": "France",                "color": "#2f5fb3"},
+  "dutch":   {"name": "Dutch Republic",        "color": "#e07a1f"},
+  "pirates": {"name": "Brethren of the Coast", "color": "#222222"}
+}

@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ship.gd" id="1"]
+
+[node name="Ship" type="Node2D"]
+z_index = 2
+script = ExtResource("1")
+
+[node name="Hull" type="Polygon2D" parent="."]
+color = Color(0.42, 0.24, 0.1, 1)
+polygon = PackedVector2Array(0, -11, 5, 4, 3, 8, -3, 8, -5, 4)

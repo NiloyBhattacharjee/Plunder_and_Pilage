@@ -1,0 +1,5 @@
+.godot/
+bin/
+tools/.venv/
+tools/cache/
+*.tmp

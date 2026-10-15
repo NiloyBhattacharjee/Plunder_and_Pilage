@@ -1,0 +1,101 @@
+extends Node2D
+## World map scene: builds the chart from data, routes the ship on click, and runs the camera.
+## Controls: left-click sea or a port to sail there. Right/middle-drag pans, wheel zooms, F follows the ship.
+## Space pauses, 1/2/3 set time speed.
+
+const PORT_CLICK_RADIUS := 14.0  # screen pixels
+const ZOOM_MAX := 4.0
+
+var terrain: TerrainGrid
+var port_positions := {}  # where the port marker is drawn
+var anchorages := {}      # nearest navigable point to each port
+var follow_ship := true
+
+@onready var ship: Node2D = $Ship
+@onready var camera: Camera2D = $Camera2D
+@onready var hud = $HUD
+
+
+func _ready() -> void:
+	terrain = TerrainGrid.new(load("res://data/map/terrain.png").get_image(), int(Data.map.cell_px))
+	for id in Data.table("ports"):
+		var p: Dictionary = Data.table("ports")[id]
+		port_positions[id] = Geo.latlon_to_px(p.lat, p.lon)
+		anchorages[id] = terrain.nearest_sea(port_positions[id])
+	$PortLayer.port_positions = port_positions
+
+	camera.limit_right = int(Data.map.size[0])
+	camera.limit_bottom = int(Data.map.size[1])
+
+	var start_port: String = Data.rules.start.port
+	ship.terrain = terrain
+	ship.position = anchorages[start_port]
+	ship.anchored_at = start_port
+	ship.arrived.connect(func(id): hud.show_message("Anchored at %s." % Data.table("ports")[id].name))
+	ship.message.connect(hud.show_message)
+	ship.foundered.connect(_on_foundered)
+	hud.ship = ship
+	hud.show_message("Your sloop lies at anchor in %s. Click the sea or a port to set a course." %
+		Data.table("ports")[start_port].name)
+
+
+func _process(_delta: float) -> void:
+	if follow_ship:
+		camera.position = ship.position
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		match event.button_index:
+			MOUSE_BUTTON_LEFT: _set_course(get_global_mouse_position())
+			MOUSE_BUTTON_WHEEL_UP: _zoom(1.15)
+			MOUSE_BUTTON_WHEEL_DOWN: _zoom(1.0 / 1.15)
+	elif event is InputEventMouseMotion and event.button_mask & (MOUSE_BUTTON_MASK_RIGHT | MOUSE_BUTTON_MASK_MIDDLE):
+		follow_ship = false
+		camera.position -= event.relative / camera.zoom
+	elif event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_SPACE: Clock.toggle_pause()
+			KEY_1: Clock.set_speed(1)
+			KEY_2: Clock.set_speed(2)
+			KEY_3: Clock.set_speed(3)
+			KEY_F: follow_ship = true
+
+
+func _set_course(target: Vector2) -> void:
+	if ship.state.hull <= 0:
+		return
+	var port_id := _port_near(target)
+	if port_id != "":
+		target = anchorages[port_id]
+	elif terrain.at(target) == TerrainGrid.LAND:
+		hud.show_message("That's dry land, Captain.")
+		return
+	var path := terrain.find_path(ship.position, target)
+	if path.is_empty():
+		hud.show_message("No sea route to there.")
+		return
+	ship.set_route(path, port_id)
+	if port_id != "":
+		hud.show_message("Setting course for %s." % Data.table("ports")[port_id].name)
+
+
+func _port_near(pos: Vector2) -> String:
+	var radius := PORT_CLICK_RADIUS / camera.zoom.x
+	for id in port_positions:
+		if pos.distance_to(port_positions[id]) < radius or pos.distance_to(anchorages[id]) < radius:
+			return id
+	return ""
+
+
+func _zoom(factor: float) -> void:
+	# Never zoom out past the point where the map stops filling the window.
+	var fit := get_viewport_rect().size / Vector2(Data.map.size[0], Data.map.size[1])
+	var z := clampf(camera.zoom.x * factor, maxf(fit.x, fit.y), ZOOM_MAX)
+	camera.zoom = Vector2(z, z)
+	$PortLayer.zoom = z
+
+
+func _on_foundered() -> void:
+	Clock.set_speed(0)
+	hud.show_message("The ship has foundered. All hands lost. (Restart to try again.)")

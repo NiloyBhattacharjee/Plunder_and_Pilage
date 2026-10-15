@@ -1,0 +1,43 @@
+{
+  "time": {
+    "start_date": "1680-01-01",
+    "seconds_per_day": 12
+  },
+  "start": {
+    "ship": "sloop", "port": "port_royal",
+    "crew": 40, "food": 120, "water": 120, "gold": 500
+  },
+  "upkeep": {
+    "food_per_crew": 0.1,
+    "water_per_crew": 0.1,
+    "wage_per_crew": 0.2
+  },
+  "weather": {
+    "trade_wind_from": 70,
+    "wind_drift_deg": 12,
+    "wind_pull": 0.25,
+    "calm_chance": 0.08,
+    "calm_persist": 0.5,
+    "calm_strength": 0.25,
+    "fair_strength": [0.7, 1.1]
+  },
+  "storms": {
+    "squall": {
+      "name": "Squall",
+      "daily_chance_by_month": [0.04, 0.03, 0.03, 0.03, 0.05, 0.08, 0.08, 0.08, 0.09, 0.09, 0.07, 0.05],
+      "spawn_area": [0.0, 0.0, 1.0, 1.0],
+      "heading": 250, "heading_spread": 30,
+      "radius_nm": 35, "speed_knots": 6, "days": [1, 3],
+      "wind_strength": 1.3, "hull_damage_per_day": 2
+    },
+    "hurricane": {
+      "name": "Hurricane",
+      "daily_chance_by_month": [0, 0, 0, 0, 0, 0.01, 0.03, 0.06, 0.08, 0.05, 0.02, 0],
+      "spawn_area": [0.85, 0.35, 1.0, 0.75],
+      "heading": 285, "heading_spread": 15,
+      "radius_nm": 110, "speed_knots": 12, "days": [5, 9],
+      "wind_strength": 1.6, "hull_damage_per_day": 30
+    }
+  },
+  "storm_shelter": 0.25
+}

@@ -1,0 +1,28 @@
+; Godot project file. Edit through Project > Project Settings where possible.
+config_version=5
+
+[application]
+
+config/name="Plunder and Pillage"
+run/main_scene="res://scenes/world_map.tscn"
+config/features=PackedStringArray("4.7")
+
+[autoload]
+
+Data="*res://scripts/data.gd"
+Clock="*res://scripts/clock.gd"
+Weather="*res://scripts/weather.gd"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/stretch/aspect="expand"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[rendering]
+
+anti_aliasing/quality/msaa_2d=2
