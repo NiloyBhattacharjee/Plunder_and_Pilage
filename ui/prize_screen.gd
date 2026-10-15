@@ -43,20 +43,22 @@ func _build() -> void:
 		Encounters.sighting(enemy, RandomNumberGenerator.new()).split(".")[0], survivors, enemy.gold,
 		Market.cargo_used(s.cargo), ship.capacity()]
 
-	UIKit.label(box, "Her cargo (goods you take are stolen: they sell for full price only through a fence)", "", UIKit.HEADER)
+	UIKit.label(box, "Her cargo (goods you take are stolen: they sell for full price only through a fence)", "", Style.c("header"))
 	var g := UIKit.grid(box, 5)
 	if enemy.cargo.is_empty():
-		UIKit.label(box, "  Her hold is empty.", "", UIKit.DIM)
+		UIKit.label(box, "  Her hold is empty.", "", Style.c("dim"))
 	for good in enemy.cargo.keys():
 		var lot := 10 if Market.weight(good) < 1.0 else 1
-		UIKit.label(g, Data.table("goods")[good].name)
+		var name_row := UIKit.row(g)
+		UIKit.icon(name_row, Data.table("goods")[good].get("icon", ""), 22)
+		UIKit.label(name_row, Data.table("goods")[good].name)
 		UIKit.label(g, "%d aboard" % enemy.cargo[good])
 		UIKit.label(g, "%d in your hold" % s.cargo.get(good, 0))
 		UIKit.button(g, "Take %d" % (lot * 10), _take.bind(good, lot * 10))
 		UIKit.button(g, "Take all", _take.bind(good, 100000))
 
 	UIKit.label(box, "")
-	UIKit.label(box, "The ship", "", UIKit.HEADER)
+	UIKit.label(box, "The ship", "", Style.c("header"))
 	_ship_fate = OptionButton.new()
 	var need := Encounters.prize_crew_needed(enemy)
 	var spare: int = s.crew.size() - s.officers.size()
@@ -72,7 +74,7 @@ func _build() -> void:
 	box.add_child(_ship_fate)
 
 	UIKit.label(box, "")
-	UIKit.label(box, "The prisoners (%d)" % survivors, "", UIKit.HEADER)
+	UIKit.label(box, "The prisoners (%d)" % survivors, "", Style.c("header"))
 	var willing := int(survivors * Data.table("encounters")[enemy.kind].prisoner_willingness)
 	_recruit = CheckBox.new()
 	_recruit.text = "Offer them a place in your crew (about %d willing, berths for %d)" % [willing, ship.stats.crew_max - ShipStats.headcount(s)]
@@ -89,7 +91,9 @@ func _build() -> void:
 	box.add_child(_prisoner_fate)
 
 	UIKit.label(box, "")
-	UIKit.label(box, "Their captain: %s" % enemy.captain.name, People.describe(enemy.captain), UIKit.HEADER)
+	var cap_row := UIKit.row(box)
+	cap_row.add_child(Portrait.make(enemy.captain, "captain", 72))
+	UIKit.label(cap_row, "Their captain: %s" % enemy.captain.name, People.describe(enemy.captain), Style.c("header"))
 	_captain_fate = OptionButton.new()
 	_captain_fate.add_item("Hold for ransom (worth about %d from %s)" % [Encounters.ransom_value(enemy.captain), Data.table("factions")[enemy.faction].name])
 	_captain_fate.set_item_tooltip(0, "Collect the ransom at any %s port. Until then they sail with you." % Data.table("factions")[enemy.faction].name)

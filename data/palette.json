@@ -1,0 +1,35 @@
+{
+  "_comment": "The whole look in one place. scripts/style.gd builds the UI theme from this; map, combat and UI read colours by name.",
+  "colors": {
+    "parchment": "#ead9b0",
+    "parchment_light": "#f3e8cc",
+    "parchment_dark": "#d6c08e",
+    "ink": "#3b2a1a",
+    "ink_soft": "#6b5640",
+    "ink_faint": "#3b2a1a30",
+    "header": "#7a2e1c",
+    "dim": "#7d6b55",
+    "good": "#2e6b3a",
+    "bad": "#a3261b",
+    "wax": "#8b2a1f",
+    "wax_light": "#a8402f",
+    "wax_dark": "#5e1a12",
+    "wax_text": "#f3ead2",
+    "sea": "#cdd5bd",
+    "deep": "#b6c4ae",
+    "shallow": "#e2e3c8",
+    "reef": "#9fb39c",
+    "land": "#ead9b0",
+    "player_ship": "#6b3d1a",
+    "smoke": "#4a3d33",
+    "flash": "#f2c94c",
+    "splash": "#f3f0e6"
+  },
+  "fonts": {
+    "body": "res://assets/ui/fonts/IMFellEnglish-Regular.ttf",
+    "italic": "res://assets/ui/fonts/IMFellEnglish-Italic.ttf",
+    "title": "res://assets/ui/fonts/PirataOne-Regular.ttf"
+  },
+  "font_sizes": {"body": 18, "header": 19, "title": 32},
+  "panel_texture": "res://assets/ui/panel.png"
+}

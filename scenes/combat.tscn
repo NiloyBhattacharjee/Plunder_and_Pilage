@@ -66,7 +66,7 @@ layout_mode = 2
 
 [node name="Help" type="Label" parent="HUD/Bottom/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_type_variation = &"Header"
 text = "A/D steer   W/S sails   Q/E fire port/starboard   1/2/3 round/chain/grape   B board   Space pause.   Broadsides only bear inside the shaded arcs."
 
 [node name="Log" type="Label" parent="HUD/Bottom/VBox"]

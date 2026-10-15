@@ -14,6 +14,7 @@ Clock="*res://scripts/clock.gd"
 Weather="*res://scripts/weather.gd"
 Ports="*res://scripts/ports.gd"
 People="*res://scripts/people.gd"
+Style="*res://scripts/style.gd"
 
 [display]
 

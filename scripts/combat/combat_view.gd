@@ -5,15 +5,14 @@ extends Node2D
 signal finished(result: Dictionary)
 
 const SPEEDS := [0.0, 1.0, 2.0]
-const SEA := Color("#c9d6c8")
-const GRID := Color(0.3, 0.4, 0.35, 0.12)
-const INK := Color("#4a3a26")
 
 var sim := CombatSim.new()
 var speed_index := 1
 var effects: Array = []  # {kind, from, to, pos, text, age, color}
 var enemy_data: Dictionary
 var ending := false
+var sprites: Array = []  # ShipSprite per sim ship
+const PUFF := preload("res://assets/fx/puff.png")
 
 @onready var camera: Camera2D = $Camera2D
 @onready var dialog = $ChoiceDialog
@@ -23,6 +22,13 @@ func start(player_data: Dictionary, enemy: Dictionary, mode: String, wind_dir: f
 	enemy_data = enemy
 	sim.rng.randomize()
 	sim.setup(CombatSim.make_ship(player_data), CombatSim.make_ship(enemy), wind_dir, wind_strength, mode)
+	var flags := [player_data.get("flag", "white"), Data.table("factions")[enemy.faction].flag]
+	for i in 2:
+		var sp: Node2D = load("res://scenes/ship_sprite.tscn").instantiate()
+		add_child(sp)
+		sp.setup(sim.ships[i].type, flags[i])
+		sp.scale = Vector2.ONE * 0.6
+		sprites.append(sp)
 	_build_hud()
 	camera.position = sim.ships[0].pos
 
@@ -40,6 +46,11 @@ func _process(delta: float) -> void:
 		elif sim.result != "":
 			ending = true
 			_end()
+	for i in sprites.size():
+		var s: Dictionary = sim.ships[i]
+		sprites[i].position = s.pos
+		sprites[i].rotation = deg_to_rad(s.heading)
+		sprites[i].set_state(s.hull / s.stats.hull, s.sails / s.stats.sails, s.sail_setting, s.struck)
 	for e in effects:
 		e.age += delta
 	effects = effects.filter(func(e): return e.age < 1.5)
@@ -82,11 +93,16 @@ func _effect(ev: Dictionary) -> void:
 			var who := "Your" if ev.who == 0 else "Their"
 			var color := Color(1.0, 0.85, 0.3) if ev.hits > 0 else Color(0.9, 0.9, 0.9)
 			effects.append({"kind": "shot", "from": ev.from, "to": ev.to, "age": 0.0, "color": color})
-			effects.append({"kind": "text", "pos": ev.to, "age": 0.0, "color": INK,
+			effects.append({"kind": "text", "pos": ev.to, "age": 0.0, "color": Style.c("ink"),
 				"text": "%d hits" % ev.hits if ev.hits > 0 else "miss"})
 			_log("%s broadside (%s, %d guns): %d hits." % [who, Data.rules.combat.ammo[ev.ammo].name.to_lower(), ev.guns, ev.hits])
+			_gun_smoke(sim.ships[ev.who], ev.to, ev.guns)
+			if ev.hits > 0:
+				_burst(ev.to, Vector2.ZERO, Color("#7a5230"), mini(ev.hits * 2, 30), 180.0, Vector2(60, 140), 0.6, Vector2(0.15, 0.3))
+			else:
+				_burst(ev.to, Vector2.ZERO, Style.c("splash"), 14, 180.0, Vector2(30, 80), 0.5, Vector2(0.2, 0.45))
 		"note":
-			effects.append({"kind": "text", "pos": ev.pos + Vector2(0, -30), "age": 0.0, "color": UIKit.BAD, "text": ev.text})
+			effects.append({"kind": "text", "pos": ev.pos + Vector2(0, -30), "age": 0.0, "color": Style.c("bad"), "text": ev.text})
 			_log(("Enemy: " if ev.who == 1 else "You: ") + ev.text)
 
 
@@ -98,15 +114,15 @@ func _note_text(text: String) -> void:
 
 func _draw() -> void:
 	var view := Rect2(camera.position - get_viewport_rect().size / camera.zoom, get_viewport_rect().size / camera.zoom * 2.0)
-	draw_rect(view, SEA)
+	draw_rect(view, Style.c("sea"))
 	var step := 100.0
 	var x := floorf(view.position.x / step) * step
 	while x < view.end.x:
-		draw_line(Vector2(x, view.position.y), Vector2(x, view.end.y), GRID, 1.0)
+		draw_line(Vector2(x, view.position.y), Vector2(x, view.end.y), Style.c("ink_faint"), 1.0)
 		x += step
 	var y := floorf(view.position.y / step) * step
 	while y < view.end.y:
-		draw_line(Vector2(view.position.x, y), Vector2(view.end.x, y), GRID, 1.0)
+		draw_line(Vector2(view.position.x, y), Vector2(view.end.x, y), Style.c("ink_faint"), 1.0)
 		y += step
 
 	var me: Dictionary = sim.ships[0]
@@ -137,22 +153,49 @@ func _draw_arcs(s: Dictionary, color: Color, target: Dictionary) -> void:
 		draw_colored_polygon(pts, Color(color, alpha))
 
 
-func _draw_ship(s: Dictionary, color: Color) -> void:
-	var length := 24.0 + sqrt(s.stats.hull) * 1.6
-	var w := length * 0.32
-	var f := Geo.from_bearing(s.heading)
-	var r := Vector2(-f.y, f.x)
-	var hull := PackedVector2Array([s.pos + f * length * 0.5, s.pos + r * w * 0.5 + f * length * 0.1,
-		s.pos + r * w * 0.4 - f * length * 0.5, s.pos - r * w * 0.4 - f * length * 0.5, s.pos - r * w * 0.5 + f * length * 0.1])
-	draw_colored_polygon(hull, color.darkened(0.3) if s.struck else color)
-	draw_polyline(hull + PackedVector2Array([hull[0]]), INK, 1.5)
-	var sail_w: float = w * 1.4 * float(s.sail_setting) / 2.0 * clampf(s.sails / float(s.stats.sails), 0.2, 1.0)
-	for m in s.masts:
-		var c: Vector2 = s.pos + f * length * (0.25 - 0.5 * (m + 0.5) / maxf(s.stats.masts, 1.0))
-		draw_line(c - r * sail_w, c + r * sail_w, Color(0.97, 0.95, 0.88), 3.0)
-		draw_circle(c, 2.0, INK)
+## Cannon smoke rolling off the firing side, with muzzle flashes along the hull.
+func _gun_smoke(s: Dictionary, aim: Vector2, guns: int) -> void:
+	var dir: Vector2 = (aim - s.pos).normalized()
+	var fwd := Geo.from_bearing(s.heading)
+	var length: float = sprites[sim.ships.find(s)].get_node("Hull").texture.get_height() * 0.6 * 0.8
+	for i in mini(guns, 6):
+		var p: Vector2 = s.pos + fwd * lerpf(-length / 2.0, length / 2.0, (i + 0.5) / mini(guns, 6)) + dir * 8.0
+		_burst(p, dir, Color(Style.c("smoke"), 0.55), 5, 30.0, Vector2(15, 35), 1.6, Vector2(0.6, 1.4))
+		_burst(p, dir, Style.c("flash"), 3, 20.0, Vector2(60, 110), 0.15, Vector2(0.2, 0.4))
+
+
+## A one-shot puff of particles (Godot's CPUParticles2D) that cleans itself up.
+func _burst(pos: Vector2, dir: Vector2, color: Color, amount: int, spread: float, speed: Vector2, life: float, size: Vector2) -> void:
+	var p := CPUParticles2D.new()
+	p.texture = PUFF
+	p.position = pos
+	p.one_shot = true
+	p.explosiveness = 0.9
+	p.amount = maxi(amount, 1)
+	p.lifetime = life
+	p.direction = dir if dir != Vector2.ZERO else Vector2.RIGHT
+	p.spread = spread
+	p.gravity = Vector2.ZERO
+	p.initial_velocity_min = speed.x
+	p.initial_velocity_max = speed.y
+	p.damping_min = speed.x * 0.5
+	p.damping_max = speed.y * 0.5
+	p.scale_amount_min = size.x
+	p.scale_amount_max = size.y
+	var ramp := Gradient.new()
+	ramp.set_color(0, color)
+	ramp.set_color(1, Color(color, 0.0))
+	p.color_ramp = ramp
+	add_child(p)
+	p.emitting = true
+	get_tree().create_timer(life + 0.3).timeout.connect(p.queue_free)
+
+
+## Name labels above each ship (the ships themselves are ShipSprite nodes).
+func _draw_ship(s: Dictionary, _color: Color) -> void:
+	var length: float = sprites[sim.ships.find(s)].get_node("Hull").texture.get_height() * 0.6
 	var label := "%s%s" % [s.name, " (struck)" if s.struck else ""]
-	draw_string(ThemeDB.fallback_font, s.pos + Vector2(-80, -length * 0.6 - 8), label, HORIZONTAL_ALIGNMENT_CENTER, 160, 14, INK)
+	draw_string(Style.font("italic"), s.pos + Vector2(-90, -length * 0.6 - 8), label, HORIZONTAL_ALIGNMENT_CENTER, 180, 16, Style.c("ink"))
 
 
 func _fit_camera(delta: float) -> void:
@@ -292,6 +335,13 @@ func _end() -> void:
 		"separated": "The distance between you grows until the %s is just a sail on the horizon." % enemy_data.name,
 	}
 	var me: Dictionary = sim.ships[0]
+	if sim.result.ends_with("sunk"):  # let her go down before the report
+		var who := 1 if sim.result == "enemy_sunk" else 0
+		_burst(sim.ships[who].pos, Vector2.ZERO, Style.c("splash"), 40, 180.0, Vector2(20, 90), 1.2, Vector2(0.3, 0.7))
+		var tw := create_tween().set_parallel()
+		tw.tween_property(sprites[who], "modulate:a", 0.0, 1.8)
+		tw.tween_property(sprites[who], "scale", sprites[who].scale * 0.7, 1.8)
+		await tw.finished
 	var text: String = texts[sim.result] + "\n\nYour casualties: %d.  Hull %d, sails %d." % [me.casualties, me.hull, me.sails]
 	if me.get("captain_wounded", false):
 		text += "\nYour captain was wounded in the fighting."

@@ -55,8 +55,8 @@ func refresh() -> void:
 func _build_market() -> void:
 	var grid: GridContainer = %MarketGrid
 	UIKit.clear(grid)
-	for h in ["Good", "In hold", "Buy", "Sell", "Best known elsewhere", "", "Buy", "", "", "Sell", ""]:
-		UIKit.label(grid, h, "", UIKit.HEADER)
+	for h in ["", "Good", "In hold", "Buy", "Sell", "Best known elsewhere", "", "Buy", "", "", "Sell", ""]:
+		UIKit.label(grid, h, "", Style.c("header"))
 
 	var p := Ports.port(port_id)
 	var ps: Dictionary = Ports.state[port_id]
@@ -66,7 +66,8 @@ func _build_market() -> void:
 		var tip := Market.breakdown(p, good, ps, ps.laws, haggle)
 		var contraband: bool = good in ps.laws.contraband
 		var sell := Ports.price(port_id, good, false, haggle)
-		UIKit.label(grid, Data.table("goods")[good].name + (" (contraband)" if contraband else ""), tip, UIKit.BAD if contraband else Color.WHITE)
+		UIKit.icon(grid, Data.table("goods")[good].get("icon", ""), 24)
+		UIKit.label(grid, Data.table("goods")[good].name + (" (contraband)" if contraband else ""), tip, Style.c("bad") if contraband else Color(0, 0, 0, 0))
 
 		var have: float = s.cargo.get(good, 0.0)
 		var hold := ""
@@ -85,7 +86,7 @@ func _build_market() -> void:
 			UIKit.label(grid, "-")
 		else:
 			UIKit.label(grid, "%s at %s, %dd ago" % [Market.fmt(best.sell), Ports.port(best.port).name, int(Clock.day) - int(best.day)], "",
-				UIKit.GOOD if best.sell > sell * 1.15 else UIKit.DIM)
+				Style.c("good") if best.sell > sell * 1.15 else Style.c("dim"))
 
 		var lot := 10 if Market.weight(good) < 1.0 else 1  # provisions trade in larger lots
 		for q in [lot, lot * 10, 100000]:
@@ -108,10 +109,10 @@ func _build_shipyard() -> void:
 	var st: Dictionary = ship.stats
 	var y: Dictionary = Data.rules.shipyard
 	var per_day: int = y.hull_per_day[level]
-	UIKit.label(box, "%s shipyard. Work here takes days; the crew still eat and draw wages while you wait." % ["", "Small", "Large"][level], "", UIKit.DIM)
+	UIKit.label(box, "%s shipyard. Work here takes days; the crew still eat and draw wages while you wait." % ["", "Small", "Large"][level], "", Style.c("dim"))
 
 	UIKit.label(box, "")
-	UIKit.label(box, "Condition", "", UIKit.HEADER)
+	UIKit.label(box, "Condition", "", Style.c("header"))
 	UIKit.label(box, "Hull %d / %d   Sails %d / %d   Guns dismounted %d   Fouling %d%%" % [s.hull, st.hull, s.sails, st.sails, s.guns_lost, int(s.fouling * 100)])
 	var r := UIKit.row(box)
 	for days in [1, 0]:
@@ -126,7 +127,7 @@ func _build_shipyard() -> void:
 
 	if s.prizes.size() > 0:
 		UIKit.label(box, "")
-		UIKit.label(box, "Your prizes", "", UIKit.HEADER)
+		UIKit.label(box, "Your prizes", "", Style.c("header"))
 		var pg := UIKit.grid(box, 4)
 		for i in s.prizes.size():
 			var prize: Dictionary = s.prizes[i]
@@ -142,7 +143,7 @@ func _build_shipyard() -> void:
 
 	UIKit.label(box, "")
 	var trade_in := ShipStats.trade_in_value(s)
-	UIKit.label(box, "Ships for sale (your %s is worth %d in trade)" % [Data.table("ships")[s.type].name, trade_in], "", UIKit.HEADER)
+	UIKit.label(box, "Ships for sale (your %s is worth %d in trade)" % [Data.table("ships")[s.type].name, trade_in], "", Style.c("header"))
 	var g := UIKit.grid(box, 6)
 	for type_id in Ports.port(port_id).ships_for_sale:
 		if type_id == s.type:
@@ -163,16 +164,16 @@ func _build_shipyard() -> void:
 		b.disabled = why != ""
 
 	UIKit.label(box, "")
-	UIKit.label(box, "Upgrades", "", UIKit.HEADER)
+	UIKit.label(box, "Upgrades", "", Style.c("header"))
 	var ug := UIKit.grid(box, 4)
 	for u in Data.table("upgrades"):
 		var up: Dictionary = Data.table("upgrades")[u]
 		var reason := ShipStats.cannot_install(s, u, level)
 		var cost := ShipStats.upgrade_cost(u, s.type)
 		var tip := "%s\n%s" % [up.description, _effects_text(up.effects)]
-		UIKit.label(ug, up.name + (" (fitted)" if u in s.upgrades else ""), tip, UIKit.GOOD if u in s.upgrades else Color.WHITE)
+		UIKit.label(ug, up.name + (" (fitted)" if u in s.upgrades else ""), tip, Style.c("good") if u in s.upgrades else Color(0, 0, 0, 0))
 		UIKit.label(ug, "%d gold, %d day%s" % [cost, up.days, "" if up.days == 1 else "s"], tip)
-		UIKit.label(ug, reason, "", UIKit.DIM)
+		UIKit.label(ug, reason, "", Style.c("dim"))
 		var b := UIKit.button(ug, "Fit", _install.bind(u, cost), "Replaces other guns." if up.get("group", "") == "cannons" else "")
 		b.disabled = reason != "" or cost > s.gold
 
@@ -253,10 +254,11 @@ func _refresh_tavern() -> void:
 	UIKit.clear(%Notables)
 	var ps2: Dictionary = Ports.state[port_id]
 	if not ps2.notables.is_empty():
-		UIKit.label(%Notables, "Hands worth a closer look (hover for what you know):", "", UIKit.HEADER)
-		var ng := UIKit.grid(%Notables, 4)
+		UIKit.label(%Notables, "Hands worth a closer look (hover for what you know):", "", Style.c("header"))
+		var ng := UIKit.grid(%Notables, 5)
 		for i in ps2.notables.size():
 			var c: Dictionary = ps2.notables[i]
+			ng.add_child(Portrait.make(c, "crew", 44))
 			UIKit.label(ng, "%s, %s" % [c.name, Data.table("nations")[c.nationality].name], People.describe(c))
 			UIKit.label(ng, People.trait_names(c), People.describe(c))
 			UIKit.button(ng, "Interview (%d)" % t.interview_cost, _act.bind(func(): return Ports.interview(port_id, i, ship.state)),

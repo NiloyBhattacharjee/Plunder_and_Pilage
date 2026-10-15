@@ -87,6 +87,7 @@ static func player_side(s: Dictionary) -> Dictionary:
 		"carpentry": ShipStats.officer_skill(s, "carpenter"),
 		"morale": morale, "swivels": ShipStats.effective(s.type, s.upgrades).swivels, "behaviour": "player",
 		"roles": {"sailors": preset.sailors, "gunners": preset.gunners, "marines": preset.marines},
+		"flag": s.get("flag", "white"),
 	}
 
 

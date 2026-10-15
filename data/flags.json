@@ -1,0 +1,9 @@
+{
+  "england": {"name": "St George's cross", "path": "res://assets/flags/england.png"},
+  "spain": {"name": "Cross of Burgundy", "path": "res://assets/flags/spain.png"},
+  "france": {"name": "Royal white with lilies", "path": "res://assets/flags/france.png"},
+  "dutch": {"name": "Prince's flag", "path": "res://assets/flags/dutch.png"},
+  "black": {"name": "The black flag", "path": "res://assets/flags/black.png"},
+  "red": {"name": "The red flag: no quarter", "path": "res://assets/flags/red.png"},
+  "white": {"name": "Plain white", "path": "res://assets/flags/white.png"}
+}

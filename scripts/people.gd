@@ -23,6 +23,11 @@ var rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	rng.randomize()
+	Clock.day_passed.connect(func(_d):
+		var d := Clock.date()
+		if d.month == 1 and d.day == 1:
+			for id in chars:
+				chars[id].age += 1)
 
 
 func person(id: String) -> Dictionary:

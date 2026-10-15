@@ -38,6 +38,7 @@ func setup(new_state: Dictionary) -> void:
 
 func refresh_stats() -> void:
 	stats = ShipStats.effective(state.type, state.upgrades)
+	$Hull.setup(state.type, state.get("flag", "white"))
 	state.hull = minf(state.hull, stats.hull)
 	state.sails = minf(state.sails, stats.sails)
 	stats_changed.emit()
@@ -60,6 +61,7 @@ func _on_tick(dd: float) -> void:
 		return
 	wind = Weather.wind_at(position)
 	_storm_damage(dd)
+	$Hull.set_state(state.hull / stats.hull, state.sails / stats.sails, 0 if route.is_empty() else 2)
 	if route.is_empty() or state.hull <= 0:
 		speed_knots = 0.0
 		return

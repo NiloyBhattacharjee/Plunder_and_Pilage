@@ -1,0 +1,465 @@
+{
+ "_comment": "Layered portraits. Parts are picked from each character's portrait seed, filtered by tags (role, background, traits). Swap art by replacing files; add parts by adding entries.",
+ "size": 128,
+ "layers": [
+  "background",
+  "body",
+  "head",
+  "wrinkles",
+  "eyes",
+  "nose",
+  "mouth",
+  "scar",
+  "facial_hair",
+  "hair",
+  "hat",
+  "eyepatch",
+  "accessory",
+  "tattoo",
+  "hook"
+ ],
+ "none_chance": {
+  "facial_hair": 0.45,
+  "hat": 0.35,
+  "accessory": 0.75,
+  "tattoo": 0.85,
+  "scar": 0.94
+ },
+ "story_layers": {
+  "wrinkles": "age",
+  "eyepatch": "one_eyed",
+  "scar": "scarred",
+  "hook": "hook_hand"
+ },
+ "modulate": {
+  "head": "skin",
+  "hair": "hair",
+  "facial_hair": "hair"
+ },
+ "skin_tones": {
+  "default": [
+   "#f1cfaa",
+   "#e6b991",
+   "#d9a679",
+   "#c99367"
+  ],
+  "spanish": [
+   "#e6b991",
+   "#d9a679",
+   "#c99367",
+   "#b98256"
+  ],
+  "portuguese": [
+   "#e0b086",
+   "#cf9a6c",
+   "#b98256"
+  ],
+  "afro_caribbean": [
+   "#8d5a3b",
+   "#7a4b2f",
+   "#6a3f27",
+   "#a46a45"
+  ]
+ },
+ "hair_colors": {
+  "default": [
+   "#2b1d14",
+   "#4a2f1d",
+   "#6b4a2b",
+   "#a87a3d",
+   "#1a1410",
+   "#8a3d1e"
+  ],
+  "afro_caribbean": [
+   "#1a1410",
+   "#2b1d14"
+  ],
+  "spanish": [
+   "#1a1410",
+   "#2b1d14",
+   "#4a2f1d"
+  ]
+ },
+ "grey": "#a8a49c",
+ "grey_from_age": 42,
+ "grey_full_age": 65,
+ "wrinkles_from_age": 50,
+ "parts": {
+  "background": [
+   {
+    "id": "parchment",
+    "path": "res://assets/portraits/background/parchment.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "sea",
+    "path": "res://assets/portraits/background/sea.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "tavern",
+    "path": "res://assets/portraits/background/tavern.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "crimson",
+    "path": "res://assets/portraits/background/crimson.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "body": [
+   {
+    "id": "sailor_shirt",
+    "path": "res://assets/portraits/body/sailor_shirt.png",
+    "tags": [
+     "crew"
+    ]
+   },
+   {
+    "id": "striped_shirt",
+    "path": "res://assets/portraits/body/striped_shirt.png",
+    "tags": [
+     "crew",
+     "pirate"
+    ]
+   },
+   {
+    "id": "pirate_coat",
+    "path": "res://assets/portraits/body/pirate_coat.png",
+    "tags": [
+     "pirate",
+     "captain"
+    ]
+   },
+   {
+    "id": "navy_coat",
+    "path": "res://assets/portraits/body/navy_coat.png",
+    "tags": [
+     "navy",
+     "officer",
+     "captain"
+    ]
+   },
+   {
+    "id": "merchant_coat",
+    "path": "res://assets/portraits/body/merchant_coat.png",
+    "tags": [
+     "merchant",
+     "captain",
+     "official"
+    ]
+   },
+   {
+    "id": "governor_coat",
+    "path": "res://assets/portraits/body/governor_coat.png",
+    "tags": [
+     "governor",
+     "official"
+    ]
+   },
+   {
+    "id": "priest_robe",
+    "path": "res://assets/portraits/body/priest_robe.png",
+    "tags": [
+     "priest"
+    ]
+   }
+  ],
+  "head": [
+   {
+    "id": "oval",
+    "path": "res://assets/portraits/head/oval.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "round",
+    "path": "res://assets/portraits/head/round.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "long",
+    "path": "res://assets/portraits/head/long.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "wrinkles": [
+   {
+    "id": "aged",
+    "path": "res://assets/portraits/wrinkles/aged.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "eyes": [
+   {
+    "id": "dots",
+    "path": "res://assets/portraits/eyes/dots.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "almond",
+    "path": "res://assets/portraits/eyes/almond.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "heavy",
+    "path": "res://assets/portraits/eyes/heavy.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "squint",
+    "path": "res://assets/portraits/eyes/squint.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "nose": [
+   {
+    "id": "straight",
+    "path": "res://assets/portraits/nose/straight.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "hooked",
+    "path": "res://assets/portraits/nose/hooked.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "broad",
+    "path": "res://assets/portraits/nose/broad.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "mouth": [
+   {
+    "id": "line",
+    "path": "res://assets/portraits/mouth/line.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "smile",
+    "path": "res://assets/portraits/mouth/smile.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "frown",
+    "path": "res://assets/portraits/mouth/frown.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "open",
+    "path": "res://assets/portraits/mouth/open.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "hair": [
+   {
+    "id": "short",
+    "path": "res://assets/portraits/hair/short.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "long",
+    "path": "res://assets/portraits/hair/long.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "queue",
+    "path": "res://assets/portraits/hair/queue.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "bald",
+    "path": "res://assets/portraits/hair/bald.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "curly",
+    "path": "res://assets/portraits/hair/curly.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "receding",
+    "path": "res://assets/portraits/hair/receding.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "facial_hair": [
+   {
+    "id": "stubble",
+    "path": "res://assets/portraits/facial_hair/stubble.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "moustache",
+    "path": "res://assets/portraits/facial_hair/moustache.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "full_beard",
+    "path": "res://assets/portraits/facial_hair/full_beard.png",
+    "tags": [
+     "any"
+    ]
+   },
+   {
+    "id": "goatee",
+    "path": "res://assets/portraits/facial_hair/goatee.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "hat": [
+   {
+    "id": "tricorne",
+    "path": "res://assets/portraits/hat/tricorne.png",
+    "tags": [
+     "captain",
+     "navy",
+     "officer",
+     "pirate"
+    ]
+   },
+   {
+    "id": "bandana",
+    "path": "res://assets/portraits/hat/bandana.png",
+    "tags": [
+     "pirate",
+     "crew"
+    ]
+   },
+   {
+    "id": "bicorne",
+    "path": "res://assets/portraits/hat/bicorne.png",
+    "tags": [
+     "navy",
+     "officer"
+    ]
+   },
+   {
+    "id": "wig",
+    "path": "res://assets/portraits/hat/wig.png",
+    "tags": [
+     "governor",
+     "official"
+    ]
+   },
+   {
+    "id": "straw",
+    "path": "res://assets/portraits/hat/straw.png",
+    "tags": [
+     "crew",
+     "merchant"
+    ]
+   },
+   {
+    "id": "knit_cap",
+    "path": "res://assets/portraits/hat/knit_cap.png",
+    "tags": [
+     "crew"
+    ]
+   }
+  ],
+  "accessory": [
+   {
+    "id": "earring",
+    "path": "res://assets/portraits/accessory/earring.png",
+    "tags": [
+     "pirate",
+     "crew",
+     "captain"
+    ]
+   }
+  ],
+  "eyepatch": [
+   {
+    "id": "patch",
+    "path": "res://assets/portraits/eyepatch/patch.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "scar": [
+   {
+    "id": "cheek",
+    "path": "res://assets/portraits/scar/cheek.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "hook": [
+   {
+    "id": "hook",
+    "path": "res://assets/portraits/hook/hook.png",
+    "tags": [
+     "any"
+    ]
+   }
+  ],
+  "tattoo": [
+   {
+    "id": "anchor",
+    "path": "res://assets/portraits/tattoo/anchor.png",
+    "tags": [
+     "pirate",
+     "crew"
+    ]
+   }
+  ]
+ }
+}

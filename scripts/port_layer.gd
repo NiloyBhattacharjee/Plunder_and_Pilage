@@ -3,7 +3,6 @@ extends Node2D
 ## marker and text size are divided by the zoom so names stay readable at any scale.
 ## In a trade map mode (`trade_good` set) each label also shows the last known buy/sell price and its age.
 
-const INK := Color("#4a3a26")
 
 var port_positions := {}  # port id -> map position, filled by world_map
 var trade_good := "":
@@ -29,8 +28,8 @@ func _draw() -> void:
 			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd%s)" % [
 				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]
 		draw_circle(pos, 6.0 * s, Color(Data.table("factions")[port.faction].color))
-		draw_circle(pos, 6.0 * s, INK, false, 1.5 * s)
+		draw_circle(pos, 6.0 * s, Style.c("ink"), false, 1.5 * s)
 		draw_string_outline(ThemeDB.fallback_font, text_pos, label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Color("#f3ecd8"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("parchment_light"))
 		draw_string(ThemeDB.fallback_font, text_pos, label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), INK)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), Style.c("ink"))

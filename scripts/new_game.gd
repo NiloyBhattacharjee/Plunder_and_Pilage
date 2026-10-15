@@ -50,6 +50,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 		"relations": relations,
 		"reputation": {"honour": 0, "fear": 0, "notoriety": 0},
 		"stolen": {}, "prizes": [], "hostages": [], "guns_lost": 0, "roles": "balanced",
+		"flag": Data.table("factions")[nation.faction].flag if nation.faction != "" else "white",
 	}
 	auto_appoint(state, 7)
 	return {"state": state, "start_port": start_port}

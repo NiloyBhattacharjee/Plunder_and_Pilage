@@ -8,12 +8,17 @@ var heading := 0.0
 func _draw() -> void:
 	var c := size / 2.0
 	var r := minf(size.x, size.y) / 2.0 - 4.0
-	draw_circle(c, r, Color(0.95, 0.9, 0.78))
-	draw_circle(c, r, Color("#4a3a26"), false, 1.5)
-	draw_string(ThemeDB.fallback_font, c + Vector2(-5, -r + 14), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#4a3a26"))
-	draw_line(c, c + Geo.from_bearing(heading) * r * 0.8, Color("#7a4a1e"), 3.0)
+	var ink := Style.c("ink")
+	draw_circle(c, r, Style.c("parchment_light"))
+	draw_circle(c, r, ink, false, 1.5)
+	for i in 16:  # a little compass rose
+		var len := r * (0.95 if i % 4 == 0 else (0.7 if i % 2 == 0 else 0.5))
+		draw_line(c, c + Geo.from_bearing(i * 22.5) * len, Color(ink, 0.35), 1.0)
+	draw_string(Style.font("title"), c + Vector2(-5, -r + 16), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ink)
+	draw_line(c, c + Geo.from_bearing(heading) * r * 0.8, Style.c("player_ship"), 3.0)
 	# Wind arrow: from the upwind side, across the centre, pointing downwind.
 	var to := Geo.from_bearing(wind_dir + 180.0)
 	var tip := c + to * r * 0.85
 	draw_line(c - to * r * 0.85, tip, Color("#2f5fb3"), 2.0)
 	draw_colored_polygon(PackedVector2Array([tip, tip - to.rotated(0.4) * 10, tip - to.rotated(-0.4) * 10]), Color("#2f5fb3"))
+

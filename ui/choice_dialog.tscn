@@ -2,18 +2,6 @@
 
 [ext_resource type="Script" path="res://ui/choice_dialog.gd" id="1"]
 
-[sub_resource type="StyleBoxFlat" id="panel_bg"]
-bg_color = Color(0.16, 0.13, 0.1, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.55, 0.45, 0.3, 1)
-content_margin_left = 20.0
-content_margin_top = 16.0
-content_margin_right = 20.0
-content_margin_bottom = 16.0
-
 [node name="ChoiceDialog" type="CanvasLayer"]
 layer = 30
 script = ExtResource("1")
@@ -36,7 +24,6 @@ grow_vertical = 2
 [node name="Panel" type="PanelContainer" parent="Center"]
 custom_minimum_size = Vector2(620, 0)
 layout_mode = 2
-theme_override_styles/panel = SubResource("panel_bg")
 
 [node name="VBox" type="VBoxContainer" parent="Center/Panel"]
 layout_mode = 2
@@ -45,7 +32,7 @@ theme_override_constants/separation = 12
 [node name="Title" type="Label" parent="Center/Panel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_type_variation = &"Title"
 
 [node name="Text" type="Label" parent="Center/Panel/VBox"]
 unique_name_in_owner = true

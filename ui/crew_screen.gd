@@ -43,35 +43,40 @@ func _build_captain(cap: Dictionary) -> void:
 	var box: VBoxContainer = %CaptainBox
 	UIKit.clear(box)
 	var bg: Dictionary = Data.table("backgrounds").get(cap.background, {})
-	UIKit.label(box, "%s, %s, age %d. %s" % [cap.name, Data.table("nations")[cap.nationality].name, cap.age, bg.get("name", "")],
+	var head := UIKit.row(box)
+	head.add_child(Portrait.make(cap, "captain", 128))
+	var who := VBoxContainer.new()
+	head.add_child(who)
+	UIKit.label(who, "%s, %s, age %d. %s" % [cap.name, Data.table("nations")[cap.nationality].name, cap.age, bg.get("name", "")],
 		bg.get("description", ""))
-	UIKit.label(box, "The captain is a crew member like any other. If they fall, someone else takes over.", "", UIKit.DIM)
+	box = who
+	UIKit.label(box, "The captain is a crew member like any other. If they fall, someone else takes over.", "", Style.c("dim"))
 	_character_sheet(box, cap)
 	UIKit.label(box, "")
 	var s: Dictionary = ship.state
 	var rep: Dictionary = s.reputation
 	UIKit.label(box, "Reputation: honour %+d, fear %+d, notoriety %d" % [rep.honour, rep.fear, rep.notoriety],
-		"Honour grows from mercy and keeping your word; fear from cruelty. Notoriety is how widely your name is known.", UIKit.HEADER)
+		"Honour grows from mercy and keeping your word; fear from cruelty. Notoriety is how widely your name is known.", Style.c("header"))
 	UIKit.label(box, "Standing: " + ", ".join(s.relations.keys().map(func(f): return "%s %+d" % [Data.table("factions")[f].name, s.relations[f]])))
 	var feelings: Array = s.crew.map(func(id): return People.person(id).relations.get(s.captain, 0))
 	var unhappy: int = feelings.filter(func(v): return v < 0).size()
 	if unhappy > 0:
 		UIKit.label(box, "%d of your crew hold something against you." % unhappy,
-			"Choices that clash with their traits (mercy to a bloodthirsty hand, cruelty to a merciful one) are remembered.", UIKit.BAD)
+			"Choices that clash with their traits (mercy to a bloodthirsty hand, cruelty to a merciful one) are remembered.", Style.c("bad"))
 	if not s.hostages.is_empty():
 		UIKit.label(box, "Hostages: " + ", ".join(s.hostages.map(func(h): return "%s (%s, %d gold)" % [
 			People.person(h.id).name, Data.table("factions")[h.faction].name, h.ransom])))
 	UIKit.label(box, "")
-	UIKit.label(box, "Log", "", UIKit.HEADER)
+	UIKit.label(box, "Log", "", Style.c("header"))
 	for line in cap.history:
-		UIKit.label(box, line, "", UIKit.DIM)
+		UIKit.label(box, line, "", Style.c("dim"))
 
 
 ## Stats, skills and traits for any character, with breakdown tooltips.
 func _character_sheet(box: Node, c: Dictionary) -> void:
 	var g := UIKit.grid(box, 4)
 	for h in ["Leadership", "", "Skills", ""]:
-		UIKit.label(g, h, "", UIKit.HEADER)
+		UIKit.label(g, h, "", Style.c("header"))
 	for i in maxi(People.STATS.size(), People.SKILLS.size()):
 		if i < People.STATS.size():
 			var k: String = People.STATS[i]
@@ -84,7 +89,7 @@ func _character_sheet(box: Node, c: Dictionary) -> void:
 		UIKit.label(g, People.SKILL_NAMES[sk], People.breakdown(c, sk))
 		UIKit.label(g, str(People.value(c, sk)), People.breakdown(c, sk))
 	var traits := UIKit.row(box)
-	UIKit.label(traits, "Traits:", "", UIKit.HEADER)
+	UIKit.label(traits, "Traits:", "", Style.c("header"))
 	for t in People.known_traits(c):
 		var td: Dictionary = Data.table("traits")[t]
 		var fx := PackedStringArray()
@@ -92,7 +97,7 @@ func _character_sheet(box: Node, c: Dictionary) -> void:
 			fx.append("%s %+d" % [People.SKILL_NAMES[k], td.effects[k]])
 		UIKit.label(traits, td.name, td.description + ("\n" + ", ".join(fx) if not fx.is_empty() else ""))
 	for i in c.hidden.size():
-		UIKit.label(traits, "?", "A trait you haven't discovered yet.", UIKit.DIM)
+		UIKit.label(traits, "?", "A trait you haven't discovered yet.", Style.c("dim"))
 
 
 func _build_ship() -> void:
@@ -100,7 +105,7 @@ func _build_ship() -> void:
 	UIKit.clear(box)
 	var s: Dictionary = ship.state
 	var st: Dictionary = ship.stats
-	UIKit.label(box, Data.table("ships")[s.type].description, "", UIKit.DIM)
+	UIKit.label(box, Data.table("ships")[s.type].description, "", Style.c("dim"))
 	var g := UIKit.grid(box, 2)
 	var rows := [
 		["hull", "%d / %d" % [s.hull, st.hull]],
@@ -133,17 +138,22 @@ func _build_ship() -> void:
 	UIKit.label(g, "Daily cost", cost_tip)
 	UIKit.label(g, "%s gold" % Market.fmt(ShipStats.daily_cost(s, st)), cost_tip)
 	UIKit.label(box, "")
-	UIKit.label(box, "Upgrades: " + (", ".join(s.upgrades.map(func(x): return Data.table("upgrades")[x].name)) if not s.upgrades.is_empty() else "none"), "", UIKit.HEADER)
+	UIKit.label(box, "Upgrades: " + (", ".join(s.upgrades.map(func(x): return Data.table("upgrades")[x].name)) if not s.upgrades.is_empty() else "none"), "", Style.c("header"))
 
 
 func _build_officers() -> void:
 	var box: VBoxContainer = %OfficersBox
 	UIKit.clear(box)
 	var s: Dictionary = ship.state
-	UIKit.label(box, "Officers are drawn from your crew. An empty post is covered by the captain at half skill.", "", UIKit.DIM)
-	var g := UIKit.grid(box, 3)
+	UIKit.label(box, "Officers are drawn from your crew. An empty post is covered by the captain at half skill.", "", Style.c("dim"))
+	var g := UIKit.grid(box, 4)
 	for role in Data.rules.officer_roles:
 		var r: Dictionary = Data.rules.officer_roles[role]
+		var holder: String = s.officers.get(role, "")
+		if holder != "":
+			g.add_child(Portrait.make(People.person(holder), "officer", 48))
+		else:
+			UIKit.icon(g, "", 48)
 		UIKit.label(g, r.name, r.effect)
 		var pick := OptionButton.new()
 		pick.add_item("(none)")
@@ -210,9 +220,9 @@ func _build_crew() -> void:
 	var nations := {}
 	for c in crew:
 		nations[c.nationality] = nations.get(c.nationality, 0) + 1
-	UIKit.label(box, "Origins: " + ", ".join(nations.keys().map(func(n): return "%s %d" % [Data.table("nations")[n].name, nations[n]])), "", UIKit.DIM)
+	UIKit.label(box, "Origins: " + ", ".join(nations.keys().map(func(n): return "%s %d" % [Data.table("nations")[n].name, nations[n]])), "", Style.c("dim"))
 	var roles := UIKit.row(box)
-	UIKit.label(roles, "Battle stations:", "How the crew is split in a fight: sailors work the ship, gunners serve the guns, marines lead boardings.", UIKit.HEADER)
+	UIKit.label(roles, "Battle stations:", "How the crew is split in a fight: sailors work the ship, gunners serve the guns, marines lead boardings.", Style.c("header"))
 	for preset in Data.rules.crew_roles.presets:
 		var p: Dictionary = Data.rules.crew_roles.presets[preset]
 		var b := UIKit.button(roles, p.name, func():
@@ -220,7 +230,7 @@ func _build_crew() -> void:
 			refresh(), "%s\nSailors %d%%, gunners %d%%, marines %d%%." % [p.description, p.sailors * 100, p.gunners * 100, p.marines * 100])
 		b.disabled = s.get("roles", "balanced") == preset
 	var unknown := crew.filter(func(c): return not c.hidden.is_empty()).size()
-	UIKit.label(box, "%d hands still have traits you haven't discovered. Time at sea brings them out." % unknown, "", UIKit.DIM)
+	UIKit.label(box, "%d hands still have traits you haven't discovered. Time at sea brings them out." % unknown, "", Style.c("dim"))
 
 	var by_lead := crew.duplicate()
 	by_lead.sort_custom(func(a, b): return People.leadership(a) > People.leadership(b))
@@ -239,12 +249,14 @@ func _build_crew() -> void:
 
 func _people_list(box: Node, title: String, people: Array, tip: String) -> void:
 	UIKit.label(box, "")
-	UIKit.label(box, title, tip, UIKit.HEADER)
+	UIKit.label(box, title, tip, Style.c("header"))
 	if people.is_empty():
-		UIKit.label(box, "  None known.", "", UIKit.DIM)
+		UIKit.label(box, "  None known.", "", Style.c("dim"))
 	for c in people:
 		var post := _post_of(c.id)
-		UIKit.label(box, "  %s%s - %s" % [c.name, " (%s)" % Data.rules.officer_roles[post].name if post != "" else "",
+		var line := UIKit.row(box)
+		line.add_child(Portrait.make(c, "officer" if post != "" else "crew", 40))
+		UIKit.label(line, "%s%s - %s" % [c.name, " (%s)" % Data.rules.officer_roles[post].name if post != "" else "",
 			People.trait_names(c)], People.describe(c))
 
 

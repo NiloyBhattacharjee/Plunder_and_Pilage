@@ -1,0 +1,59 @@
+{
+ "_comment": "Lettering drawn on the chart. lat/lon place it; size in map pixels; italic for seas.",
+ "mar_caribe": {
+  "text": "Mar del Norte",
+  "lat": 14.6,
+  "lon": -76.0,
+  "size": 46,
+  "italic": true
+ },
+ "golfo": {
+  "text": "Golfo de Nueva España",
+  "lat": 24.8,
+  "lon": -91.5,
+  "size": 36,
+  "italic": true
+ },
+ "atlantic": {
+  "text": "Oceanus Atlanticus",
+  "lat": 21.5,
+  "lon": -63.8,
+  "size": 34,
+  "italic": true
+ },
+ "bahamas": {
+  "text": "Islas Lucayas",
+  "lat": 26.6,
+  "lon": -75.6,
+  "size": 22,
+  "italic": true
+ },
+ "main": {
+  "text": "Tierra Firme",
+  "lat": 9.0,
+  "lon": -70.5,
+  "size": 30,
+  "italic": false
+ },
+ "yucatan": {
+  "text": "Yucatán",
+  "lat": 19.8,
+  "lon": -89.4,
+  "size": 24,
+  "italic": false
+ },
+ "florida": {
+  "text": "La Florida",
+  "lat": 29.4,
+  "lon": -82.6,
+  "size": 24,
+  "italic": false
+ },
+ "pacific": {
+  "text": "Mar del Sur",
+  "lat": 9.6,
+  "lon": -91.0,
+  "size": 30,
+  "italic": true
+ }
+}
