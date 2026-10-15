@@ -18,6 +18,38 @@ CREAM = (243, 234, 210, 255)
 FONT = str(A / "ui" / "fonts" / "IMFellEnglish-Regular.ttf")
 
 
+def engrave(img, spacing=4, cross=False, stipple=False, shadow_from=0.5, alpha=150):
+    """Engraver's shading: hatch lines (or stipple dots) over the shadow side of whatever is drawn in `img`.
+    Light comes from the upper left, so the shadow is everything right of `shadow_from` across the part's width."""
+    a = img.split()[3]
+    box = a.getbbox()
+    if not box:
+        return img
+    w, h = img.size
+    shade = Image.new("L", (w, h), 0)
+    sd = ImageDraw.Draw(shade)
+    x0 = box[0] + (box[2] - box[0]) * shadow_from
+    sd.polygon([(x0, box[1]), (box[2], box[1]), (box[2], box[3]), (x0 - (box[3] - box[1]) * 0.25, box[3])], fill=255)
+    lines = Image.new("L", (w, h), 0)
+    ld = ImageDraw.Draw(lines)
+    if stipple:
+        rnd = random.Random(w * 7 + h)
+        for _ in range(int(w * h / (spacing * spacing))):
+            ld.point((rnd.randrange(w), rnd.randrange(h)), fill=255)
+    else:
+        for k in range(-h, w + h, spacing):
+            ld.line([(k, 0), (k + h, h)], fill=255, width=1)
+            if cross:
+                ld.line([(k + h, 0), (k, h)], fill=255, width=1)
+    from PIL import ImageChops
+    mask = ImageChops.multiply(ImageChops.multiply(lines, shade), a)
+    mask = mask.point(lambda v: v * alpha // 255)
+    ink = Image.new("RGBA", (w, h), INK)
+    out = img.copy()
+    out.paste(ink, (0, 0), mask)
+    return out
+
+
 def save(img, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     img.save(path)
@@ -51,12 +83,12 @@ def draw_hull(L, wf, guns, damaged):
     img = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     cx, cy = size[0] / 2, size[1] / 2
-    d.polygon(hull_outline(cx, cy, L, W), fill=(138, 90, 50, 255), outline=INK)
+    d.polygon(hull_outline(cx, cy, L, W), fill=(196, 160, 112, 255), outline=INK)
     d.line(hull_outline(cx, cy, L, W) + [hull_outline(cx, cy, L, W)[0]], fill=INK, width=3)
-    d.polygon(hull_outline(cx, cy + L * 0.02, L * 0.86, W * 0.72), fill=(176, 122, 69, 255))
+    d.polygon(hull_outline(cx, cy + L * 0.02, L * 0.86, W * 0.72), fill=(222, 196, 150, 255))
     for k in range(-2, 3):  # deck planks
         x = cx + k * W * 0.12
-        d.line([(x, cy - L * 0.3), (x, cy + L * 0.4)], fill=(150, 100, 58, 255), width=1)
+        d.line([(x, cy - L * 0.3), (x, cy + L * 0.4)], fill=(120, 92, 60, 255), width=1)
     ports = min(guns // 2, 16)
     for i in range(ports):  # gun ports along each side
         y = cy - L * 0.25 + (i + 0.5) * (L * 0.62 / max(ports, 1))
@@ -74,7 +106,7 @@ def draw_hull(L, wf, guns, damaged):
             x = cx + rnd.uniform(-W * 0.3, W * 0.3)
             y = cy + rnd.uniform(-L * 0.3, L * 0.3)
             d.line([(x, y), (x + rnd.uniform(-10, 10), y + rnd.uniform(6, 16)), (x + rnd.uniform(-12, 12), y + rnd.uniform(14, 26))], fill=INK, width=2)
-    return img
+    return engrave(img, spacing=3 if damaged else 4, cross=damaged, shadow_from=0.55)
 
 
 def mast_positions(L, n, cy):
@@ -131,7 +163,7 @@ def draw_sails(L, wf, rig, state):
             r = rnd.uniform(3, 7)
             d.polygon([(x + r * math.cos(a) * rnd.uniform(0.5, 1.2), y + r * math.sin(a) * rnd.uniform(0.5, 1.2))
                        for a in [k * math.pi / 3 for k in range(6)]], fill=(0, 0, 0, 0))
-    return img
+    return engrave(img, spacing=3, stipple=True, shadow_from=0.6, alpha=170)
 
 
 def make_ships():
@@ -195,9 +227,16 @@ def make_portraits():
         for _ in range(400):  # light paper speckle
             x, y = rnd.randrange(S), rnd.randrange(S)
             d.point((x, y), fill=tuple(max(0, c - 18) for c in col) + (255,))
-        d.ellipse([-30, -30, S + 30, S + 30], outline=tuple(max(0, c - 40) for c in col) + (255,), width=22)
+        frame = Image.new("RGBA", (S, S), (0, 0, 0, 0))  # an engraved oval frame: cross-hatching outside the oval
+        fd = ImageDraw.Draw(frame)
+        fd.rectangle([0, 0, S, S], fill=col + (255,))
+        fd.ellipse([8, 4, S - 8, S + 30], fill=(0, 0, 0, 0))
+        frame = engrave(frame, spacing=3, cross=True, shadow_from=0.0, alpha=110)
+        img.alpha_composite(frame)
+        d = ImageDraw.Draw(img)
+        d.ellipse([8, 4, S - 8, S + 30], outline=INK, width=2)
         d.rectangle([0, 0, S - 1, S - 1], outline=INK, width=3)
-        add("background", pid, img.filter(ImageFilter.GaussianBlur(0.3)))
+        add("background", pid, img)
 
     def body(pid, coat, tags, trim=None, collar=None, stripes=None):
         img, d = layer()
@@ -212,22 +251,22 @@ def make_portraits():
             d.line([(84, 96), (72, S)], fill=trim, width=3)
             for y in (108, 118):
                 d.ellipse([60, y, 66, y + 6], fill=trim)
-        add("body", pid, img, tags)
+        add("body", pid, engrave(img, spacing=3, shadow_from=0.55, alpha=170), tags)
     body("sailor_shirt", (226, 214, 186, 255), ["crew"], collar=(200, 186, 156, 255))
     body("striped_shirt", (238, 236, 228, 255), ["crew", "pirate"], stripes=(52, 80, 130, 255))
-    body("pirate_coat", (128, 32, 28, 255), ["pirate", "captain"], trim=(212, 170, 60, 255), collar=(240, 236, 225, 255))
-    body("navy_coat", (32, 44, 92, 255), ["navy", "officer", "captain"], trim=(212, 170, 60, 255), collar=(240, 236, 225, 255))
-    body("merchant_coat", (110, 78, 46, 255), ["merchant", "captain", "official"], collar=(245, 243, 236, 255))
-    body("governor_coat", (64, 30, 82, 255), ["governor", "official"], trim=(220, 190, 90, 255), collar=(250, 250, 250, 255))
-    body("priest_robe", (24, 22, 22, 255), ["priest"], collar=(250, 250, 250, 255))
+    body("pirate_coat", (176, 84, 70, 255), ["pirate", "captain"], trim=(212, 170, 60, 255), collar=(240, 236, 225, 255))
+    body("navy_coat", (92, 108, 150, 255), ["navy", "officer", "captain"], trim=(212, 170, 60, 255), collar=(240, 236, 225, 255))
+    body("merchant_coat", (160, 128, 92, 255), ["merchant", "captain", "official"], collar=(245, 243, 236, 255))
+    body("governor_coat", (128, 96, 140, 255), ["governor", "official"], trim=(220, 190, 90, 255), collar=(250, 250, 250, 255))
+    body("priest_robe", (70, 62, 58, 255), ["priest"], collar=(250, 250, 250, 255))
 
     def head(pid, box):
         img, d = layer()
         d.rectangle([52, 78, 76, 100], fill=(232, 232, 232, 255), outline=INK)  # neck
         d.ellipse([box[0] - 6, 50, box[0] + 4, 66], fill=(236, 236, 236, 255), outline=INK)  # ears
         d.ellipse([box[2] - 4, 50, box[2] + 6, 66], fill=(236, 236, 236, 255), outline=INK)
-        d.ellipse(box, fill=(244, 244, 244, 255), outline=INK, width=2)
-        add("head", pid, img)
+        d.ellipse(box, fill=(246, 246, 246, 255), outline=INK, width=2)
+        add("head", pid, engrave(img, spacing=3, stipple=True, shadow_from=0.6, alpha=120))
     head("oval", [40, 24, 88, 86])
     head("round", [36, 28, 92, 86])
     head("long", [42, 20, 86, 90])
@@ -268,7 +307,7 @@ def make_portraits():
         ("curly", lambda d: [d.ellipse([x - 7, y - 7, x + 7, y + 7], fill=W_, outline=INK) for x, y in ((44, 34), (54, 24), (66, 21), (78, 25), (86, 36), (40, 46), (88, 48))]),
         ("receding", lambda d: d.chord([38, 22, 90, 50], 200, 340, fill=W_, outline=INK)),
     ):
-        img, d = layer(); fn(d); add("hair", pid, img)
+        img, d = layer(); fn(d); add("hair", pid, engrave(img, spacing=2, shadow_from=0.0, alpha=110))
 
     for pid, fn in (
         ("stubble", lambda d: [d.point((x, y), fill=(200, 200, 200, 255)) for x in range(46, 84, 3) for y in range(68, 86, 3) if (x - 64) ** 2 / 400 + (y - 72) ** 2 / 250 < 1.2]),
@@ -276,10 +315,10 @@ def make_portraits():
         ("full_beard", lambda d: d.chord([42, 52, 86, 98], 0, 180, fill=W_, outline=INK)),
         ("goatee", lambda d: d.polygon([(58, 78), (70, 78), (66, 92), (62, 92)], fill=W_, outline=INK)),
     ):
-        img, d = layer(); fn(d); add("facial_hair", pid, img)
+        img, d = layer(); fn(d); add("facial_hair", pid, engrave(img, spacing=2, shadow_from=0.0, alpha=110))
 
     def hat(pid, fn, tags):
-        img, d = layer(); fn(d); add("hat", pid, img, tags)
+        img, d = layer(); fn(d); add("hat", pid, engrave(img, spacing=3, shadow_from=0.5, alpha=150), tags)
     hat("tricorne", lambda d: (d.polygon([(26, 30), (64, 6), (102, 30), (64, 22)], fill=(26, 24, 24, 255), outline=INK), d.line([(30, 29), (64, 22), (98, 29)], fill=(212, 170, 60, 255), width=2)), ["captain", "navy", "officer", "pirate"])
     hat("bandana", lambda d: (d.chord([38, 16, 90, 52], 180, 360, fill=(170, 30, 30, 255), outline=INK), d.polygon([(88, 34), (100, 44), (92, 48)], fill=(170, 30, 30, 255), outline=INK)), ["pirate", "crew"])
     hat("bicorne", lambda d: d.chord([22, 4, 106, 40], 180, 360, fill=(26, 24, 30, 255), outline=INK), ["navy", "officer"])
@@ -332,11 +371,12 @@ def make_icons():
     for gid, g in goods.items():
         img = Image.new("RGBA", (48, 48), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
-        col = GOOD_COLORS.get(gid, (160, 140, 110)) + (255,)
+        base = GOOD_COLORS.get(gid, (160, 140, 110))
+        col = tuple(int(c * 0.6 + 234 * 0.4) for c in base) + (255,)  # faded towards paper: a wash, not paint
         d.ellipse([3, 3, 45, 45], fill=col, outline=INK, width=2)
         light = sum(col[:3]) > 450
         d.text((24, 25), g["name"][0], font=font, fill=INK if light else CREAM, anchor="mm")
-        save(img, A / "icons" / "goods" / f"{gid}.png")
+        save(engrave(img, spacing=3, shadow_from=0.6, alpha=90), A / "icons" / "goods" / f"{gid}.png")
 
 
 def make_fx():
