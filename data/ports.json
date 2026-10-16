@@ -31,7 +31,7 @@
     "governor": "Don Alonso de Vargas",
     "description": "Key to the New World. The treasure fleet gathers here under the guns of El Morro before the run home.",
     "population": 10000, "tags": ["capital", "garrison"],
-    "make": {"tobacco": 14, "hides": 10, "sugar": 10, "food": 200},
+    "make": {"tobacco": 14, "hides": 10, "sugar": 10, "rum": 4, "food": 200},
     "shipyard": 2, "sailors": 20, "ships_for_sale": ["sloop", "brig", "frigate", "galleon"], "recruits": {"skills": {"gunnery": 2}, "traits": {"former_navy": 0.15, "devout": 0.1}},
     "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.6}
   },
@@ -49,7 +49,7 @@
     "governor": "Don Martín de Arroyo",
     "description": "The strongest walls on the Main. Gold and emeralds from New Granada pass through on their way to Spain.",
     "population": 6000, "tags": ["fair_town", "garrison"],
-    "make": {"silver": 1.5, "gold": 0.3, "cocoa": 6, "hides": 4, "food": 100},
+    "make": {"silver": 1.5, "gold": 0.3, "cocoa": 6, "hides": 4, "rum": 3, "food": 100},
     "shipyard": 2, "sailors": 20, "ships_for_sale": ["brig", "frigate", "galleon"], "recruits": {"skills": {"gunnery": 2}, "traits": {"former_navy": 0.15}},
     "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.7}
   },

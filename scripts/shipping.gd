@@ -1,6 +1,6 @@
 extends Node2D
-## Ships of the living world. Merchants carry real cargo from the ports that produce it to the ports that want it,
-## so their arrival feeds a market and their loss starves it. Navies patrol their coasts, pirates lurk on the
+## Ships of the living world. Merchants are the economy's voyages (scripts/economy/traffic.gd), drawn when they
+## pass near you: real cargo bound for a real market, so taking one starves that port and frightens that route. Navies patrol their coasts, pirates lurk on the
 ## trade routes (sometimes under false colours) and take merchants, hunters come for notorious pirates.
 ## Each NPC carries the same encounter data the battle scene uses. Only ships within sight are drawn.
 
@@ -17,6 +17,7 @@ var world: Node        # the world map: anchorages, the player's ship, busy()
 var rng := RandomNumberGenerator.new()
 var _routes := {}
 var _sprites := {}
+var _since_mirror := 1.0
 
 
 func setup(t: TerrainGrid, w: Node) -> void:
@@ -41,6 +42,10 @@ func _tick(dd: float) -> void:
 	if world == null:
 		return
 	var player: Node2D = world.ship
+	_since_mirror += dd
+	if _since_mirror >= 0.25:
+		_since_mirror = 0.0
+		_mirror(player.position)
 	for n in npcs.duplicate():
 		move(n, dd, player.position, player.state)
 	_contacts(player)
@@ -108,8 +113,9 @@ func _contacts(player: Node2D) -> void:
 
 func _arrive(n: Dictionary) -> void:
 	if n.kind == "merchant":
-		for g in n.enemy.cargo:
-			Economy.add(n.dest, g, n.enemy.cargo[g])  # the cargo reaches the market
+		if not n.has("voyage"):  # a contract's ship; a voyage's cargo reaches the market on the economy's schedule
+			for g in n.enemy.cargo:
+				Economy.add(n.dest, g, n.enemy.cargo[g])
 		remove(n)
 	else:
 		_new_goal(n)
@@ -152,9 +158,6 @@ func daily() -> void:
 		n.age += 1
 		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id"):  # contract targets and named captains stay
 			remove(n)
-	for i in cfg().spawn_per_day:
-		if count("merchant") < cfg().merchants:
-			spawn_merchant()
 	if count("pirate") < cfg().pirates:
 		spawn("pirate", "pirates")
 	for f in Career.nations():
@@ -176,6 +179,8 @@ func _meetings() -> void:
 					p.enemy.cargo[g] = p.enemy.cargo.get(g, 0) + m.enemy.cargo[g]
 				_say(m, "Pirates took the %s merchantman %s; her cargo never reached %s." % [
 					Data.table("factions")[m.enemy.faction].adjective, m.enemy.name, Ports.port(m.dest).name])
+				if m.has("voyage"):
+					Economy.lose_voyage(m.voyage, "pirates")
 				remove(m)
 	for v in npcs.filter(func(n): return n.kind == "navy" or n.kind == "hunter"):
 		for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("contract") and not n.has("captain_id")):
@@ -189,37 +194,60 @@ func _say(n: Dictionary, text: String, always := false) -> void:
 		news.emit(text)
 
 
-func spawn_merchant() -> Dictionary:
-	var goods: Array = Economy.model.traded().filter(func(g): return g != "food")
-	var g: String = goods[rng.randi() % goods.size()]
-	var origins := Ports.state.keys().filter(func(id): return g in Economy.produces(id) and Ports.port(id).faction != "pirates")
-	if origins.is_empty():
-		return {}
-	var origin: String = origins[rng.randi() % origins.size()]
-	var f: String = Ports.port(origin).faction
-	var dests := Ports.state.keys().filter(func(id): return _good_destination(id, origin, g, f))
-	if dests.is_empty():
-		return {}
-	var dest: String = dests[rng.randi() % dests.size()]
+## A merchant voyage from the economy (Economy.voyages()), drawn as a ship where she is along her route right now.
+## Her cargo is the voyage's. She's the same voyage: take her and the cargo never reaches port.
+func spawn_voyage(v: Dictionary, pos: Vector2, rest: PackedVector2Array) -> Dictionary:
+	var f: String = v.faction
 	var e := Encounters.generate(f, rng, "merchant")
-	var st := ShipStats.effective(e.type, [])
-	var w := Market.weight(g)
-	var qty := int(minf(Economy.stock(origin, g) - 1.0, st.cargo * cfg().merchant_cargo_fraction / w))
-	if qty <= 0:
-		return {}
-	Economy.add(origin, g, -qty)  # the goods leave the origin's market
-	e.cargo = {g: qty}
-	var n := _add("merchant", e, world.anchorages[origin], Data.table("factions")[f].flag)
-	n.origin = origin
-	n.dest = dest
-	n.route = _route(origin, dest)
+	e.cargo = {v.good: v.qty}
+	var n := _add("merchant", e, pos, Data.table("factions")[f].flag)
+	n.voyage = v.id
+	n.origin = v.origin
+	n.dest = v.dest
+	n.route = rest
 	return n
 
 
-## A port that's short of this good, isn't a pirate den, and isn't at war with the merchant's nation.
-static func _good_destination(id: String, origin: String, g: String, f: String) -> bool:
-	var p := Ports.port(id)
-	return id != origin and Economy.mult(id, g) > Economy.mult(origin, g) * 1.2 and p.faction != "pirates" and not Factions.at_war(f, p.faction)
+## Ships at sea near you (or a watchtower) are drawn from the voyages; ones far out of sight are let go
+## (the voyage sails on, unseen). Checked a few times a day.
+func _mirror(player_pos: Vector2) -> void:
+	var near := nm(cfg().sight_nm) * 1.5
+	var eyes: Array = [player_pos] + Bases.watch_points()
+	var drawn := {}
+	for n in npcs.duplicate():
+		if not n.has("voyage"):
+			continue
+		if eyes.all(func(p): return n.pos.distance_to(p) > near * 2.0):
+			remove(n)
+		else:
+			drawn[n.voyage] = true
+	for v in Economy.voyages():
+		if drawn.has(v.id) or not world.anchorages.has(v.origin) or not world.anchorages.has(v.dest):
+			continue
+		var path := _route(v.origin, v.dest)
+		if path.is_empty():
+			continue
+		var at := _along(world.anchorages[v.origin], path, Economy.progress(v))
+		if eyes.any(func(p): return at[0].distance_to(p) < near):
+			spawn_voyage(v, at[0], at[1])
+
+
+## The point a fraction f of the way along a route, and the rest of the route from there: [Vector2, PackedVector2Array].
+static func _along(start: Vector2, path: PackedVector2Array, f: float) -> Array:
+	var total := 0.0
+	var prev := start
+	for p in path:
+		total += prev.distance_to(p)
+		prev = p
+	var left := total * f
+	prev = start
+	for i in path.size():
+		var seg := prev.distance_to(path[i])
+		if left <= seg:
+			return [prev.move_toward(path[i], left), path.slice(i)]
+		left -= seg
+		prev = path[i]
+	return [prev, PackedVector2Array()]
 
 
 func spawn(kind: String, f: String) -> Dictionary:
@@ -317,7 +345,8 @@ func _update_sprites(player_pos: Vector2) -> void:
 		var visible: bool = n.pos.distance_to(player_pos) < sight or Bases.watch_points().any(func(w): return n.pos.distance_to(w) < sight)  # watchtowers see too
 		if visible and not _sprites.has(n.id):
 			var shown := Career.flag_faction(n.flag)
-			news.emit("Sail ho: %s %s to the %s." % ["a pirate" if shown == "pirates" else ("a " + Data.table("factions")[shown].adjective if shown != "" else "an unmarked"),
+			var adj: String = Data.table("factions")[shown].adjective if shown != "" and shown != "pirates" else ""
+			news.emit("Sail ho: %s %s to the %s." % ["a pirate" if shown == "pirates" else (("an " if adj.left(1).to_lower() in "aeiou" else "a ") + adj if adj != "" else "an unmarked"),
 				Data.table("ships")[n.enemy.type].name.to_lower(), Geo.compass_name(Geo.bearing(n.pos - player_pos))])
 			var sp: Node2D = SPRITE.instantiate()
 			add_child(sp)

@@ -638,6 +638,8 @@ func _on_combat_finished(result: Dictionary) -> void:
 		port_layer.queue_redraw()
 	_raid_base = ""
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
+		if current_npc.has("voyage"):  # her cargo never reaches port, and the route remembers
+			Economy.lose_voyage(current_npc.voyage, "player")
 		shipping.remove(current_npc)
 	current_npc = {}
 	match result.outcome:

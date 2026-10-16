@@ -5,8 +5,8 @@ extends SceneTree
 ##   bin/Godot_v4.7.2-stable_win64_console.exe --headless --path . -s tools/economy_sim.gd -- --years 15 --seed 1
 ##
 ## Options: --years N (default 15), --seed N (default 1), --out PATH (default tools/out/economy.csv),
-## --raid PORT:GOOD:DAYS:FACTOR (a stand-in for raiding a route until market milestone 2: cuts that port's
-## imports of the good by FACTOR for DAYS, starting in year 2).
+## --raid ORIGIN:DEST:DAYS:CHANCE (a raider working that route from the start of year 2: each day, each ship on it
+## is taken with CHANCE). Also writes routes.csv beside the main file: sailings, losses and risk per route per week.
 
 var _done := false
 var Data: Node   # autoloads aren't known to a SceneTree script at compile time: look them up instead
@@ -31,18 +31,23 @@ func _process(_delta: float) -> bool:
 	f.store_line("week,date,port,good,stock,normal,mult,buy,sell,make,use,imports,exports")
 	var stats := {}  # port:good -> {min, max, sum, n, clamped}
 	var raid: Array = args.get("raid", "").split(":") if args.has("raid") else []
+	var rf := FileAccess.open("res://" + out.get_base_dir().path_join("routes.csv"), FileAccess.WRITE)
+	rf.store_line("week,route,sailings,losses,risk")
+	var at_sea := 0.0
 	var days := years * 365
 	for d in days:
 		var date: Dictionary = Clock.date_of(d)
-		if raid.size() == 4 and d == 365:
-			m.add_mod(raid[0], {"good": raid[1], "days": int(raid[2]), "use": 1.0, "reason": "Raiders on the route"})
-			m.params[raid[0]][raid[1]].imp_saved = m.params[raid[0]][raid[1]].imp
-			m.params[raid[0]][raid[1]].imp *= float(raid[3])
-		if raid.size() == 4 and d == 365 + int(raid[2]):
-			m.params[raid[0]][raid[1]].imp = m.params[raid[0]][raid[1]].imp_saved
+		if raid.size() == 4 and d >= 365 and d < 365 + int(raid[2]):
+			for v in m.traffic.voyages.duplicate():
+				if v.origin == raid[0] and v.dest == raid[1] and m.rng.randf() < float(raid[3]):
+					m.traffic.lose(v, "player", m.day)
 		m.step(date.month)
+		at_sea += m.traffic.voyages.size()
 		if d % 7 != 0:
 			continue
+		for key in m.traffic.routes:
+			var r: Dictionary = m.traffic.routes[key]
+			rf.store_line("%d,%s,%d,%d,%.3f" % [d / 7, key, r.sailings, r.losses, m.traffic.risk.get(key, 0.0)])
 		var date_text := "%04d-%02d-%02d" % [date.year, date.month, date.day]
 		for id in m.stock:
 			for g in m.traded():
@@ -61,7 +66,14 @@ func _process(_delta: float) -> bool:
 					st.clamped += 1
 				stats[key] = st
 	f.close()
-	print("Wrote %s: %d years, seed %d." % [out, years, seed])
+	rf.close()
+	print("Wrote %s and routes.csv: %d years, seed %d." % [out, years, seed])
+	var sailings := 0
+	var losses := 0
+	for r in m.traffic.routes.values():
+		sailings += r.sailings
+		losses += r.losses
+	print("Merchants: %d voyages a year, %.0f at sea on an average day, %.1f%% lost." % [sailings / years, at_sea / days, 100.0 * losses / maxf(1, sailings)])
 	_report(stats)
 	return true
 

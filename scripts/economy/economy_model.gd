@@ -16,6 +16,8 @@ var stock := {}      # port -> good -> units in the warehouses
 var mods := {}       # port -> [{good, make, use, days_left, reason, rumour}]: timed shocks on production and use
 var history := {}    # port -> good -> weekly price multipliers, oldest first
 var params := {}     # port -> good -> {make, use, imp, exp, normal}, fixed by the data
+var traffic: Traffic # merchant voyages between the ports (scripts/economy/traffic.gd)
+var day := 0         # days the model has run
 var _seasons := {}
 var _traded: Array = []
 
@@ -47,6 +49,8 @@ func setup(goods_t: Dictionary, ports_t: Dictionary, cfg_t: Dictionary, seed: in
 			params[id][g] = _params(id, g)
 			stock[id][g] = params[id][g].normal
 			history[id][g] = []
+	day = 0
+	traffic = Traffic.new(self)
 
 
 func traded() -> Array:
@@ -153,8 +157,10 @@ func flows(id: String, g: String, month: int) -> Dictionary:
 	}
 
 
-## One day for every port. `month` is 1-12.
+## One day for every port, and the ships between them. `month` is 1-12.
 func step(month: int) -> void:
+	day += 1
+	traffic.step(day, month)
 	for id in stock:
 		for g in _traded:
 			var f := flows(id, g, month)
@@ -222,6 +228,9 @@ func reason(id: String, g: String, month: int) -> String:
 		if lv == "scarce" and season <= 0.75:
 			return notes.low
 	if lv == "scarce":
+		var raid := traffic.worst_route_into(id)
+		if raid[1] >= cfg.traffic.raid_reason_risk:
+			return "Raiders on the route from " + ports[raid[0]].name
 		if gd.origin == "european" and pr.imp < 0.5:
 			return "Foreign goods are banned: only the fleets and smugglers bring them"
 		if cfg.sailing[month - 1] < 0.8:
@@ -259,7 +268,7 @@ func breakdown(id: String, g: String, month: int, spread_mult := 1.0, duty := 0.
 
 
 func save_state() -> Dictionary:
-	return {"rng": str(rng.state), "stock": stock, "mods": mods, "history": history}
+	return {"rng": str(rng.state), "stock": stock, "mods": mods, "history": history, "day": day, "traffic": traffic.save_state()}
 
 
 func load_state(d: Dictionary) -> void:
@@ -273,3 +282,6 @@ func load_state(d: Dictionary) -> void:
 		mods[id] = d.mods[id]
 	for id in d.history:
 		history[id] = d.history[id]
+	day = int(d.get("day", 0))
+	if d.has("traffic"):
+		traffic.load_state(d.traffic)

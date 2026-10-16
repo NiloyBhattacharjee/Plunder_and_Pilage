@@ -17,21 +17,36 @@ func after_each():
 	Ports.reset()
 
 
-func test_merchants_carry_goods_from_producers_to_buyers():
-	var n: Dictionary = {}
-	for i in 20:
-		n = world.shipping.spawn_merchant()
-		if not n.is_empty():
-			break
-	assert_false(n.is_empty())
-	var g: String = n.enemy.cargo.keys()[0]
-	assert_true(g in Economy.produces(n.origin))
-	assert_gt(Economy.mult(n.dest, g), Economy.mult(n.origin, g), "bound where it's dearer")
-	assert_false(n.route.is_empty())
-	var before: float = Economy.stock(n.dest, g)
+## A voyage at sea with a route the map can draw.
+func voyage() -> Dictionary:
+	for v in Economy.voyages():
+		if not world.shipping._route(v.origin, v.dest).is_empty():
+			return v
+	return {}
+
+
+## A merchant at sea, drawn from the economy's voyages.
+func merchant() -> Dictionary:
+	var v := voyage()
+	var path: PackedVector2Array = world.shipping._route(v.origin, v.dest)
+	var at: Array = world.shipping._along(world.anchorages[v.origin], path, 0.5)
+	return world.shipping.spawn_voyage(v, at[0], at[1])
+
+
+func test_merchants_are_the_economys_voyages():
+	assert_false(Economy.voyages().is_empty(), "the warmed-up economy has ships at sea")
+	var v := voyage()
+	var path: PackedVector2Array = world.shipping._route(v.origin, v.dest)
+	var at: Array = world.shipping._along(world.anchorages[v.origin], path, Economy.progress(v))
+	world.shipping._mirror(at[0])
+	var n: Dictionary = world.shipping.npcs.filter(func(x): return x.get("voyage", "") == v.id)[0]
+	assert_eq(n.enemy.cargo, {v.good: v.qty}, "she carries the voyage's cargo")
+	var before: float = Economy.stock(v.dest, v.good)
 	world.shipping._arrive(n)
-	assert_gt(Economy.stock(n.dest, g), before, "the cargo reaches the market")
-	assert_eq(world.shipping.npcs.size(), 0)
+	assert_eq(Economy.stock(v.dest, v.good), before, "the cargo lands on the economy's schedule, not twice")
+	world.shipping.npcs = []
+	world.shipping._mirror(Vector2(-99999, -99999))
+	assert_eq(world.shipping.npcs.size(), 0, "nothing drawn far from anyone")
 
 
 func test_patrols_and_pirates_spawn_with_goals():
@@ -44,19 +59,19 @@ func test_patrols_and_pirates_spawn_with_goals():
 func test_daily_fills_the_seas():
 	for i in 10:
 		world.shipping.daily()
-	assert_gt(world.shipping.count("merchant"), 5)
 	assert_gt(world.shipping.count("navy"), 0)
+	assert_gt(world.shipping.count("pirate"), 0)
 
 
 func test_pirates_take_merchants_they_meet():
-	var m: Dictionary = world.shipping.spawn_merchant()
-	while m.is_empty():
-		m = world.shipping.spawn_merchant()
+	var m := merchant()
 	var p: Dictionary = world.shipping.spawn("pirate", "pirates")
 	p.pos = m.pos
 	world.shipping._meetings()
 	assert_false(m in world.shipping.npcs)
 	assert_false(p.enemy.cargo.is_empty())
+	assert_false(Economy.voyages().any(func(v): return v.id == m.voyage), "the voyage never arrives")
+	assert_gt(Economy.model.traffic.route_risk(m.origin, m.dest), 0.0, "and the route remembers")
 
 
 func test_deep_keels_cannot_follow_into_shallows():
@@ -84,9 +99,7 @@ func test_deep_keels_cannot_follow_into_shallows():
 
 
 func test_contact_signal_when_close():
-	var m: Dictionary = world.shipping.spawn_merchant()
-	while m.is_empty():
-		m = world.shipping.spawn_merchant()
+	var m := merchant()
 	world.ship.anchored_at = ""
 	world.ship.position = m.pos
 	watch_signals(world.shipping)
@@ -96,6 +109,7 @@ func test_contact_signal_when_close():
 
 
 func test_shipping_survives_save_and_load():
+	merchant()
 	for i in 5:
 		world.shipping.daily()
 	var count: int = world.shipping.npcs.size()

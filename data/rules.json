@@ -307,9 +307,8 @@
     "npc_false_flag_chance": 0.3
   },
   "shipping": {
-    "merchants": 20, "pirates": 4, "navy_per_faction": 2,
+    "pirates": 4, "navy_per_faction": 2,
     "hunters_max": 2, "hunter_spawn_chance": 0.15,
-    "spawn_per_day": 3,
     "sight_nm": 45, "contact_nm": 9, "chase_nm": 32,
     "npc_speed_factor": 0.9, "merchant_cargo_fraction": 0.7,
     "contact_cooldown_days": 1.5, "max_age_days": 60

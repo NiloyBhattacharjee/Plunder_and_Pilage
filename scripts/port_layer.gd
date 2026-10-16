@@ -32,6 +32,8 @@ func _draw() -> void:
 			label += " - RAID COMING"
 		draw_string_outline(Style.font("pixel"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), int(4 * s), Style.c("chart_paper_light"))
 		draw_string(Style.font("pixel"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), col)
+	if trade_good == "@routes":
+		_draw_routes(s)
 	for h in Contracts.hints():  # where your contracts send you, inked on the chart
 		var at: Vector2
 		if h.has("radius"):
@@ -50,7 +52,7 @@ func _draw() -> void:
 		if trade_good == "@standing" and not ship_state.is_empty():
 			var acc := Career.port_access(ship_state, id)
 			label += "  %+d%s" % [ship_state.relations.get(port.faction, 0), "" if acc.open else ", CLOSED"]
-		elif trade_good != "":
+		elif trade_good != "" and not trade_good.begins_with("@"):
 			var k: Dictionary = Ports.known.get(id, {}).get(trade_good, {})
 			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd%s)" % [
 				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]
@@ -60,3 +62,29 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("chart_paper_light"))
 		draw_string(Style.font("pixel"), text_pos, label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), Style.c("chart_ink"))
+
+
+## Trade routes map mode: a line for each route merchants have used lately, thicker the busier, redder the riskier.
+func _draw_routes(s: float) -> void:
+	var tr: Traffic = Economy.model.traffic
+	var pairs := {}  # "a|b" (sorted) -> [recent, risk]
+	for key in tr.routes:
+		var a: String = key.get_slice(">", 0)
+		var b: String = key.get_slice(">", 1)
+		var k: String = a + "|" + b if a < b else b + "|" + a
+		var cur: Array = pairs.get(k, [0.0, 0.0])
+		pairs[k] = [cur[0] + tr.routes[key].recent, maxf(cur[1], tr.risk.get(key, 0.0))]
+	var font := Style.font("pixel")
+	for k in pairs:
+		var busy: float = pairs[k][0]
+		if busy < 0.5:
+			continue
+		var a: String = k.get_slice("|", 0)
+		var b: String = k.get_slice("|", 1)
+		if not port_positions.has(a) or not port_positions.has(b):
+			continue
+		var r: float = pairs[k][1]
+		var col := Color(Style.c("chart_ink"), 0.7).lerp(Style.c("bad"), clampf(r * 2.0, 0.0, 1.0))
+		draw_line(port_positions[a], port_positions[b], col, clampf(busy * 0.6, 1.5, 9.0) * s)
+		if r >= Data.table("economy").traffic.raid_reason_risk:
+			draw_string(font, port_positions[a].lerp(port_positions[b], 0.5), "raiders", HORIZONTAL_ALIGNMENT_CENTER, -1, int(14 * s), Style.c("bad"))

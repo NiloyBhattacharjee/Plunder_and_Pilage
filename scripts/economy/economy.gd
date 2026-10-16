@@ -4,7 +4,7 @@ extends Node
 ## model stays the one source of truth. Laws (duties, contraband) live with the ports (Ports.state[id].laws).
 
 var model := EconomyModel.new()
-var _warm := {}  # starting month -> warmed-up {stock, history}
+var _warm := {}  # starting month -> the warmed-up model's state
 
 
 func _ready() -> void:
@@ -20,14 +20,14 @@ func cfg() -> Dictionary:
 func reset(seed := -1) -> void:
 	model.setup(Data.table("goods"), Data.table("ports"), cfg(), seed if seed >= 0 else randi())
 	var month: int = Clock.date_of(int(Clock.day)).month
-	if not _warm.has(month):  # the warm-up has no randomness, so it's worked out once per starting month
+	if not _warm.has(month):  # warming up takes a moment, so it's done once per starting month and reused
 		model.warm_up(int(cfg().warm_up_days), month)
-		_warm[month] = {"stock": model.stock.duplicate(true), "history": model.history.duplicate(true)}
-	model.stock = _warm[month].stock.duplicate(true)
-	model.history = _warm[month].history.duplicate(true)
+		_warm[month] = model.save_state().duplicate(true)
+	model.load_state(_warm[month].duplicate(true))
 
 
 func _on_day(d: int) -> void:
+	model.traffic.wars = _wars()
 	model.step(Clock.date_of(d).month)
 	if d % 7 == 0:
 		model.sample_week()
@@ -99,6 +99,31 @@ func shock(id: String, s: Dictionary) -> void:
 
 func mods(id: String) -> Array:
 	return model.mods[id]
+
+
+## Which nations are at war, for the merchants to steer clear of.
+func _wars() -> Array:
+	var out := []
+	var nations: Array = Career.nations()
+	for i in nations.size():
+		for j in range(i + 1, nations.size()):
+			if Factions.at_war(nations[i], nations[j]):
+				out.append([nations[i], nations[j]])
+	return out
+
+
+func voyages() -> Array:
+	return model.traffic.voyages
+
+
+## A voyage ends without arriving: taken by the player or by pirates, or sunk.
+func lose_voyage(id: String, cause: String) -> void:
+	model.traffic.lose_id(id, cause, model.day)
+
+
+## How far along her voyage a ship is, 0 at the origin and 1 at the destination.
+func progress(v: Dictionary) -> float:
+	return clampf(float(model.day - v.depart) / maxf(1.0, v.arrive - v.depart), 0.0, 1.0)
 
 
 func save_state() -> Dictionary:

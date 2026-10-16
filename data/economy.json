@@ -38,13 +38,38 @@
 
   "outside": {
     "_comment": "Stand-in for merchant traffic until it's simulated ship by ship (market milestone 2): the off-map trade with Europe and other colonies. import: share of a port's use that outside merchants bring at normal prices; export: share of its production they carry off; reexport: share of its use they carry off again (a port that makes none still sells some on).",
-    "import": {"european": 0.9, "colonial": 0.8, "supply": 0.8, "treasure": 1.0},
+    "import": {"european": 0.9, "colonial": 0.4, "supply": 0.7, "treasure": 1.0},
     "export": {"european": 0.15, "colonial": 0.7, "supply": 0.3, "treasure": 0.8},
-    "reexport": {"european": 0.1, "colonial": 0.1, "supply": 0.1, "treasure": 0.0},
-    "faction_import": {"spain": {"european": 0.4}},
-    "_faction_import": "Spain forbids trade with foreigners: European goods reach its ports only by the fleets and smugglers, so they're scarce and dear.",
+    "reexport": {"european": 0.1, "colonial": 0.05, "supply": 0.05, "treasure": 0.0},
+    "faction_import": {"spain": {"european": 0.4, "colonial": 1.5, "supply": 1.4}},
+    "_faction_import": "Spain forbids trade with foreigners: European goods reach its ports only by the fleets and smugglers, so they're scarce and dear. Its own coasting trade from the mainland (not on the map) brings colonial goods and food instead.",
     "tag_import": {"free_port": 1.7, "pirate_haven": 0.8},
     "tag_export": {"free_port": 1.4}
+  },
+
+  "traffic": {
+    "_comment": "Merchant voyages between the ports (scripts/economy/traffic.gd). Since market milestone 2 the outside trade above is only the trade with Europe and North America; goods move around the Caribbean in these ships.",
+    "sailings_per_1000": 0.07,
+    "tramp_chance": 0.6,
+    "_tramp_chance": "After unloading, a ship looks for a cargo where she is (so small ports get ships too) or goes home.",
+    "tag_sailings": {"free_port": 3.0, "capital": 1.3, "plantation": 0.8, "fair_town": 0.6, "pirate_haven": 0.4},
+    "cargo_tons": [50, 160],
+    "speed_nm_per_day": 90, "detour": 1.3, "loading_days": 2,
+    "min_margin": 0.2,
+    "max_share_of_dest": 0.35,
+    "choose_among": 3,
+    "_min_margin": "A merchant sails only for a known price gap of at least this much (after the spreads), and stops buying when the next unit isn't worth it.",
+    "keep_home": 0.3,
+    "risk_aversion": 1.5,
+    "pirate_loss_per_day": 0.002,
+    "storm_loss_per_day": [0, 0, 0, 0, 0, 0.001, 0.002, 0.004, 0.005, 0.003, 0.001, 0],
+    "loss_risk": {"pirates": 0.12, "storm": 0.03, "player": 0.2},
+    "risk_breeds_pirates": 2.0,
+    "_risk_breeds_pirates": "Where ships have been taken lately, more get taken: pirates go where the hunting is good.",
+    "risk_decay": 0.985,
+    "recent_decay": 0.97,
+    "raid_reason_risk": 0.25,
+    "haven_traders": ["dutch", "france", "england"]
   },
 
   "sailing": [1.0, 1.0, 1.0, 1.0, 1.0, 0.9, 0.75, 0.6, 0.55, 0.65, 0.85, 1.0],

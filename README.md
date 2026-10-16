@@ -68,7 +68,8 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
 - `ships.json` (8 types, each with its own polar curve for points of sail), `upgrades.json` (effects use `set`, `add` and `mult` on any ship stat; `group` makes upgrades replace each other).
 - `history.json`: dated wars, peace treaties and pardons (1680 onwards). `scripts/factions.gd` applies them; `scripts/career.gd` judges every attack
   (lawful prize under a letter of marque, or piracy), and handles ranks, the Crown's share, pardons, closed ports and false colours.
-- `scripts/shipping.gd`: NPC ships. Merchant cargo leaves the origin's market and reaches the destination's (bound where the good is dearer), so raiding a route starves a port.
+- `scripts/economy/traffic.gd`: merchant voyages. Ports send out merchants who pick the cargo and destination with the best expected profit, using price news carried by earlier ships; goods land only when a ship arrives, ships tramp on from port to port, and routes remember losses (pirates, storms, you), so a raided route sees fewer ships and dearer goods at its end. Tuned in `economy.json` `traffic`.
+- `scripts/shipping.gd`: NPC ships. Merchants are the economy's voyages, drawn when they pass near you; taking one is a real loss to that route. The "Trade routes" map mode shows busy routes (thicker) and risky ones (red, "raiders").
 - `contracts.json`: contract templates (employer, requirements, objective, tiers unlocked by trust, rewards, lie and trap chances).
   `scripts/contracts.gd` runs them: three objectives (raid, intercept a named ship that really sails the map, deliver) cover every template.
   Employers are characters; their trust in you is their relation to your captain. Tuning in `rules.json` `contracts`.
