@@ -42,7 +42,7 @@ func test_big_sales_get_worse_prices():
 func test_ports_have_characters():
 	warm()
 	assert_lt(m.mult("bridgetown", "sugar"), 0.95, "sugar is cheap where it grows")
-	assert_gt(m.mult("cartagena", "cloth"), 1.5, "European goods are dear where foreigners can't trade")
+	assert_gt(m.mult("cartagena", "cloth"), m.mult("port_royal", "cloth") * 1.2, "European goods are dear where foreigners can't trade")
 	assert_lt(m.mult("willemstad", "cloth"), m.mult("port_royal", "cloth"), "the Dutch free port undercuts everyone")
 	assert_gt(m.mult("bridgetown", "food"), m.mult("santo_domingo", "food"), "plantations must buy their food")
 

@@ -21,7 +21,7 @@ static func canonical(good: String) -> String:
 static func seizure_chance(laws: Dictionary, good: String, qty: int) -> float:
 	if not good in laws.contraband:
 		return 0.0
-	var p: float = Data.rules.smuggling.seizure_per_10_units * laws.vigilance
+	var p: float = clampf(Data.rules.smuggling.seizure_per_10_units * laws.vigilance, 0.0, 1.0)
 	return 1.0 - pow(1.0 - p, qty / 10.0)
 
 

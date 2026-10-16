@@ -91,6 +91,7 @@ func _ready() -> void:
 	Contracts.changed.connect(port_layer.queue_redraw)
 	shipping.contact.connect(_on_contact)
 	shipping.news.connect(hud.show_message)
+	Economy.fleet_event.connect(_on_fleet_event)
 	shipping.alert.connect(func(text):
 		hud.show_message(text + " (Paused. Space to resume.)")
 		Clock.set_speed(0))
@@ -598,6 +599,23 @@ func _update_daylight() -> void:
 	_daylight.color = c
 	for l in _lights:
 		l.energy = clampf(night * 1.6 - 0.3, 0.0, 1.2) * l.get_meta("dim", 1.0)
+
+
+## The fleets come and go: the whole Caribbean hears of it.
+func _on_fleet_event(ev: Dictionary) -> void:
+	var f: Dictionary = Economy.cfg().fleets[ev.fleet]
+	var where: String = " and ".join(ev.ports.map(func(p): return Ports.port(p).name))
+	match ev.kind:
+		"arrived":
+			hud.show_message("%s has reached %s. %s" % [f.name.capitalize(), where, "The fair has begun." if f.get("brings", {}).size() > 0 else "It's loading for home."])
+		"skipped":
+			hud.show_message("No %s this year: the merchants of %s wait in vain." % [f.name, where])
+		"sailed":
+			hud.show_message("%s has sailed for home from %s." % [f.name.capitalize(), where])
+			if f.get("treasure", false) and ev.treasure > 0.0:
+				var g: Dictionary = shipping.spawn_treasure(ev.ports[-1], ev.treasure)
+				if not g.is_empty():
+					hud.show_message("A treasure galleon, the %s, leaves %s for Havana with the year's silver." % [g.enemy.name, Ports.port(ev.ports[-1]).name])
 
 
 func _open_crew() -> void:

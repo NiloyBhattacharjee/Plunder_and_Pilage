@@ -65,9 +65,9 @@ func test_taken_cargo_is_stolen_and_sells_cheap_without_a_fence():
 	assert_false(s.stolen.has("cocoa"))
 
 
-func test_fence_pays_full_price():
-	assert_eq(Ports.fence_mult("nassau"), 1.0)
-	assert_lt(Ports.fence_mult("havana"), 1.0)
+func test_fence_pays_nearly_full_price():
+	assert_eq(Ports.fence_mult("nassau"), Data.rules.fence.fence_mult)
+	assert_gt(Ports.fence_mult("nassau"), Ports.fence_mult("havana") * 1.5, "far better than an honest market")
 
 
 func test_eating_stolen_food_clears_the_mark():

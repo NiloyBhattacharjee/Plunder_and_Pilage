@@ -24,7 +24,7 @@ func reset() -> void:
 	for id in Data.table("ports"):
 		var p := port(id)
 		state[id] = {"sailors": float(p.sailors), "laws": p.laws.duplicate(true),
-			"notables": [], "notables_age": 0}
+			"notables": [], "notables_age": 0, "fence_cash": _fence_cash_max(id)}
 		refresh_notables(id)
 
 
@@ -41,6 +41,7 @@ func daily() -> void:
 		var p := port(id)
 		var ps: Dictionary = state[id]
 		ps.sailors = minf(p.sailors, ps.sailors + p.sailors * Data.rules.tavern.regen_per_day)
+		ps.fence_cash = minf(_fence_cash_max(id), ps.get("fence_cash", 0.0) + _fence_cash_max(id) * Data.rules.fence.cash_regen)
 		# customs forget slowly: vigilance drifts back to the port's normal level
 		var base: float = p.laws.vigilance
 		ps.laws.vigilance = move_toward(ps.laws.vigilance, base, Data.rules.smuggling.vigilance_decay_per_day)
@@ -91,6 +92,18 @@ func buy(id: String, good: String, qty: int, s: Dictionary, capacity: float, spr
 		cost = Economy.quote(id, good, qty, true, spread_mult)
 	if qty <= 0:
 		return {"ok": false, "text": "Can't buy: no money, no room in the hold, or none left."}
+	var laws: Dictionary = state[id].laws
+	if good in laws.get("enumerated", []) and Career.flag_faction(s.get("flag", "white")) != port(id).faction:
+		# the Navigation Acts: these goods go home in the nation's own ships. Loading them under other colours is smuggling.
+		if rng.randf() < Market.seizure_chance({"contraband": [good], "vigilance": laws.vigilance}, good, qty):
+			var sm: Dictionary = Data.rules.smuggling
+			var fine := int(round(cost * sm.fine_mult))
+			s.gold = maxf(0.0, s.gold - fine)
+			var f: String = port(id).faction
+			s.relations[f] = s.relations.get(f, 0) - int(sm.seizure_relation)
+			laws.vigilance = minf(1.0, laws.vigilance + sm.seizure_vigilance)
+			return {"ok": false, "text": "Customs stop the loading: %s may leave here only in %s ships. Fined %d (standing -%d)." % [
+				_name(good), Data.table("factions")[f].adjective, fine, sm.seizure_relation]}
 	s.gold -= cost
 	s.cargo[good] = s.cargo.get(good, 0) + qty
 	s.cargo_cost[good] = s.cargo_cost.get(good, 0.0) + cost
@@ -118,9 +131,26 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	var n_clean := mini(qty, int(have - stolen))
 	var n_stolen := qty - n_clean
 	var income := Economy.quote(id, good, qty, false, spread_mult)
+	var note := ""
 	if n_stolen > 0:  # stolen goods sell cheap unless there's a fence (they're sold last, at the lower end of the quote)
 		var clean_part := Economy.quote(id, good, n_clean, false, spread_mult)
-		income = clean_part + int((income - clean_part) * fence_mult(id))
+		var stolen_income := int((income - clean_part) * fence_mult(id, s))
+		if port(id).get("fence", false):
+			while n_stolen > 0 and stolen_income > ps.fence_cash:  # a fence has only so much coin
+				n_stolen -= maxi(1, n_stolen / 8)
+				qty = n_clean + n_stolen
+				income = Economy.quote(id, good, qty, false, spread_mult)
+				stolen_income = int((income - clean_part) * fence_mult(id, s))
+				note = " The fence has no more coin today."
+			ps.fence_cash -= stolen_income
+			s.fence_trust = s.get("fence_trust", {})
+			s.fence_trust[id] = s.fence_trust.get(id, 0.0) + stolen_income
+		income = clean_part + stolen_income
+		if qty <= 0:
+			return {"ok": false, "text": "The fence has no coin left for stolen goods. Come back in a few days."}
+	if Data.table("goods")[good].demand == "treasure" and port(id).faction != "spain" and not port(id).get("fence", false):
+		income = int(income * Data.rules.fence.treasure_legal_mult)  # few honest buyers for a heap of Spanish silver
+		note += " Few here will touch so much Spanish treasure; it went cheap."
 	var sm: Dictionary = Data.rules.smuggling
 	var contraband: bool = good in ps.laws.contraband
 	if rng.randf() < Market.seizure_chance(ps.laws, good, qty):
@@ -139,7 +169,7 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	s.gold += income
 	Economy.add(id, good, qty)
 	log_trade(s, id, good, -qty, income, income - paid)
-	var text := "Sold %d %s for %d." % [qty, _name(good), income]
+	var text := "Sold %d %s for %d.%s" % [qty, _name(good), income, note]
 	if n_stolen > 0:  # plunder: the crew take their share by the articles
 		text += " " + Crew.plunder(s, income * n_stolen / float(qty))
 	return {"ok": true, "text": text.strip_edges(), "value": income}
@@ -181,8 +211,18 @@ func cannot_buy_ship(id: String, type_id: String, s: Dictionary) -> String:
 
 
 ## Stolen goods fetch full price only through a fence (pirate havens, some free ports).
-func fence_mult(id: String) -> float:
-	return 1.0 if port(id).get("fence", false) else Data.rules.fence.legal_mult
+## What stolen goods fetch here, as a share of the price: a fence pays nearly full (more as they come to trust you);
+## an honest market pays a pittance and asks no questions it would rather not hear the answers to.
+func fence_mult(id: String, s := {}) -> float:
+	var f: Dictionary = Data.rules.fence
+	if not port(id).get("fence", false):
+		return f.legal_mult
+	var trust: float = s.get("fence_trust", {}).get(id, 0.0)
+	return minf(1.0, f.fence_mult + trust * f.trust_per_gold)
+
+
+func _fence_cash_max(id: String) -> float:
+	return float(Data.rules.fence.cash.get(port(id).size, 0)) if port(id).get("fence", false) else 0.0
 
 
 ## Sells a prize ship at the shipyard, with whatever cargo is left aboard. The prize crew rejoins.

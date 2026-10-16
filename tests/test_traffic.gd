@@ -48,7 +48,10 @@ func test_risky_routes_see_fewer_ships():
 	var calm := EconomyModel.new()
 	calm.setup(Data.table("goods"), Data.table("ports"), Data.table("economy"), 3)
 	calm.warm_up(120, 1)
-	var key := "port_royal>nassau"
+	var key := ""  # the busiest route so far
+	for k in calm.traffic.routes:
+		if key == "" or calm.traffic.routes[k].sailings > calm.traffic.routes[key].sailings:
+			key = k
 	var c0: int = calm.traffic.routes.get(key, {}).get("sailings", 0)
 	var r0: int = m.traffic.routes.get(key, {}).get("sailings", 0)
 	for d in 120:
@@ -64,7 +67,7 @@ func test_no_trade_with_the_enemy():
 	m.traffic.wars = [["england", "france"]]
 	assert_false(m.traffic.allowed("england", "saint_pierre"))
 	assert_true(m.traffic.allowed("england", "willemstad"))
-	assert_false(m.traffic.allowed("england", "havana"), "Spain admits only its own")
+	assert_false(m.traffic.allowed("france", "havana"), "Spain admits only its own, and smugglers")
 	assert_true(m.traffic.allowed("dutch", "nassau"), "the Dutch trade with anyone")
 
 

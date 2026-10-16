@@ -52,9 +52,16 @@ func refresh() -> void:
 	%Title.text = "%s  (%s)" % [p.name, Data.table("factions")[p.faction].name]
 	var law_text := "No contraband laws." if laws.contraband.is_empty() else "Contraband: %s. Customs vigilance %d%%." % [
 		", ".join(laws.contraband.map(func(g): return Data.table("goods")[g].name)), int(laws.vigilance * 100)]
-	law_text += "  Stolen goods sell at %s here." % ("full price through the fence" if p.get("fence", false) else "half price, no questions asked")
+	law_text += "  Stolen goods sell at %s here." % ("nearly full price through the fence (it has %d gold to spare)" % Ports.state[port_id].fence_cash
+		if p.get("fence", false) else "half price, no questions asked")
+	if not laws.get("enumerated", []).is_empty():
+		law_text += "  %s go only in %s ships." % [", ".join(laws.enumerated.map(func(g): return Data.table("goods")[g].name)), Data.table("factions")[p.faction].adjective]
 	var gov := Politics.official(port_id, "governor")
 	law_text += "  " + Politics.law_text(port_id)
+	var fleet := Economy.fleet_text(port_id)
+	if fleet != "":
+		law_text += "
+" + fleet
 	%Info.text = "%s\n%s\n%s\nGold %d   Hold %d / %d tons" % ["Governor: " + People.person(gov).name if gov != "" else "Ruled by the council of captains",
 		p.description, law_text, ship.state.gold, Market.cargo_used(ship.state.cargo), ship.capacity()]
 	_build_market()
@@ -89,6 +96,8 @@ func _build_market() -> void:
 		var why := Economy.reason(port_id, good)
 		if contraband:
 			why = "Contraband here" + (": " + why if why != "" else "")
+		elif good in ps.laws.get("enumerated", []) and Career.flag_faction(s.get("flag", "white")) != Ports.port(port_id).faction:
+			why = "%s ships only: loading it is smuggling" % Data.table("factions")[Ports.port(port_id).faction].adjective.capitalize()
 		if why != "":
 			UIKit.label(name_box, why, tip, Style.c("dim")).add_theme_font_size_override("font_size", 14)
 

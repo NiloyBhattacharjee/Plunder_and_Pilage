@@ -3,6 +3,8 @@ extends Node
 ## Everything that moves stock goes through here (the player's trades, merchants arriving, shocks), so the
 ## model stays the one source of truth. Laws (duties, contraband) live with the ports (Ports.state[id].laws).
 
+signal fleet_event(ev: Dictionary)  # a fleet arrived, sailed, or didn't come this year
+
 var model := EconomyModel.new()
 var _warm := {}  # starting month -> the warmed-up model's state
 
@@ -19,16 +21,20 @@ func cfg() -> Dictionary:
 ## A fresh economy, warmed up so it opens at its own balance. seed < 0 picks one at random.
 func reset(seed := -1) -> void:
 	model.setup(Data.table("goods"), Data.table("ports"), cfg(), seed if seed >= 0 else randi())
-	var month: int = Clock.date_of(int(Clock.day)).month
+	var date := Clock.date_of(int(Clock.day))
+	var month: int = date.month
 	if not _warm.has(month):  # warming up takes a moment, so it's done once per starting month and reused
-		model.warm_up(int(cfg().warm_up_days), month)
+		model.warm_up(int(cfg().warm_up_days), month, date.year)
 		_warm[month] = model.save_state().duplicate(true)
 	model.load_state(_warm[month].duplicate(true))
 
 
 func _on_day(d: int) -> void:
 	model.traffic.wars = _wars()
-	model.step(Clock.date_of(d).month)
+	var date := Clock.date_of(d)
+	model.step(date.month, date.year)
+	for ev in model.fleets.take_events():
+		fleet_event.emit(ev)
 	if d % 7 == 0:
 		model.sample_week()
 
@@ -110,6 +116,21 @@ func _wars() -> Array:
 			if Factions.at_war(nations[i], nations[j]):
 				out.append([nations[i], nations[j]])
 	return out
+
+
+## The fleet that serves this port in a sentence, or "": what every quayside knows.
+func fleet_text(id: String) -> String:
+	var f := model.fleets.for_port(id)
+	if f.is_empty():
+		return ""
+	var name: String = cfg().fleets[f.id].name
+	match f.status:
+		"fair":
+			return "%s is in port: %d more days before it sails for home." % [name.capitalize(), f.days]
+		"due":
+			return "%s is expected in about %d days." % [name.capitalize(), maxi(1, f.days)]
+	return "%s is due again in %s." % [name.capitalize(), ["January", "February", "March", "April", "May", "June", "July",
+		"August", "September", "October", "November", "December"][int(cfg().fleets[f.id].month) - 1]]
 
 
 func voyages() -> Array:

@@ -162,7 +162,9 @@
     "Swallow", "Good Fortune", "Black Joke", "Rising Sun", "Night Rambler", "Happy Delivery", "Defiance", "Sea Nymph",
     "Merry Christmas", "Bachelor's Delight", "Liberty", "Wolf", "Dragon", "Pearl", "Fortune's Folly"],
 
-  "fence": {"legal_mult": 0.5},
+  "fence": {"legal_mult": 0.5, "fence_mult": 0.85, "trust_per_gold": 0.00003, "cash": {"small": 1500, "medium": 3000, "large": 5000},
+            "cash_regen": 0.05, "treasure_legal_mult": 0.7,
+            "_comment": "Stolen goods: an honest port pays legal_mult of the price; a fence pays fence_mult, rising toward full price as you do business (trust_per_gold), but has only so much cash (refilling cash_regen of it a day). Silver and gold sold outside Spanish ports and fences fetch treasure_legal_mult."},
   "encounters": {"daily_chance": 0.12, "hostile_relation": -25, "friendly_pirate_relation": 20},
   "bases": {
     "max": 4, "claim_cost": 150, "claim_garrison": 5, "discover_nm": 30, "discover_dc": 9,

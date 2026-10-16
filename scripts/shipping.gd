@@ -124,6 +124,10 @@ func _contacts(player: Node2D) -> void:
 
 
 func _arrive(n: Dictionary) -> void:
+	if n.get("treasure", false):
+		_say(n, "The treasure galleon %s has reached Havana safely." % n.enemy.name, true)
+		remove(n)
+		return
 	if n.kind == "merchant":
 		if not n.has("voyage"):  # a contract's ship; a voyage's cargo reaches the market on the economy's schedule
 			for g in n.enemy.cargo:
@@ -173,7 +177,7 @@ func _set_course(n: Dictionary, goal: Vector2) -> void:
 func daily() -> void:
 	for n in npcs.duplicate():
 		n.age += 1
-		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id"):  # contract targets and named captains stay
+		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.get("treasure", false):  # contract targets and named captains stay
 			remove(n)
 	if count("pirate") < cfg().pirates:
 		spawn("pirate", "pirates")
@@ -209,6 +213,23 @@ func _meetings() -> void:
 func _say(n: Dictionary, text: String, always := false) -> void:
 	if always or world.ship.position.distance_to(n.pos) < nm(cfg().sight_nm) * 2.0:
 		news.emit(text)
+
+
+## A treasure galleon, sailing from the fair to join the fleet at Havana with the year's silver aboard.
+func spawn_treasure(port: String, value: float) -> Dictionary:
+	if not world.anchorages.has(port) or not world.anchorages.has("havana") or port == "havana":
+		return {}
+	var e := Encounters.generate("spain", rng, "navy", "galleon")
+	e.name = ["Nuestra Senora de Atocha", "Nuestra Senora de la Concepcion", "Santa Margarita", "San Jose", "Nuestra Senora de Guadalupe"][rng.randi() % 5]
+	e.label = "the treasure galleon"
+	e.cargo = {"silver": maxi(10, int(value * 0.7 / 200.0)), "gold": maxi(2, int(value * 0.3 / 600.0))}
+	e.morale = 85.0
+	var n := _add("navy", e, world.anchorages[port], Data.table("factions").spain.flag)
+	n.treasure = true
+	n.origin = port
+	n.dest = "havana"
+	n.route = _route(port, "havana")
+	return n
 
 
 ## A merchant voyage from the economy (Economy.voyages()), drawn as a ship where she is along her route right now.

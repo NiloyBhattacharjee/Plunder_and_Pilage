@@ -17,6 +17,7 @@ var mods := {}       # port -> [{good, make, use, days_left, reason, rumour}]: t
 var history := {}    # port -> good -> weekly price multipliers, oldest first
 var params := {}     # port -> good -> {make, use, imp, exp, normal}, fixed by the data
 var traffic: Traffic # merchant voyages between the ports (scripts/economy/traffic.gd)
+var fleets: Fleets   # the treasure fleets and sugar convoys (scripts/economy/fleets.gd)
 var day := 0         # days the model has run
 var _seasons := {}
 var _traded: Array = []
@@ -51,6 +52,7 @@ func setup(goods_t: Dictionary, ports_t: Dictionary, cfg_t: Dictionary, seed: in
 			history[id][g] = []
 	day = 0
 	traffic = Traffic.new(self)
+	fleets = Fleets.new(self)
 
 
 func traded() -> Array:
@@ -75,6 +77,7 @@ func _params(id: String, g: String) -> Dictionary:
 		ex *= o.tag_export.get(t, 1.0)
 		rex *= o.tag_export.get(t, 1.0)
 	use *= p.get("use", {}).get(g, 1.0)
+	imp *= p.get("import_mult", 1.0)  # a port's own extra supply (Portobelo's mule trains from Panama)
 	var make := float(p.make.get(g, 0.0))
 	return {"make": make, "use": use, "imp": imp, "exp": ex, "rex": rex, "normal": maxf(cfg.min_normal, (make + use) * cfg.cover_days)}
 
@@ -150,17 +153,19 @@ func flows(id: String, g: String, month: int) -> Dictionary:
 	var sr: float = cfg.supply_response
 	return {
 		"make": pr.make * _seasons[gd.season][month - 1] * make_mod,
-		"use": pr.use * use_mod * minf(cap, pow(m, -cfg.demand_response[gd.demand])),
+		"use": pr.use * use_mod * fleets.use_mult(id, g) * minf(cap, pow(m, -cfg.demand_response[gd.demand])),
 		"imp": pr.use * pr.imp * sail * minf(cap, pow(m, sr)),
 		"exp": (pr.make * pr.exp + pr.use * pr.rex) * sail * minf(cap, pow(m, -sr)),
 		"spoil": stock[id][g] * gd.get("spoils", 0.0),
 	}
 
 
-## One day for every port, and the ships between them. `month` is 1-12.
-func step(month: int) -> void:
+## One day for every port, and the ships between them. `month` is 1-12; `year` matters only to the fleets
+## (irregular after 1700); without one, each 365 days counts as a new year.
+func step(month: int, year := -1) -> void:
 	day += 1
 	traffic.step(day, month)
+	fleets.step(day, month, year if year > 0 else 1000 + day / 365)
 	for id in stock:
 		for g in _traded:
 			var f := flows(id, g, month)
@@ -171,10 +176,11 @@ func step(month: int) -> void:
 
 
 ## Runs the economy for a while before the game starts, so it opens at its own balance, not at the data's guess.
-func warm_up(days: int, start_month: int) -> void:
+func warm_up(days: int, start_month: int, start_year := -1) -> void:
 	var weeks: int = cfg.history_weeks
 	for i in days:
-		step(posmod(start_month - 1 - (days - i) / 30, 12) + 1)
+		var back: int = start_month - 1 - (days - i) / 30
+		step(posmod(back, 12) + 1, start_year + floori(back / 12.0) if start_year > 0 else -1)
 		if days - i <= weeks * 7 and (days - i) % 7 == 0:  # the last months become the opening price history
 			sample_week()
 
@@ -227,6 +233,15 @@ func reason(id: String, g: String, month: int) -> String:
 			return notes.high
 		if lv == "scarce" and season <= 0.75:
 			return notes.low
+	var fleet := fleets.for_port(id)
+	if not fleet.is_empty():
+		var fname: String = cfg.fleets[fleet.id].name
+		if lv == "plenty" and fleet.status == "fair" and cfg.fleets[fleet.id].get("brings", {}).has(g):
+			return "%s is in: the fair floods the market" % fname.capitalize()
+		if lv == "scarce" and fleet.status == "fair" and cfg.fleets[fleet.id].get("fair_use", {}).has(g):
+			return "%s is buying for home" % fname.capitalize()
+		if lv == "scarce" and fleet.status != "fair" and cfg.fleets[fleet.id].get("brings", {}).has(g):
+			return "Scarce: %s hasn't come" % fname
 	if lv == "scarce":
 		var raid := traffic.worst_route_into(id)
 		if raid[1] >= cfg.traffic.raid_reason_risk:
@@ -268,7 +283,8 @@ func breakdown(id: String, g: String, month: int, spread_mult := 1.0, duty := 0.
 
 
 func save_state() -> Dictionary:
-	return {"rng": str(rng.state), "stock": stock, "mods": mods, "history": history, "day": day, "traffic": traffic.save_state()}
+	return {"rng": str(rng.state), "stock": stock, "mods": mods, "history": history, "day": day, "traffic": traffic.save_state(),
+		"fleets": fleets.save_state()}
 
 
 func load_state(d: Dictionary) -> void:
@@ -285,3 +301,5 @@ func load_state(d: Dictionary) -> void:
 	day = int(d.get("day", 0))
 	if d.has("traffic"):
 		traffic.load_state(d.traffic)
+	if d.has("fleets"):
+		fleets.load_state(d.fleets)

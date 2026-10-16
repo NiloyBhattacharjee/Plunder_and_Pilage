@@ -41,9 +41,9 @@
     "import": {"european": 0.9, "colonial": 0.4, "supply": 0.7, "treasure": 1.0},
     "export": {"european": 0.15, "colonial": 0.7, "supply": 0.3, "treasure": 0.8},
     "reexport": {"european": 0.1, "colonial": 0.05, "supply": 0.05, "treasure": 0.0},
-    "faction_import": {"spain": {"european": 0.4, "colonial": 1.5, "supply": 1.4}},
-    "_faction_import": "Spain forbids trade with foreigners: European goods reach its ports only by the fleets and smugglers, so they're scarce and dear. Its own coasting trade from the mainland (not on the map) brings colonial goods and food instead.",
-    "tag_import": {"free_port": 1.7, "pirate_haven": 0.8},
+    "faction_import": {"spain": {"european": 0.35, "colonial": 1.5, "supply": 1.4}, "england": {"european": 1.2}},
+    "_faction_import": "Spain forbids trade with foreigners: European goods reach its ports only by the fleets and smugglers, so they're scarce and dear. Its own coasting trade from the mainland (not on the map) brings colonial goods and food instead. England's colonies get London's goods directly and plentifully.",
+    "tag_import": {"free_port": 2.6, "pirate_haven": 0.8},
     "tag_export": {"free_port": 1.4}
   },
 
@@ -63,13 +63,37 @@
     "risk_aversion": 1.5,
     "pirate_loss_per_day": 0.002,
     "storm_loss_per_day": [0, 0, 0, 0, 0, 0.001, 0.002, 0.004, 0.005, 0.003, 0.001, 0],
-    "loss_risk": {"pirates": 0.12, "storm": 0.03, "player": 0.2},
+    "loss_risk": {"pirates": 0.12, "storm": 0.03, "player": 0.2, "guarda_costa": 0.06},
     "risk_breeds_pirates": 2.0,
     "_risk_breeds_pirates": "Where ships have been taken lately, more get taken: pirates go where the hunting is good.",
     "risk_decay": 0.985,
     "recent_decay": 0.97,
     "raid_reason_risk": 0.25,
-    "haven_traders": ["dutch", "france", "england"]
+    "haven_traders": ["dutch", "france", "england"],
+    "smugglers": ["dutch", "england"],
+    "_smugglers": "Merchants who run forbidden goods into Spanish ports. Each voyage risks seizure by the guarda costas.",
+    "guarda_costa_seizure": 0.35,
+    "smuggler_cargo": 0.35
+  },
+
+  "fleets": {
+    "_comment": "The convoys (scripts/economy/fleets.gd). month: when they're due; delay_days: how late; brings: days of each port's use, landed on arrival; fair_days: how long they stay; fair_use: use multipliers while they're in (crowds at a fair, a convoy buying cargo for home); takes: the share of each port's stock they carry off when they sail. irregular_from / skip_chance: after 1700 the Spanish fleets often didn't sail at all.",
+    "flota": {"name": "the flota", "nation": "spain", "ports": ["veracruz"], "month": 9, "delay_days": [0, 40], "fair_days": 50,
+              "brings": {"cloth": 70, "wine": 70, "tools": 45, "gunpowder": 45, "naval_stores": 70},
+              "fair_use": {"cloth": 1.4, "wine": 1.4, "tools": 1.2, "food": 1.3},
+              "takes": {"silver": 0.85, "gold": 0.85, "cocoa": 0.5, "indigo": 0.6, "hides": 0.4},
+              "irregular_from": 1700, "skip_chance": 0.45, "treasure": true},
+    "galeones": {"name": "the galeones", "nation": "spain", "ports": ["cartagena", "portobelo"], "month": 3, "delay_days": [0, 40], "fair_days": 40,
+                 "brings": {"cloth": 60, "wine": 60, "tools": 40, "gunpowder": 40, "naval_stores": 65},
+                 "fair_use": {"cloth": 1.5, "wine": 1.5, "tools": 1.2, "food": 1.6},
+                 "takes": {"silver": 0.85, "gold": 0.85, "cocoa": 0.5, "hides": 0.4},
+                 "irregular_from": 1700, "skip_chance": 0.5, "treasure": true},
+    "english_convoy": {"name": "the sugar convoy", "nation": "england", "ports": ["port_royal", "bridgetown", "basseterre"], "month": 6, "delay_days": [0, 15], "fair_days": 21,
+                       "fair_use": {"sugar": 3.0, "rum": 2.5, "molasses": 2.0, "indigo": 2.0},
+                       "takes": {"sugar": 0.5, "rum": 0.35, "molasses": 0.3, "indigo": 0.5, "cotton": 0.4}},
+    "french_convoy": {"name": "the French convoy", "nation": "france", "ports": ["saint_pierre"], "month": 6, "delay_days": [5, 25], "fair_days": 21,
+                      "fair_use": {"sugar": 3.0, "indigo": 2.0, "cocoa": 2.0},
+                      "takes": {"sugar": 0.5, "indigo": 0.5, "cocoa": 0.4}}
   },
 
   "sailing": [1.0, 1.0, 1.0, 1.0, 1.0, 0.9, 0.75, 0.6, 0.55, 0.65, 0.85, 1.0],

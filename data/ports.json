@@ -6,7 +6,7 @@
     "population": 6500, "tags": ["capital", "garrison"],
     "make": {"sugar": 18, "rum": 8, "molasses": 4, "logwood": 10},
     "shipyard": 2, "sailors": 60, "ships_for_sale": ["sloop", "brigantine", "brig"], "recruits": {"skills": {"swordplay": 2}, "traits": {"veteran": 0.1}},
-    "laws": {"contraband": [], "vigilance": 0.3}
+    "laws": {"enumerated": ["sugar", "tobacco", "cotton", "indigo"], "contraband": [], "vigilance": 0.3}
   },
   "bridgetown": {
     "name": "Bridgetown", "faction": "england", "lat": 13.097, "lon": -59.616, "size": "medium",
@@ -15,7 +15,7 @@
     "population": 3000, "tags": ["plantation"],
     "make": {"sugar": 30, "molasses": 12, "rum": 8, "cotton": 6},
     "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner"], "recruits": {"skills": {}, "traits": {"green": 0.2, "family_man": 0.1}},
-    "laws": {"contraband": [], "vigilance": 0.4}
+    "laws": {"enumerated": ["sugar", "tobacco", "cotton", "indigo"], "contraband": [], "vigilance": 0.4}
   },
   "basseterre": {
     "name": "Basseterre", "faction": "england", "lat": 17.296, "lon": -62.726, "size": "small", "label_offset": [9, 22],
@@ -24,7 +24,7 @@
     "population": 1000, "tags": ["plantation"],
     "make": {"sugar": 12, "tobacco": 5, "cotton": 4},
     "shipyard": 1, "sailors": 12, "ships_for_sale": ["sloop"],
-    "laws": {"contraband": [], "vigilance": 0.3}
+    "laws": {"enumerated": ["sugar", "tobacco", "cotton", "indigo"], "contraband": [], "vigilance": 0.3}
   },
   "havana": {
     "name": "Havana", "faction": "spain", "lat": 23.136, "lon": -82.359, "size": "large",
@@ -58,7 +58,7 @@
     "governor": "Don Felipe Ochoa",
     "description": "A fever-ridden village that wakes once a year, when Peruvian silver arrives for the great fair.",
     "population": 1000, "tags": ["fair_town"],
-    "make": {"silver": 1.0, "gold": 0.2, "food": 10},
+    "make": {"silver": 1.0, "gold": 0.2, "food": 10}, "import_mult": 1.6,
     "shipyard": 0, "sailors": 8, "ships_for_sale": [],
     "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.2}
   },
@@ -97,7 +97,7 @@
     "population": 2000, "tags": ["capital", "plantation"],
     "make": {"sugar": 20, "cocoa": 6, "indigo": 4, "molasses": 6, "rum": 4},
     "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner", "brig"], "recruits": {"skills": {"medicine": 1}, "traits": {"devout": 0.1}},
-    "laws": {"contraband": ["cloth", "tools"], "vigilance": 0.3}
+    "laws": {"enumerated": ["sugar", "indigo", "cocoa"], "contraband": ["cloth", "tools"], "vigilance": 0.3}
   },
   "willemstad": {
     "name": "Willemstad", "faction": "dutch", "lat": 12.108, "lon": -68.935, "size": "medium",

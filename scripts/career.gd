@@ -249,6 +249,15 @@ static func flag_fools_port(s: Dictionary, port_id: String) -> bool:
 	return f != "" and f != "pirates" and not Factions.at_war(f, Ports.port(port_id).faction)
 
 
+## Goods Spain forbids foreigners to bring (the union of its ports' contraband) in your hold?
+static func carries_spanish_contraband(s: Dictionary) -> bool:
+	for id in Data.table("ports"):
+		var p: Dictionary = Data.table("ports")[id]
+		if p.faction == "spain" and p.laws.contraband.any(func(g): return s.cargo.get(g, 0.0) >= 1.0):
+			return true
+	return false
+
+
 ## Friendly ports trade a little better; hostile ones gouge you.
 static func price_mult(s: Dictionary, port_id: String) -> float:
 	var pa: Dictionary = Data.rules.port_access
@@ -269,6 +278,8 @@ static func npc_hostile(s: Dictionary, enemy: Dictionary, rng: RandomNumberGener
 		"warship":
 			if enemy.kind == "hunter" and wanted(s):
 				return true
+			if enemy.faction == "spain" and shown != "spain" and carries_spanish_contraband(s):
+				return true  # a guarda costa: every foreign hull with forbidden goods aboard is a prize
 			if s.get("patrol_warning", {}).get(enemy.faction, 0.0) > Clock.day:
 				return false  # you know where they'll be, and keep out of their way
 			if shown == "pirates" or Factions.at_war(shown, enemy.faction):

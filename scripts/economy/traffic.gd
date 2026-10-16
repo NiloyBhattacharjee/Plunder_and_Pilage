@@ -76,7 +76,7 @@ func allowed(f: String, dest: String) -> bool:
 	if at_war(f, p.faction):
 		return false
 	if p.faction == "spain":
-		return false
+		return f in cfg().smugglers  # as smugglers: only forbidden goods, at the risk of the guarda costas
 	if p.faction == "pirates":
 		return f in cfg().haven_traders
 	return true
@@ -99,7 +99,10 @@ func _voyages_at_sea(day: int, month: int) -> void:
 	var storm: float = cfg().storm_loss_per_day[month - 1]
 	for v in voyages.duplicate():
 		if day >= v.arrive:
-			_arrive(v, day)
+			if v.get("smuggler", false) and m.rng.randf() < cfg().guarda_costa_seizure:
+				lose(v, "guarda_costa", day)  # caught at the last, off the Spanish coast
+			else:
+				_arrive(v, day)
 			continue
 		var key: String = v.origin + ">" + v.dest
 		if m.rng.randf() < cfg().pirate_loss_per_day * (1.0 + risk.get(key, 0.0) * cfg().risk_breeds_pirates):
@@ -182,7 +185,15 @@ func _send(o: String, day: int, month: int, f: String) -> void:
 		var safe: float = maxf(0.0, 1.0 - route_risk(o, d) * cfg().risk_aversion - (storm_days + cfg().pirate_loss_per_day) * t)
 		var spread_d: float = m.cfg.spread[m.ports[d].size] / 2.0
 		var known: Dictionary = board[o][d].m
+		var smuggling: bool = m.ports[d].faction == "spain" and f != "spain"
+		var hold := cap
+		if smuggling:
+			safe *= 1.0 - cfg().guarda_costa_seizure
+			hold *= cfg().smuggler_cargo  # a fast sloop, not a fat merchantman
+		var enumerated: Array = m.ports[o].laws.get("enumerated", []) if f != m.ports[o].faction else []
 		for g in m.traded():
+			if (smuggling and not g in m.ports[d].laws.contraband) or g in enumerated:
+				continue
 			var buy := m.price(o, g, true)
 			var normal_d: float = m.params[d][g].normal
 			# what she expects to fetch: the price heard, lowered by what this port has already sent that way
@@ -193,7 +204,7 @@ func _send(o: String, day: int, month: int, f: String) -> void:
 				continue
 			var w := float(m.goods[g].weight)
 			var spare: float = m.stock[o][g] - m.params[o][g].normal * cfg().keep_home
-			var qty := minf(minf(cap / w, spare), normal_d * cfg().max_share_of_dest)  # no one ship floods a market
+			var qty := minf(minf(hold / w, spare), normal_d * cfg().max_share_of_dest)  # no one ship floods a market
 			if qty < 1.0:
 				continue
 			var value: float = (sell - buy) * qty * safe / t
@@ -215,7 +226,8 @@ func _send(o: String, day: int, month: int, f: String) -> void:
 	_route(key).sailings += 1
 	_route(key).recent += 1.0
 	voyages.append({"id": "v%d" % next_id, "faction": f, "origin": o, "dest": best.dest, "good": g, "qty": qty,
-		"depart": day, "arrive": day + int(round(best.t * m.rng.randf_range(0.85, 1.2))), "news": news})
+		"depart": day, "arrive": day + int(round(best.t * m.rng.randf_range(0.85, 1.2))), "news": news,
+		"smuggler": m.ports[best.dest].faction == "spain" and f != "spain"})
 	next_id += 1
 
 
