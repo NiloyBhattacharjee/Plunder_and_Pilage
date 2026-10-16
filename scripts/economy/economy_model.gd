@@ -336,7 +336,7 @@ func reason(id: String, g: String, month: int) -> String:
 	if lv == "scarce":
 		var raid := traffic.worst_route_into(id)
 		if raid[1] >= cfg.traffic.raid_reason_risk:
-			return "Raiders on the route from " + ports[raid[0]].name
+			return "Raiders off the coast" if raid[0] == id else "Raiders on the route from " + ports[raid[0]].name
 		if gd.origin == "european" and pr.imp < 0.5:
 			return "Foreign goods are banned: only the fleets and smugglers bring them"
 		if cfg.sailing[month - 1] < 0.8:

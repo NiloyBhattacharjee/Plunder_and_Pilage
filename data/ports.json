@@ -76,7 +76,7 @@
     "governor": "Don Gaspar de Lugo",
     "description": "Sacked twice in living memory. Rich in cocoa, behind a shallow bar that big ships cannot cross.",
     "population": 3000, "tags": ["plantation"],
-    "make": {"cocoa": 12, "tobacco": 8, "hides": 8, "food": 60},
+    "make": {"cocoa": 12, "tobacco": 8, "hides": 8, "food": 60, "naval_stores": 1.5},
     "shipyard": 1, "sailors": 10, "ships_for_sale": ["sloop", "schooner"],
     "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.3}
   },

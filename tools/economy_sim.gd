@@ -41,7 +41,8 @@ func _process(_delta: float) -> bool:
 			for v in m.traffic.voyages.duplicate():
 				if v.origin == raid[0] and v.dest == raid[1] and m.rng.randf() < float(raid[3]):
 					m.traffic.lose(v, "player", m.day)
-		m.step(date.month)
+		_history(m, date)
+		m.step(date.month, date.year)
 		at_sea += m.traffic.voyages.size()
 		if d % 7 != 0:
 			continue
@@ -76,6 +77,34 @@ func _process(_delta: float) -> bool:
 	print("Merchants: %d voyages a year, %.0f at sea on an average day, %.1f%% lost." % [sailings / years, at_sea / days, 100.0 * losses / maxf(1, sailings)])
 	_report(stats)
 	return true
+
+
+## The timeline's effects on the market (data/history.json), applied on their dates: the economy alone, with no
+## player, so only the world's own effects (the game applies the rest through EconomyEffects).
+var _applied := {}
+
+
+func _history(m: EconomyModel, date: Dictionary) -> void:
+	var stamp := "%04d-%02d-%02d" % [date.year, date.month, date.day]
+	for id in Data.table("history"):
+		var ev = Data.table("history")[id]
+		if id.begins_with("_") or _applied.has(id) or ev.date > stamp or not ev.has("effects"):
+			continue
+		_applied[id] = true
+		if ev.date < "%04d-01-01" % (date.year - 1):
+			continue  # long before this run began
+		for e in ev.effects:
+			var port: String = e.get("port", ev.get("port", ""))
+			if m.stock.has(port) and m.apply_effect(port, e):
+				continue
+			match e.type:
+				"pirate_spawn_rate_multiplier": m.set_world("pirates", float(e.value), int(e.get("days", 365)))
+				"trade_slump":
+					m.set_world("sailings:" + e.faction, float(e.get("sailings", 0.6)), int(e.days))
+					m.set_world("imports:" + e.faction, float(e.get("imports", 0.7)), int(e.days))
+				"fleet_blocked": m.set_world("fleet_blocked:" + e.fleet, true, int(e.days))
+				"fair_access": m.set_world("fair_access:" + e.faction, true, int(e.get("days", -1)))
+		print("  %s: %s" % [stamp, id])
 
 
 func _report(stats: Dictionary) -> void:

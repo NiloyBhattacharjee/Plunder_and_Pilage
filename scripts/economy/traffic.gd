@@ -13,6 +13,7 @@ var m: EconomyModel
 var voyages: Array = []   # {id, faction, origin, dest, good, qty, depart, arrive, news}
 var board := {}           # port -> port -> {day, m: {good: price multiplier}}: what each port knows of the others
 var risk := {}            # "a>b" -> 0..1, recent losses on that route
+var approach := {}        # port -> 0..1: losses near a port frighten every route into it, not just one
 var routes := {}          # "a>b" -> {sailings, losses, recent}: for the map and the reports
 var wars: Array = []      # [faction, faction] pairs at war, set by the game each day
 var lost_log: Array = []  # [{day, route, good, qty, cause}] recent losses, for news
@@ -58,7 +59,7 @@ func _prices(id: String) -> Dictionary:
 
 
 func route_risk(a: String, b: String) -> float:
-	return risk.get(a + ">" + b, 0.0)
+	return maxf(risk.get(a + ">" + b, 0.0), approach.get(b, 0.0))
 
 
 func at_war(f: String, g: String) -> bool:
@@ -91,6 +92,10 @@ func step(day: int, month: int) -> void:
 		risk[id] *= cfg().risk_decay
 		if risk[id] < 0.005:
 			risk.erase(id)
+	for id in approach.keys():
+		approach[id] *= cfg().risk_decay
+		if approach[id] < 0.005:
+			approach.erase(id)
 	for r in routes.values():
 		r.recent *= cfg().recent_decay
 	_voyages_at_sea(day, month)
@@ -138,6 +143,8 @@ func lose(v: Dictionary, cause: String, day: int) -> void:
 	voyages.erase(v)
 	var key: String = v.origin + ">" + v.dest
 	risk[key] = minf(1.0, risk.get(key, 0.0) + cfg().loss_risk[cause])
+	if cause != "storm":  # a raider off the port takes ships from every direction
+		approach[v.dest] = minf(1.0, approach.get(v.dest, 0.0) + cfg().loss_risk[cause] * cfg().approach_share)
 	_route(key).losses += 1
 	lost_log.append({"day": day, "route": key, "good": v.good, "qty": v.qty, "cause": cause})
 	if lost_log.size() > 40:
@@ -241,11 +248,14 @@ func worst_route_into(dest: String) -> Array:
 	for key in risk:
 		if key.ends_with(">" + dest) and risk[key] > worst[1]:
 			worst = [key.get_slice(">", 0), risk[key]]
+	if approach.get(dest, 0.0) > worst[1]:
+		worst = [dest, approach[dest]]
 	return worst
 
 
 func save_state() -> Dictionary:
-	return {"voyages": voyages, "board": board, "risk": risk, "routes": routes, "lost_log": lost_log, "next_id": next_id, "waiting": waiting}
+	return {"voyages": voyages, "board": board, "risk": risk, "routes": routes, "lost_log": lost_log, "next_id": next_id, "waiting": waiting,
+		"approach": approach}
 
 
 func load_state(d: Dictionary) -> void:
@@ -260,5 +270,6 @@ func load_state(d: Dictionary) -> void:
 	lost_log = d.lost_log
 	next_id = int(d.next_id)
 	waiting = d.get("waiting", [])
+	approach = d.get("approach", {})
 	for w in waiting:
 		w.day = int(w.day)
