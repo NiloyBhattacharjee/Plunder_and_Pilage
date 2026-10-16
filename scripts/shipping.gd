@@ -108,9 +108,8 @@ func _contacts(player: Node2D) -> void:
 
 func _arrive(n: Dictionary) -> void:
 	if n.kind == "merchant":
-		var ps: Dictionary = Ports.state[n.dest]
 		for g in n.enemy.cargo:
-			ps.stock[g] += n.enemy.cargo[g] * Market.weight(g)  # the cargo reaches the market
+			Economy.add(n.dest, g, n.enemy.cargo[g])  # the cargo reaches the market
 		remove(n)
 	else:
 		_new_goal(n)
@@ -191,9 +190,9 @@ func _say(n: Dictionary, text: String, always := false) -> void:
 
 
 func spawn_merchant() -> Dictionary:
-	var goods: Array = Data.table("goods").keys().filter(func(g): return g != "food" and g != "water")
+	var goods: Array = Economy.model.traded().filter(func(g): return g != "food")
 	var g: String = goods[rng.randi() % goods.size()]
-	var origins := Ports.state.keys().filter(func(id): return g in Ports.port(id).produces and Ports.port(id).faction != "pirates")
+	var origins := Ports.state.keys().filter(func(id): return g in Economy.produces(id) and Ports.port(id).faction != "pirates")
 	if origins.is_empty():
 		return {}
 	var origin: String = origins[rng.randi() % origins.size()]
@@ -205,10 +204,10 @@ func spawn_merchant() -> Dictionary:
 	var e := Encounters.generate(f, rng, "merchant")
 	var st := ShipStats.effective(e.type, [])
 	var w := Market.weight(g)
-	var qty := int(minf(Ports.state[origin].stock[g] - 1.0, st.cargo * cfg().merchant_cargo_fraction) / w)
+	var qty := int(minf(Economy.stock(origin, g) - 1.0, st.cargo * cfg().merchant_cargo_fraction / w))
 	if qty <= 0:
 		return {}
-	Ports.state[origin].stock[g] -= qty * w  # the goods leave the origin's market
+	Economy.add(origin, g, -qty)  # the goods leave the origin's market
 	e.cargo = {g: qty}
 	var n := _add("merchant", e, world.anchorages[origin], Data.table("factions")[f].flag)
 	n.origin = origin
@@ -217,10 +216,10 @@ func spawn_merchant() -> Dictionary:
 	return n
 
 
-## A port that wants this good, isn't a pirate den, and isn't at war with the merchant's nation.
+## A port that's short of this good, isn't a pirate den, and isn't at war with the merchant's nation.
 static func _good_destination(id: String, origin: String, g: String, f: String) -> bool:
 	var p := Ports.port(id)
-	return id != origin and g in p.wants and p.faction != "pirates" and not Factions.at_war(f, p.faction)
+	return id != origin and Economy.mult(id, g) > Economy.mult(origin, g) * 1.2 and p.faction != "pirates" and not Factions.at_war(f, p.faction)
 
 
 func spawn(kind: String, f: String) -> Dictionary:

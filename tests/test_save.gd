@@ -22,7 +22,7 @@ func test_round_trip_restores_world():
 	world.ship.position = Vector2(1500, 900)
 	world.ship.route = PackedVector2Array([Vector2(1600, 950)])
 	Clock.day = 42.5
-	Ports.state.havana.stock.wine = 3.0
+	Economy.model.stock.havana.wine = 3.0
 	Ports.record_prices("havana", 40)
 	Weather.spawn_storm("hurricane")
 	var storm_pos: Vector2 = Weather.storms[0].pos
@@ -40,7 +40,7 @@ func test_round_trip_restores_world():
 	assert_eq(world.ship.position, Vector2(1500, 900))
 	assert_eq(world.ship.route[0], Vector2(1600, 950))
 	assert_eq(Clock.day, 42.5)
-	assert_eq(Ports.state.havana.stock.wine, 3.0)
+	assert_eq(Economy.stock("havana", "wine"), 3.0)
 	assert_true(Ports.known.has("havana"))
 	assert_eq(Weather.storms[0].pos, storm_pos)
 

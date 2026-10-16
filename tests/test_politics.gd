@@ -46,9 +46,13 @@ func test_interest_groups_set_the_laws():
 
 func test_tariffs_change_prices():
 	Ports.state.port_royal.laws.tariff = 0.0
-	var before := Career.price_mult(s, "port_royal")
+	var before := Ports.price("port_royal", "sugar", true)
 	Ports.state.port_royal.laws.tariff = 0.2
-	assert_almost_eq(Career.price_mult(s, "port_royal"), before * 1.2, 0.001)
+	var duty: float = Data.table("economy").duty.england
+	assert_almost_eq(Ports.price("port_royal", "sugar", true), before * (1.2 + duty) / (1.0 + duty), 0.01, "the tariff is a duty on top")
+	Ports.state.port_royal.laws.contraband = ["sugar"]
+	assert_lt(Ports.price("port_royal", "sugar", true), before, "smugglers pay no duty")
+	Ports.state.port_royal.laws.contraband = []
 
 
 func test_favours_are_earned_spent_and_owed():

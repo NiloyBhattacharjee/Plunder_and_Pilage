@@ -29,7 +29,7 @@ shift your flag between ships, move cargo between holds. A captain who hates you
 With a shipyard at your base you can lay down new hulls.
 The ships fight at a range band (long, medium, close, grappled); the weather gauge gives +2.
 The game starts on the new-game screen (captain name, nationality, background, ship name); Continue loads the quicksave.
-Arriving at a port opens the port screen (market, shipyard, tavern, governor, contracts); time stops while it's open. Hover over a price to see why it is what it is. The map-mode dropdown shows the last prices you know for a good at every port.
+Arriving at a port opens the port screen (market, shipyard, tavern, governor, contracts); time stops while it's open. Hover over a price to see why it is what it is. The market shows each good's stock (plenty, normal, scarce), why it's unusual ("Glut after the harvest", "Foreign goods are banned"), what you paid, a 26-week price line, and the best price you know elsewhere. The map-mode dropdown shows the last prices you know for a good at every port. The crew screen's Ledger tab keeps every trade and its profit.
 
 Design docs: `docs/brief.md` (main brief) and `docs/brief_additions.md` (political intrigue, alliances and rivalries).
 
@@ -61,11 +61,14 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
 
 - `rules.json`: global tuning (time scale, start state, upkeep, wind, storms, market, smuggling, shipyard, tavern, market events).
 - `ports.json`, `goods.json`, `factions.json`, `ships.json`: content. A port's `laws` are only its starting laws; the live copy is saved with the game so it can change.
+  Each port has a `population`, `tags` (capital, plantation, free_port, pirate_haven, fair_town, garrison) and what it `make`s each day.
+- `economy.json`: the trade economy. Every port, every day: stock += production x season + imports - consumption - exports - spoilage, and the price follows stock against normal stock. Consumption per 1,000 people, tag multipliers, seasons, duties, spreads, and the outside trade that stands in for merchant traffic. `scripts/economy/economy_model.gd` is the model (no nodes, runs headless); the `Economy` autoload runs it on the clock.
+- Headless economy runs: `bin/Godot_v4.7.2-stable_win64_console.exe --headless --path . -s tools/economy_sim.gd -- --years 15 --seed 1` writes `tools/out/economy.csv` (port, good, week: stock, prices, flows) and prints health checks (prices pinned at a limit, widest swings, cheapest and dearest port per good).
 - Market events (shortages, gluts, poor harvests) are in `rules.json` under `market_events`; add more there.
 - `ships.json` (8 types, each with its own polar curve for points of sail), `upgrades.json` (effects use `set`, `add` and `mult` on any ship stat; `group` makes upgrades replace each other).
 - `history.json`: dated wars, peace treaties and pardons (1680 onwards). `scripts/factions.gd` applies them; `scripts/career.gd` judges every attack
   (lawful prize under a letter of marque, or piracy), and handles ranks, the Crown's share, pardons, closed ports and false colours.
-- `scripts/shipping.gd`: NPC ships. Merchant cargo leaves the origin's market and reaches the destination's, so raiding a route starves a port.
+- `scripts/shipping.gd`: NPC ships. Merchant cargo leaves the origin's market and reaches the destination's (bound where the good is dearer), so raiding a route starves a port.
 - `contracts.json`: contract templates (employer, requirements, objective, tiers unlocked by trust, rewards, lie and trap chances).
   `scripts/contracts.gd` runs them: three objectives (raid, intercept a named ship that really sails the map, deliver) cover every template.
   Employers are characters; their trust in you is their relation to your captain. Tuning in `rules.json` `contracts`.

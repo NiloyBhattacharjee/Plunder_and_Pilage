@@ -3,3 +3,4 @@ bin/
 tools/.venv/
 tools/cache/
 *.tmp
+tools/out/

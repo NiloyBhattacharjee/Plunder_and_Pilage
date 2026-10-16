@@ -103,4 +103,4 @@ func test_rumour_teaches_a_price_elsewhere():
 func test_market_events_happen_over_a_year():
 	for i in 365:
 		Ports.daily()
-	assert_true(Ports.state.values().any(func(ps): return not ps.mods.is_empty()))
+	assert_true(Ports.state.keys().any(func(id): return not Economy.mods(id).is_empty()))

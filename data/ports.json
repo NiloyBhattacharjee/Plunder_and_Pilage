@@ -3,8 +3,8 @@
     "name": "Port Royal", "faction": "england", "lat": 17.937, "lon": -76.841, "size": "large",
     "governor": "Sir Henry Morgan",
     "description": "The wickedest city in the world. Buccaneer gold built its taverns, and its governor was once a buccaneer himself.",
-    "produces": ["sugar", "rum", "logwood"],
-    "wants": ["cloth", "tools", "wine", "gunpowder"],
+    "population": 6500, "tags": ["capital", "garrison"],
+    "make": {"sugar": 18, "rum": 8, "molasses": 4, "logwood": 10},
     "shipyard": 2, "sailors": 60, "ships_for_sale": ["sloop", "brigantine", "brig"], "recruits": {"skills": {"swordplay": 2}, "traits": {"veteran": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.3}
   },
@@ -12,8 +12,8 @@
     "name": "Bridgetown", "faction": "england", "lat": 13.097, "lon": -59.616, "size": "medium",
     "governor": "Sir Edmund Hale",
     "description": "Upwind of everything. Planters grow rich on sugar and fear for their ships every hurricane season.",
-    "produces": ["sugar", "rum", "molasses", "cotton"],
-    "wants": ["tools", "cloth", "hides", "wine", "food"],
+    "population": 3000, "tags": ["plantation"],
+    "make": {"sugar": 30, "molasses": 12, "rum": 8, "cotton": 6},
     "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner"], "recruits": {"skills": {}, "traits": {"green": 0.2, "family_man": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.4}
   },
@@ -21,8 +21,8 @@
     "name": "Basseterre", "faction": "england", "lat": 17.296, "lon": -62.726, "size": "small", "label_offset": [9, 22],
     "governor": "Colonel Thomas Wren",
     "description": "St. Christopher is shared uneasily with the French. Both garrisons watch each other more than the sea.",
-    "produces": ["sugar", "tobacco", "cotton"],
-    "wants": ["tools", "cloth", "gunpowder"],
+    "population": 1000, "tags": ["plantation"],
+    "make": {"sugar": 12, "tobacco": 5, "cotton": 4},
     "shipyard": 1, "sailors": 12, "ships_for_sale": ["sloop"],
     "laws": {"contraband": [], "vigilance": 0.3}
   },
@@ -30,63 +30,63 @@
     "name": "Havana", "faction": "spain", "lat": 23.136, "lon": -82.359, "size": "large",
     "governor": "Don Alonso de Vargas",
     "description": "Key to the New World. The treasure fleet gathers here under the guns of El Morro before the run home.",
-    "produces": ["tobacco", "hides", "sugar"],
-    "wants": ["cloth", "wine", "tools", "weapons"],
+    "population": 10000, "tags": ["capital", "garrison"],
+    "make": {"tobacco": 14, "hides": 10, "sugar": 10, "food": 200},
     "shipyard": 2, "sailors": 20, "ships_for_sale": ["sloop", "brig", "frigate", "galleon"], "recruits": {"skills": {"gunnery": 2}, "traits": {"former_navy": 0.15, "devout": 0.1}},
-    "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.6}
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.6}
   },
   "santo_domingo": {
     "name": "Santo Domingo", "faction": "spain", "lat": 18.472, "lon": -69.882, "size": "medium",
     "governor": "Don Rodrigo Pimentel",
     "description": "The oldest city of the Indies, proud and poor. Its cattle run wild and feed half the buccaneers of Tortuga.",
-    "produces": ["hides", "cocoa", "sugar", "food"],
-    "wants": ["cloth", "wine", "tools"],
+    "population": 5000, "tags": ["capital"],
+    "make": {"hides": 14, "cocoa": 5, "sugar": 4, "food": 220},
     "shipyard": 1, "sailors": 15, "ships_for_sale": ["sloop", "brigantine"],
-    "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.3}
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.3}
   },
   "cartagena": {
     "name": "Cartagena", "faction": "spain", "lat": 10.391, "lon": -75.479, "size": "large",
     "governor": "Don Martín de Arroyo",
     "description": "The strongest walls on the Main. Gold and emeralds from New Granada pass through on their way to Spain.",
-    "produces": ["gold", "silver", "cocoa"],
-    "wants": ["cloth", "wine", "weapons", "tools"],
+    "population": 6000, "tags": ["fair_town", "garrison"],
+    "make": {"silver": 1.5, "gold": 0.3, "cocoa": 6, "hides": 4, "food": 100},
     "shipyard": 2, "sailors": 20, "ships_for_sale": ["brig", "frigate", "galleon"], "recruits": {"skills": {"gunnery": 2}, "traits": {"former_navy": 0.15}},
-    "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.7}
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.7}
   },
   "portobelo": {
     "name": "Portobelo", "faction": "spain", "lat": 9.553, "lon": -79.655, "size": "small",
     "governor": "Don Felipe Ochoa",
     "description": "A fever-ridden village that wakes once a year, when Peruvian silver arrives for the great fair.",
-    "produces": ["silver", "gold"],
-    "wants": ["cloth", "wine", "tools", "gunpowder"],
+    "population": 1000, "tags": ["fair_town"],
+    "make": {"silver": 1.0, "gold": 0.2, "food": 10},
     "shipyard": 0, "sailors": 8, "ships_for_sale": [],
-    "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.2}
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.2}
   },
   "veracruz": {
     "name": "Veracruz", "faction": "spain", "lat": 19.173, "lon": -96.134, "size": "large",
     "governor": "Don Esteban Calderón",
     "description": "Mexico's door to the sea. Silver from the mines of New Spain waits here for the flota.",
-    "produces": ["silver", "indigo", "cocoa"],
-    "wants": ["cloth", "wine", "tools", "weapons"],
+    "population": 3000, "tags": ["fair_town"],
+    "make": {"silver": 2.0, "indigo": 3, "cocoa": 6, "hides": 6, "food": 80},
     "shipyard": 1, "sailors": 15, "ships_for_sale": ["sloop", "brig"],
-    "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.6}
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.6}
   },
   "maracaibo": {
     "name": "Maracaibo", "faction": "spain", "lat": 10.654, "lon": -71.64, "size": "small",
     "governor": "Don Gaspar de Lugo",
     "description": "Sacked twice in living memory. Rich in cocoa, behind a shallow bar that big ships cannot cross.",
-    "produces": ["cocoa", "tobacco", "hides"],
-    "wants": ["cloth", "tools", "wine"],
+    "population": 3000, "tags": ["plantation"],
+    "make": {"cocoa": 12, "tobacco": 8, "hides": 8, "food": 60},
     "shipyard": 1, "sailors": 10, "ships_for_sale": ["sloop", "schooner"],
-    "laws": {"contraband": ["cloth", "tools", "wine", "weapons", "gunpowder"], "vigilance": 0.3}
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.3}
   },
   "tortuga": {
     "name": "Tortuga", "faction": "france", "fence": true, "lat": 20.04, "lon": -72.78, "size": "small",
     "governor": "Jacques Nepveu de Pouancey",
     "broker": "Marie Leclerc",
     "description": "A rock of buccaneers under a French flag. The governor asks few questions if his share arrives on time.",
-    "produces": ["hides", "tobacco", "food"],
-    "wants": ["gunpowder", "weapons", "wine", "cloth"],
+    "population": 1200, "tags": ["pirate_haven"],
+    "make": {"hides": 12, "tobacco": 4, "food": 60},
     "shipyard": 1, "sailors": 50, "ships_for_sale": ["sloop", "brigantine"], "recruits": {"skills": {"swordplay": 3, "gunnery": 1}, "traits": {"bloodthirsty": 0.1, "veteran": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.1}
   },
@@ -94,8 +94,8 @@
     "name": "Saint-Pierre", "faction": "france", "lat": 14.743, "lon": -61.176, "size": "medium",
     "governor": "Comte Henri de Blénac",
     "description": "The Paris of the Antilles, under the shadow of Mont Pelée. Rich in sugar and cocoa, short of everything else.",
-    "produces": ["sugar", "cocoa", "indigo"],
-    "wants": ["tools", "cloth", "wine"],
+    "population": 2000, "tags": ["capital", "plantation"],
+    "make": {"sugar": 20, "cocoa": 6, "indigo": 4, "molasses": 6, "rum": 4},
     "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "schooner", "brig"], "recruits": {"skills": {"medicine": 1}, "traits": {"devout": 0.1}},
     "laws": {"contraband": ["cloth", "tools"], "vigilance": 0.3}
   },
@@ -103,8 +103,8 @@
     "name": "Willemstad", "faction": "dutch", "lat": 12.108, "lon": -68.935, "size": "medium",
     "governor": "Mijnheer Pieter van Loon",
     "description": "The Dutch trade with everyone, legally or not. Spanish colonists buy here what Spain cannot send them.",
-    "produces": ["cloth", "tools", "gunpowder"],
-    "wants": ["cocoa", "tobacco", "hides", "silver", "water"],
+    "population": 3000, "tags": ["free_port"],
+    "make": {"food": 20},
     "shipyard": 2, "sailors": 30, "ships_for_sale": ["schooner", "fluyt", "brig", "frigate"], "recruits": {"skills": {"seamanship": 2, "trade": 1}, "traits": {"sea_legs": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.2}
   },
@@ -113,8 +113,8 @@
     "governor": "Mijnheer Jan Schot",
     "broker": "Abraham Pereira",
     "description": "A free port on a volcanic rock. Warehouses line the beach and nobody checks whose flag a buyer sails under.",
-    "produces": ["weapons", "gunpowder", "cloth", "wine"],
-    "wants": ["sugar", "tobacco", "cotton", "indigo", "water"],
+    "population": 800, "tags": ["free_port"],
+    "make": {},
     "shipyard": 1, "sailors": 20, "ships_for_sale": ["sloop", "fluyt"], "recruits": {"skills": {"seamanship": 1, "trade": 2}, "traits": {}},
     "laws": {"contraband": [], "vigilance": 0.1}
   },
@@ -123,8 +123,8 @@
     "governor": "Captain Elias Thorne",
     "broker": "Captain Elias Thorne",
     "description": "A ruined settlement turned pirate roost. The shoals of the Bahama Banks keep the navies' big ships away.",
-    "produces": ["hides", "logwood"],
-    "wants": ["rum", "gunpowder", "weapons", "wine", "tools", "food"],
+    "population": 600, "tags": ["pirate_haven"],
+    "make": {"hides": 3, "logwood": 3, "food": 10},
     "shipyard": 1, "sailors": 45, "ships_for_sale": ["sloop", "schooner"], "recruits": {"skills": {"swordplay": 2}, "traits": {"drunkard": 0.15, "greedy": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.0}
   }

@@ -7,9 +7,9 @@ const DATA_DIR := "res://data/"
 # Required fields per table, and fields that must reference ids in another table.
 # A bad entry fails loudly at startup naming the file, entry and field.
 const SCHEMA := {
-	"ports": {"required": ["name", "faction", "lat", "lon", "size", "produces", "wants", "shipyard", "sailors", "laws", "ships_for_sale"],
-		"refs": {"faction": "factions", "produces": "goods", "wants": "goods", "laws.contraband": "goods", "ships_for_sale": "ships"}},
-	"goods": {"required": ["name", "base_price", "icon"]},
+	"ports": {"required": ["name", "faction", "lat", "lon", "size", "population", "tags", "make", "shipyard", "sailors", "laws", "ships_for_sale"],
+		"refs": {"faction": "factions", "laws.contraband": "goods", "ships_for_sale": "ships"}},
+	"goods": {"required": ["name", "base_price", "weight", "demand", "origin", "icon"]},
 	"factions": {"required": ["name", "adjective", "color", "ship_names", "flag"], "refs": {"flag": "flags"}},
 	"ships": {"required": ["name", "description", "hull", "sails", "speed_knots", "turning", "cargo", "crew_min", "crew_max",
 		"guns", "gun_weight", "max_gun_weight", "draught", "price", "upkeep", "min_standing", "polar", "masts", "art"]},

@@ -25,12 +25,12 @@ func test_merchants_carry_goods_from_producers_to_buyers():
 			break
 	assert_false(n.is_empty())
 	var g: String = n.enemy.cargo.keys()[0]
-	assert_true(g in Ports.port(n.origin).produces)
-	assert_true(g in Ports.port(n.dest).wants)
+	assert_true(g in Economy.produces(n.origin))
+	assert_gt(Economy.mult(n.dest, g), Economy.mult(n.origin, g), "bound where it's dearer")
 	assert_false(n.route.is_empty())
-	var before: float = Ports.state[n.dest].stock[g]
+	var before: float = Economy.stock(n.dest, g)
 	world.shipping._arrive(n)
-	assert_gt(Ports.state[n.dest].stock[g], before, "the cargo reaches the market")
+	assert_gt(Economy.stock(n.dest, g), before, "the cargo reaches the market")
 	assert_eq(world.shipping.npcs.size(), 0)
 
 

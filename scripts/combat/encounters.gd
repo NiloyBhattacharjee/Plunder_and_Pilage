@@ -316,7 +316,7 @@ static func _faction_goods(f: String) -> Array:
 	var goods := []
 	for id in Data.table("ports"):
 		if Data.table("ports")[id].faction == f:
-			for g in Data.table("ports")[id].produces:
+			for g in Economy.produces(id):
 				if not g in goods:
 					goods.append(g)
 	return goods if not goods.is_empty() else ["rum", "hides", "gunpowder"]

@@ -71,12 +71,13 @@
     "reversion": 0.05,
     "noise": 0.04
   },
+  "ledger_max": 200,
   "market_events": [
-    {"id": "shortage", "name": "Shortage", "kind": "wants", "mult": 0.35, "days": [20, 45], "daily_chance": 0.004,
+    {"id": "shortage", "name": "Shortage", "kind": "used", "stock": 0.35, "use": 1.5, "days": [20, 45], "daily_chance": 0.004,
      "rumour": "{good} is fetching a fortune in {port}. They can't get enough of it."},
-    {"id": "glut", "name": "Glut", "kind": "produces", "mult": 2.0, "days": [20, 45], "daily_chance": 0.004,
+    {"id": "glut", "name": "Glut", "kind": "produces", "stock": 2.0, "make": 1.4, "days": [20, 45], "daily_chance": 0.004,
      "rumour": "Warehouses in {port} are overflowing with {good}. It's going for nothing."},
-    {"id": "bad_harvest", "name": "Poor harvest", "kind": "produces", "mult": 0.4, "days": [30, 60], "daily_chance": 0.003,
+    {"id": "bad_harvest", "name": "Poor harvest", "kind": "produces", "stock": 0.6, "make": 0.3, "days": [30, 60], "daily_chance": 0.003,
      "rumour": "The {good} crop failed around {port}. Prices there have gone mad."}
   ],
   "smuggling": {

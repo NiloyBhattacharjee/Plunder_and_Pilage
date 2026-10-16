@@ -44,6 +44,11 @@ func date() -> Dictionary:
 	return Time.get_date_dict_from_unix_time(_start_unix + int(day) * 86400)
 
 
+## The calendar date of any day number (for the economy's seasons, and headless runs with no clock running).
+static func date_of(d: int) -> Dictionary:
+	return Time.get_date_dict_from_unix_time(Time.get_unix_time_from_datetime_string(Data.rules.time.start_date) + d * 86400)
+
+
 func date_string() -> String:
 	var d := date()
 	var months := ["January", "February", "March", "April", "May", "June", "July",

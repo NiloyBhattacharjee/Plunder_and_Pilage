@@ -68,19 +68,34 @@ func refresh() -> void:
 func _build_market() -> void:
 	var grid: GridContainer = %MarketGrid
 	UIKit.clear(grid)
-	for h in ["", "Good", "In hold", "Buy", "Sell", "Best known elsewhere", "", "Buy", "", "", "Sell", ""]:
+	grid.columns = 14
+	for h in ["", "Good", "Stock", "In hold", "Buy", "Sell", "Trend", "Elsewhere", "", "Buy", "", "", "Sell", ""]:
 		UIKit.label(grid, h, "", Style.c("header"))
 
-	var p := Ports.port(port_id)
 	var ps: Dictionary = Ports.state[port_id]
 	var s: Dictionary = ship.state
 	var haggle := ShipStats.spread_mult(s) * Career.price_mult(s, port_id)  # haggling, and how they regard you here
 	for good in Data.table("goods"):
-		var tip := Market.breakdown(p, good, ps, ps.laws, haggle)
+		var gd: Dictionary = Data.table("goods")[good]
+		var tip := Economy.breakdown(port_id, good, haggle)
 		var contraband: bool = good in ps.laws.contraband
 		var sell := Ports.price(port_id, good, false, haggle)
-		UIKit.icon(grid, Data.table("goods")[good].get("icon", ""), 24)
-		UIKit.label(grid, Data.table("goods")[good].name + (" (contraband)" if contraband else ""), tip, Style.c("bad") if contraband else Color(0, 0, 0, 0))
+		UIKit.icon(grid, gd.get("icon", ""), 24)
+		var name_box := VBoxContainer.new()
+		name_box.add_theme_constant_override("separation", -4)
+		grid.add_child(name_box)
+		UIKit.label(name_box, gd.name, tip + ("
+" + gd.note if gd.has("note") else ""), Style.c("bad") if contraband else Color(0, 0, 0, 0))
+		var why := Economy.reason(port_id, good)
+		if contraband:
+			why = "Contraband here" + (": " + why if why != "" else "")
+		if why != "":
+			UIKit.label(name_box, why, tip, Style.c("dim")).add_theme_font_size_override("font_size", 14)
+
+		var lv := Economy.level(port_id, good)
+		UIKit.label(grid, {"scarce": "Scarce", "plenty": "Plenty", "normal": "Normal"}[lv] if Economy.model.is_traded(good) else "",
+			"%d in the warehouses." % Economy.stock(port_id, good) if Economy.model.is_traded(good) else "",
+			{"scarce": Style.c("bad"), "plenty": Style.c("good"), "normal": Style.c("dim")}[lv])
 
 		var have: float = s.cargo.get(good, 0.0)
 		var hold := ""
@@ -90,18 +105,23 @@ func _build_market() -> void:
 				hold += " (paid %s)" % Market.fmt(s.cargo_cost[good] / have)
 			if s.stolen.get(good, 0) > 0:
 				hold += " [%d stolen]" % s.stolen[good]
-		UIKit.label(grid, hold)
+		UIKit.label(grid, hold, "What you hold, and the average you paid for it.")
 		UIKit.label(grid, Market.fmt(Ports.price(port_id, good, true, haggle)), tip)
 		UIKit.label(grid, Market.fmt(sell), tip)
+		if Economy.model.is_traded(good):
+			grid.add_child(PriceSpark.make(Economy.history(port_id, good), Economy.mult(port_id, good)))
+		else:
+			UIKit.label(grid, "")
 
 		var best := Ports.best_known_sale(good, port_id)
 		if best.is_empty():
 			UIKit.label(grid, "-")
 		else:
-			UIKit.label(grid, "%s at %s, %dd ago" % [Market.fmt(best.sell), Ports.port(best.port).name, int(Clock.day) - int(best.day)], "",
+			UIKit.label(grid, "%s %s %dd" % [Market.fmt(best.sell), Ports.port(best.port).name, int(Clock.day) - int(best.day)],
+				"The best price you know of for selling it elsewhere: %s at %s, %d days ago." % [Market.fmt(best.sell), Ports.port(best.port).name, int(Clock.day) - int(best.day)],
 				Style.c("good") if best.sell > sell * 1.15 else Style.c("dim"))
 
-		var lot := 10 if Market.weight(good) < 1.0 else 1  # provisions trade in larger lots
+		var lot := 10 if Market.weight(good) <= 0.2 else 1  # provisions and water trade in larger lots
 		for q in [lot, lot * 10, 100000]:
 			UIKit.button(grid, "+%d" % q if q < 100000 else "Max", _act.bind(func(): return _traded(Ports.buy(port_id, good, q, s, ship.capacity(), haggle))))
 		for q in [lot, lot * 10, 100000]:

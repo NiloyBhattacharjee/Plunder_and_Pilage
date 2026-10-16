@@ -253,8 +253,7 @@ static func flag_fools_port(s: Dictionary, port_id: String) -> bool:
 static func price_mult(s: Dictionary, port_id: String) -> float:
 	var pa: Dictionary = Data.rules.port_access
 	var rel: int = s.relations.get(Ports.port(port_id).faction, 0)
-	var tariff: float = Ports.state[port_id].laws.get("tariff", 0.0)
-	return clampf(1.0 - rel * pa.price_per_standing, pa.price_clamp[0], pa.price_clamp[1]) * (1.0 + tariff) * Bonds.price_mult(s, port_id)
+	return clampf(1.0 - rel * pa.price_per_standing, pa.price_clamp[0], pa.price_clamp[1]) * Bonds.price_mult(s, port_id)  # the tariff is a duty now (Economy.duty)
 
 
 ## Will this ship attack you on sight? Navies judge you by your record and by the colours you fly.

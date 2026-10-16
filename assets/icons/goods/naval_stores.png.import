@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cfrugk58ivinf"
-path="res://.godot/imported/weapons.png-6b04cee5de10c6cc4019e6ba1b2926f1.ctex"
+uid="uid://c10kvgn3pe7fr"
+path="res://.godot/imported/naval_stores.png-15265e6d021fb67f692efe16627e3b18.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/icons/goods/weapons.png"
-dest_files=["res://.godot/imported/weapons.png-6b04cee5de10c6cc4019e6ba1b2926f1.ctex"]
+source_file="res://assets/icons/goods/naval_stores.png"
+dest_files=["res://.godot/imported/naval_stores.png-15265e6d021fb67f692efe16627e3b18.ctex"]
 
 [params]
 

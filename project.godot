@@ -12,6 +12,7 @@ config/features=PackedStringArray("4.7")
 Data="*res://scripts/data.gd"
 Clock="*res://scripts/clock.gd"
 Weather="*res://scripts/weather.gd"
+Economy="*res://scripts/economy/economy.gd"
 Ports="*res://scripts/ports.gd"
 People="*res://scripts/people.gd"
 Style="*res://scripts/style.gd"

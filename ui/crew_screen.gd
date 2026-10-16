@@ -40,6 +40,7 @@ func refresh() -> void:
 	_build_crew()
 	_build_people()
 	_build_fleet()
+	_build_ledger()
 
 
 func _build_captain(cap: Dictionary) -> void:
@@ -521,3 +522,39 @@ func _fleet_act(text: String) -> void:
 	%Status.text = text
 	message.emit(text)
 	refresh()
+
+
+# ---- the trade ledger ---------------------------------------------------------------
+
+func _build_ledger() -> void:
+	var box: VBoxContainer = %LedgerBox
+	UIKit.clear(box)
+	var ledger: Array = ship.state.get("ledger", [])
+	UIKit.label(box, "The trade ledger", "Every purchase and sale. A sale's profit is what it fetched over what you paid for those goods (plunder cost nothing).", Style.c("header"))
+	if ledger.is_empty():
+		UIKit.label(box, "Nothing bought or sold yet.", "", Style.c("dim"))
+		return
+	var by_good := {}
+	var total := 0
+	for e in ledger:
+		if e.qty < 0:
+			by_good[e.good] = by_good.get(e.good, 0) + e.profit
+			total += e.profit
+	var sums := UIKit.row(box)
+	UIKit.label(sums, "Profit on sales: %+d.   " % total, "", Style.c("good") if total >= 0 else Style.c("bad"))
+	var goods: Array = by_good.keys()
+	goods.sort_custom(func(a, b): return by_good[a] > by_good[b])
+	UIKit.label(sums, ",  ".join(goods.map(func(g): return "%s %+d" % [Data.table("goods")[g].name.to_lower(), by_good[g]])), "", Style.c("dim"))
+	UIKit.label(box, "")
+	var g := UIKit.grid(box, 6)
+	for h in ["Date", "Port", "", "Goods", "Gold", "Profit"]:
+		UIKit.label(g, h, "", Style.c("header"))
+	for i in range(ledger.size() - 1, maxi(-1, ledger.size() - 61), -1):
+		var e: Dictionary = ledger[i]
+		var d := Clock.date_of(e.day)
+		UIKit.label(g, "%d/%d/%d" % [d.day, d.month, d.year])
+		UIKit.label(g, Ports.port(e.port).name)
+		UIKit.label(g, "Bought" if e.qty > 0 else "Sold", "", Style.c("dim"))
+		UIKit.label(g, "%d %s" % [absi(e.qty), Data.table("goods")[e.good].name.to_lower()])
+		UIKit.label(g, "%+d" % e.value)
+		UIKit.label(g, "" if e.qty > 0 else "%+d" % e.profit, "", Style.c("good") if e.profit >= 0 else Style.c("bad"))
