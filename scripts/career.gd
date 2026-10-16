@@ -213,6 +213,7 @@ static func pardon(s: Dictionary, f: String, free := false, port_id := "") -> Ar
 			c.relations[s.captain] = c.relations.get(s.captain, 0) - 5
 			resent += 1
 	ShipStats.captain(s).history.append("Pardoned by %s, %s." % [fname(f), Clock.date_string()])
+	Ambitions.tally(s, "pardons")
 	var msgs := ["%s pardons you%s. Other nations' grudges remain." % [fname(f), "" if cost == 0 else " for %d gold" % cost]]
 	if resent > 0:
 		msgs.append("%d of your crew call it a betrayal of the Brethren." % resent)

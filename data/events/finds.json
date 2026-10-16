@@ -1,0 +1,184 @@
+{
+ "_comment": "Things found at sea: each waits on the map (a \"find\" kind, drawn by scripts/finds.gd) until you sail to it. find_near: sea or reef.",
+ "wreck_on_reef": {
+  "find": "wreck",
+  "find_near": "reef",
+  "cooldown": 60,
+  "weight": 8,
+  "title": "A wreck on the reef",
+  "text": "The bones of a big ship lie on the reef, her stern still above the breakers. {nation_adj} by the carving on her transom. Whatever she carried is under four fathoms of clear water.",
+  "roles": {
+   "nation": {
+    "from": "nation"
+   }
+  },
+  "choices": [
+   {
+    "text": "Send down the best swimmers",
+    "check": {
+     "who": "post.boatswain",
+     "skill": "seamanship",
+     "dc": 13
+    },
+    "outcomes": [
+     "cargo silver +6",
+     "gold +120",
+     "opinion crew +2"
+    ],
+    "result": "They come up blue-lipped and grinning, again and again: coin, plate, a chest of silver bars.",
+    "fail_outcomes": [
+     "crew -1",
+     "opinion crew -2"
+    ],
+    "fail_result": "A surge throws a diver against the coral. They bring the body up, and nothing else."
+   },
+   {
+    "text": "Strip her for timber and cordage",
+    "outcomes": [
+     "hull +15",
+     "sails +10",
+     "time 1"
+    ],
+    "result": "A day's hard work with axes and saws. Your carpenter is delighted."
+   },
+   {
+    "text": "Leave her: a wreck on a reef means more reef",
+    "outcomes": [],
+    "result": "You stand off and give her a wide berth."
+   }
+  ]
+ },
+ "battle_wreckage": {
+  "find": "wreckage",
+  "find_near": "sea",
+  "cooldown": 10,
+  "weight": 2,
+  "title": "Wreckage",
+  "text": "Charred spars, a stove-in boat, casks and worse on the swell. A ship died here not long ago. Clinging to a hatch cover, {survivor} raises an arm.",
+  "roles": {
+   "survivor": {
+    "from": "new"
+   }
+  },
+  "choices": [
+   {
+    "text": "Haul {survivor} aboard and offer a berth",
+    "outcomes": [
+     "hire {survivor}",
+     "honour +1"
+    ],
+    "result": "{survivor} coughs up half the sea and swears to serve the ship that stopped."
+   },
+   {
+    "text": "Pick up what's floating",
+    "outcomes": [
+     "food +20",
+     "cargo rum +6",
+     "time 1"
+    ],
+    "result": "Salt pork, a few casks of rum, some of it still good."
+   },
+   {
+    "text": "Leave the dead to the sea",
+    "outcomes": [
+     "opinion crew -2"
+    ],
+    "result": "The men watch the hatch cover drift astern in silence."
+   }
+  ]
+ },
+ "dispatch_bag": {
+  "find": "satchel",
+  "find_near": "sea",
+  "cooldown": 60,
+  "weight": 5,
+  "title": "Dispatches",
+  "text": "A canvas dispatch bag, weighted with shot so it would sink if the ship was taken. It didn't. Inside, under the seal of the {nation_adj} admiralty: orders for their cruisers.",
+  "roles": {
+   "nation": {
+    "from": "nation"
+   }
+  },
+  "choices": [
+   {
+    "text": "Read the orders",
+    "outcomes": [
+     "patrols {nation} 30"
+    ],
+    "result": "Courses, stations and dates. For a month you'll know where their cruisers are."
+   },
+   {
+    "text": "Hand it in, seal unbroken, at the next {nation_adj} port",
+    "outcomes": [
+     "relation {nation} +4",
+     "honour +1"
+    ],
+    "result": "An honest captain is rarer than you'd think. Word will get round."
+   }
+  ]
+ },
+ "turtles": {
+  "find": "turtle",
+  "find_near": "reef",
+  "cooldown": 30,
+  "weight": 8,
+  "title": "Turtles",
+  "text": "Green turtles basking on the surface, dozens of them. Every sailor in these waters knows what that means: fresh meat that stays alive in the hold for weeks.",
+  "choices": [
+   {
+    "text": "Lower the boats and turn them",
+    "check": {
+     "who": "post.boatswain",
+     "skill": "seamanship",
+     "dc": 9
+    },
+    "outcomes": [
+     "food +40",
+     "opinion crew +2"
+    ],
+    "result": "Thirty turtles on their backs in the hold. Turtle soup tonight.",
+    "fail_outcomes": [
+     "food +10"
+    ],
+    "fail_result": "Most of them dive before the boats get close."
+   },
+   {
+    "text": "No time. Sail on",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "sea_chest": {
+  "find": "cask",
+  "find_near": "sea",
+  "cooldown": 60,
+  "weight": 5,
+  "title": "A sea chest",
+  "text": "An iron-bound sea chest floats past, riding high: something light inside, or something sealed tight. Somebody's whole life, perhaps.",
+  "roles": {
+   "amount": {
+    "from": "number",
+    "range": [
+     60,
+     260
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Fish it out and break it open",
+    "outcomes": [
+     "gold +{amount}",
+     "reveal_cove"
+    ],
+    "result": "Coins wrapped in oilcloth, and a waterstained chart with an anchorage marked that isn't on yours."
+   },
+   {
+    "text": "Let it go",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ }
+}

@@ -58,8 +58,43 @@
       "radius_nm": 260, "speed_knots": 8, "days": [2, 4],
       "wind_strength": 1.35, "wind_from": 350, "hull_damage_per_day": 1, "sail_damage_per_day": 2,
       "message": "A norther comes howling down from the Gulf. Cold wind, steep seas."
+    },
+    "fog": {
+      "name": "Fog bank",
+      "daily_chance_by_month": [0.1, 0.1, 0.08, 0.05, 0.03, 0.02, 0.02, 0.02, 0.03, 0.05, 0.08, 0.1],
+      "spawn_area": [0.0, 0.0, 1.0, 1.0],
+      "heading": 250, "heading_spread": 40,
+      "radius_nm": 45, "speed_knots": 3, "days": [1, 2],
+      "wind_strength": 0.8, "hull_damage_per_day": 0, "sail_damage_per_day": 0,
+      "message": "Fog closes in. The lookouts can barely see the bowsprit. Anything out there can't see you either."
     }
   },
+  "_at_sea": "Meetings at sea (scripts/at_sea.gd). rail_price: a merchant sells her cargo over the rail at this share of what it fetches where she's bound; plunder_price: a pirate sells hers at this share of the nearest port's price. gam_relation: standing with the Brethren a pirate needs to heave to and talk. tip_nm: how near a voyage's ports must be for a pirate to have heard of it. A friendly patrol asks to search you at inspect_chance (+ per point of notoriety); search_find: chance they find what you're hiding; clean_relation: thanks for a clean hold. npc_battle_days: how long other ships' fights last (time to come up and take a side). rescue_relation and rescue_gold_share: the thanks of a ship you saved.",
+  "at_sea": {
+    "rail_price": 0.9, "plunder_price": 0.5, "gam_relation": 0, "tip_nm": 160, "volunteers": [1, 4],
+    "inspect_chance": 0.35, "inspect_per_notoriety": 0.01, "search_find": 0.75, "search_again_days": 20, "clean_relation": 1,
+    "bribe_base": 40, "bribe_share": 0.15, "bribe_success": 0.7, "plunder_notoriety": 5,
+    "npc_battle_days": 0.4, "attacker_edge": 1.3, "rescue_relation": 6, "rescue_gold_share": 0.4
+  },
+  "_finds": "Things floating at sea (events with a \"find\" key) put on the map for you to sail to: a daily chance of one appearing somewhere around you, how far off, how long it stays, and how close you must come. Storms leave wreckage in their wake; other ships' battles leave wreckage where they fought.",
+  "finds": {
+    "daily_chance": 0.35, "max": 3, "spawn_nm": [15, 70], "days": [3, 7], "reach_nm": 3,
+    "storm_wreck_chance": 0.12,
+    "kinds": {
+      "cask": {"spotted": "casks bobbing in the swell"},
+      "boat": {"spotted": "a small boat adrift"},
+      "wreck": {"spotted": "a dismasted hulk"},
+      "whale": {"spotted": "whales blowing"},
+      "bottle": {"spotted": "something glinting in the water"},
+      "castaway": {"spotted": "smoke from a sandbar"},
+      "fish": {"spotted": "birds diving on a shoal of fish"},
+      "wreckage": {"spotted": "smoke and floating wreckage"},
+      "turtle": {"spotted": "turtles basking on the surface"},
+      "satchel": {"spotted": "a canvas bag floating low in the water"}
+    }
+  },
+  "_visibility": "How far you see, and are seen, as a share of a clear day's sight: ships hidden by fog or dark can be slipped past, or crept up on.",
+  "visibility": {"fog": 0.3, "night": 0.55, "dusk": 0.8, "squall": 0.7, "hurricane": 0.4, "norther": 0.75},
   "storm_shelter": 0.25,
 
   "ledger_max": 200,
@@ -300,6 +335,27 @@
   },
 
   "dice_combat": {
+    "_conditions": "What the light, the weather and the place do to a fight. Each battle has up to one of each, read from the world where it starts (scripts/combat/encounters.gd conditions()). gun: added to gunnery at each range band. actions: added to that action's roll for the side taking it. seamanship: to every manoeuvre. start_band: the ships sight each other late and start closer. gauge_flip: chance each round the wind shifts and the gauge changes hands. ends: chance each round it passes. becomes: after so many rounds it turns into another. surprise: morale the side attacked loses, caught unready. grounding: chance a deeper ship that fails a manoeuvre touches bottom. shallow_bonus: to the shallower ship's manoeuvres. sea_damage: hull both ships lose each round. fort: a port's guns join in.",
+    "_temperaments": "How an enemy captain fights, from their traits (the first that matches): it changes the AI's orders and her crew's starting morale. Shown in the battle log, and in a sighting when you know the captain by name.",
+    "temperaments": {
+      "bold": {"traits": ["brave", "hot_headed", "bloodthirsty"], "name": "bold", "text": "they'll come straight at you and won't run until the ship is sinking under them", "morale": 5},
+      "timid": {"traits": ["cowardly", "green"], "name": "timid", "text": "they'll keep their distance, and break off the moment it goes badly", "morale": -10},
+      "greedy": {"traits": ["greedy"], "name": "greedy", "text": "they want your ship whole: expect chain and grape, and a demand to strike", "morale": 0},
+      "steady": {"traits": ["calm", "veteran", "former_navy"], "name": "steady", "text": "an old hand: they'll look for your weak points and hammer them", "morale": 5}
+    },
+    "conditions": {
+      "dawn": {"kind": "light", "name": "First light", "text": "Grey dawn: the lookouts are only now rubbing their eyes. The attacker has the gauge and the other side's crew are caught half awake.", "surprise": 10},
+      "dusk": {"kind": "light", "name": "Dusk", "text": "The sun is going down. Hold out until dark and the night will hide whoever wants to run.", "becomes": {"after": 4, "to": "night", "text": "Darkness falls over the fight."}},
+      "night": {"kind": "light", "name": "Night", "text": "Only the gun flashes show where she is. Long shots are wasted; a ship that runs may vanish into the dark.", "gun": [-4, -3, -1, 0], "actions": {"flee": 4, "study": -3, "intimidate": 2}, "start_band": 1},
+      "fog": {"kind": "weather", "name": "Fog", "text": "A wall of white. You sighted each other late and close. At range you're firing at a shadow, and a quick ship can lose herself in it.", "gun": [-6, -3, 0, 0], "actions": {"flee": 5, "study": -3}, "start_band": 1, "ends": 0.12, "end_text": "The fog thins and lifts: now everyone can see everyone."},
+      "squall": {"kind": "weather", "name": "Squall", "text": "Rain in sheets and the wind boxing the compass. The gauge won't stay with anyone for long.", "gun": [-2, -2, -2, -1], "seamanship": -1, "gauge_flip": 0.3, "ends": 0.2, "end_text": "The squall blows through and the sun comes out."},
+      "norther": {"kind": "weather", "name": "Norther", "text": "A cold gale out of the north and steep seas. Gun ports ship water on the lee side.", "gun": [-2, -2, -1, -1], "seamanship": -1, "gauge_flip": 0.15},
+      "hurricane": {"kind": "weather", "name": "Hurricane", "text": "Madness: fighting in a hurricane. The sea is the worst enemy here, and it hits both ships.", "gun": [-5, -4, -3, -2], "seamanship": -3, "gauge_flip": 0.4, "sea_damage": [1, 8]},
+      "calm": {"kind": "weather", "name": "Dead calm", "text": "Not a breath of wind. Neither ship can manoeuvre much: whoever has the better guns wins. A steady deck makes for good shooting.", "gun": [1, 1, 1, 0], "actions": {"close": -4, "open": -4, "flee": -6, "gauge": -5, "grapple": -3}, "ends": 0.1, "end_text": "A breeze ruffles the water: the ships can move again."},
+      "shoals": {"kind": "place", "name": "Shoal water", "text": "Reefs and sandbars all round. A shallow keel goes where a deep one dares not, and a deep ship that blunders may touch bottom.", "grounding": 0.35, "shallow_bonus": 2},
+      "fort": {"kind": "place", "name": "Under the guns of {port}", "text": "The fort at {port} is close enough to join in.", "range_nm": 14,
+        "guns": {"small": 8, "medium": 14, "large": 24}, "gunnery": {"small": 8, "medium": 10, "large": 12}, "gun_weight": {"small": 12, "medium": 18, "large": 24}}
+    },
     "bands": ["Long range", "Medium range", "Close range", "Grappled"],
     "start_band": {"attack": 0, "ambush": 2, "defend": 1, "flee": 0},
     "start_gauge": {"attack": 0.6, "ambush": 0.9, "defend": 0.3, "flee": 0.2},

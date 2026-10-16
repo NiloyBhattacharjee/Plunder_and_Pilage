@@ -5,6 +5,8 @@ extends Node3D
 ## Cannon fire lights the ships up, fires burn with flickering light, and lanterns glow at dusk.
 ## Your ship sits front left, hers back right (Pokémon style); allies stand behind yours. The range band sets
 ## the gap. Ships are drawn from assets/ships_side/<type>/ (hull, sails, damaged and torn versions, layout.json).
+## The battle's conditions show: fog rolls in (and lifts when it lifts), a dead calm flattens the sea, a squall
+## brings rain, and a fort stands on the shore behind when its guns are in the fight.
 ## Built in code: Godot's 3D nodes are just objects, so a scene file would only hold the same settings.
 
 const PIXEL := 0.016                         # world units per art pixel
@@ -21,10 +23,13 @@ var _band := 0
 var _shake := 0.0
 var _night := 0.0          # 0 day .. 1 night: lanterns and fire glow matter more
 var _t := 0.0
+var _env: Environment
+var _haze := 0.005         # the clear-weather haze the fog thins back to
+var _fort: Sprite3D
 
 
 func setup(battle: DiceCombat, flags: Array, looks: Array, wind_strength: float) -> void:
-	_build_world(wind_strength)
+	_build_world(wind_strength, battle.conditions.map(func(c): return c.id))
 	for i in 2:
 		ships.append(_make_ship(battle.sides[i].type, flags[i], looks[i], i == 1))
 	var k := 0
@@ -43,10 +48,11 @@ func setup(battle: DiceCombat, flags: Array, looks: Array, wind_strength: float)
 
 # ---- the world --------------------------------------------------------------------------
 
-func _build_world(wind_strength: float) -> void:
+func _build_world(wind_strength: float, conds: Array) -> void:
 	var hour := fposmod(Clock.day, 1.0) * 24.0
 	_night = clampf(absf(hour - 13.0) / 6.0 - 0.6, 0.0, 1.0)  # day from ~7 to ~19, dusk either side
-	var storm := wind_strength > 1.25
+	var storm := wind_strength > 1.25 or "squall" in conds or "hurricane" in conds or "norther" in conds
+	var fog := "fog" in conds
 	var day := Color("#7fb6e6")
 	var dusk := Color("#f0a066")
 	var top := Color("#2a4c86").lerp(Color("#0b1028"), _night)
@@ -54,6 +60,9 @@ func _build_world(wind_strength: float) -> void:
 	if storm:
 		top = Color("#2a3038")
 		horizon = Color("#5a6470")
+	elif fog:
+		top = top.lerp(Color("#b8c0c6"), 0.7)
+		horizon = horizon.lerp(Color("#d8dcdc"), 0.75)
 
 	var env := Environment.new()
 	var sky := Sky.new()
@@ -77,7 +86,9 @@ func _build_world(wind_strength: float) -> void:
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.fog_enabled = true             # distance haze toward the horizon
 	env.fog_light_color = horizon.darkened(0.25)
-	env.fog_density = 0.005 if not storm else 0.02
+	_haze = 0.005 if not storm else 0.02
+	env.fog_density = 0.07 if fog else _haze
+	_env = env
 	env.fog_sky_affect = 0.0
 	env.ssao_enabled = true
 	env.adjustment_enabled = true
@@ -115,7 +126,7 @@ func _build_world(wind_strength: float) -> void:
 	sea.mesh = plane
 	water_mat = ShaderMaterial.new()
 	water_mat.shader = load("res://assets/battle/water.gdshader")
-	water_mat.set_shader_parameter("swell", 2.2 if storm else 1.0)
+	water_mat.set_shader_parameter("swell", 2.2 if storm else (0.2 if "calm" in conds else 1.0))
 	if _night > 0.5:
 		water_mat.set_shader_parameter("deep", Color("#06142a"))
 		water_mat.set_shader_parameter("shallow", Color("#123a52"))
@@ -126,6 +137,12 @@ func _build_world(wind_strength: float) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(Clock.day)
 	_prop("res://assets/battle/island.png", Vector3(rng.randf_range(-40, 10), -0.2, -70), 0.2, false)
+	if "fort" in conds:  # the port's walls on a headland behind the fight
+		_prop("res://assets/battle/island.png", Vector3(0, -0.2, -30), 0.16, false)
+		_fort = _prop("res://assets/map/town.png", Vector3(0, 1.1, -29.5), 0.28, false)
+	if "shoals" in conds:  # breakers on the reefs
+		for k in 3:
+			_prop("res://assets/battle/rock.png", Vector3(rng.randf_range(-18, 18), -0.15, rng.randf_range(-24, -8)), 0.06, rng.randf() < 0.5)
 	if rng.randf() < 0.6:
 		_prop("res://assets/battle/island.png", Vector3(rng.randf_range(20, 50), -0.2, -85), 0.16, true)
 	_prop("res://assets/battle/rock.png", Vector3(rng.randf_range(-14, 14), -0.1, -14), 0.08, rng.randf() < 0.5)
@@ -234,6 +251,9 @@ func _sprite(path: String, flip: bool) -> Sprite3D:
 ## Moves the ships to the range band and shows damage. `snap` jumps instead of gliding.
 func sync(battle: DiceCombat, snap := false) -> void:
 	_band = battle.band
+	if _env:  # fog that lifts mid-fight thins away
+		var want := 0.07 if battle.has_condition("fog") else _haze
+		_env.fog_density = lerpf(_env.fog_density, want, 0.02)
 	for i in 2:
 		var sh: Dictionary = ships[i]
 		var s: Dictionary = battle.sides[i]
@@ -325,6 +345,29 @@ func broadside(i: int, hit: bool, ally := "") -> void:
 		shake(0.15)
 	else:
 		_puff(at + Vector3(-dir * 1.5, -0.4, 0.8), Vector3.UP, Color(0.92, 0.96, 1.0, 0.9), 16, 0.8, 0.25)
+
+
+## The fort's guns: a flash on the walls, then splinters or a splash by the ship it fires on.
+func fort_fire(target_i: int, hit: bool) -> void:
+	if _fort == null:
+		return
+	var flash := OmniLight3D.new()
+	flash.light_color = Color("#ffd27a")
+	flash.light_energy = 12.0
+	flash.omni_range = 9.0
+	flash.position = _fort.position + Vector3(0, 1.0, 1.0)
+	add_child(flash)
+	var tw := create_tween()
+	tw.tween_property(flash, "light_energy", 0.0, 0.4)
+	tw.tween_callback(flash.queue_free)
+	_puff(_fort.position + Vector3(0, 1.2, 0.5), Vector3(1, 0.4, 0.3), Color(0.85, 0.82, 0.78, 0.8), 14, 2.0, 0.6)
+	var target: Dictionary = ships[target_i]
+	var at: Vector3 = target.root.position + Vector3(0, 0.6, 0.6)
+	if hit:
+		_puff(at, Vector3(0, 1, 0.3), Color(0.55, 0.36, 0.2, 1.0), 18, 0.7, 0.12)
+		shake(0.2)
+	else:
+		_puff(at + Vector3(-1.5, -0.4, 0.8), Vector3.UP, Color(0.92, 0.96, 1.0, 0.9), 16, 0.8, 0.25)
 
 
 func _puff(pos: Vector3, dir: Vector3, color: Color, amount: int, life: float, size: float) -> void:

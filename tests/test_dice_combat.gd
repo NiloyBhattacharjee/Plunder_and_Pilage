@@ -163,3 +163,87 @@ func test_intelligence_reveals_weak_points():
 	assert_eq(b.sides[1].known, b.sides[1].weak)
 	Encounters.remember(s, {"captain_id": "cap_y", "type": "fluyt"}, ["chain", "nerve"])
 	assert_eq(Encounters.intel_on(s, {"captain_id": "z", "type": "fluyt"}), ["chain"], "a class's rig is known; a crew's nerve isn't")
+
+
+func with_conditions(kind: String, ids: Array, mode := "attack", seed := 1) -> DiceCombat:
+	rng.seed = seed
+	Ports.reset()
+	var s: Dictionary = NewGame.build({"nationality": "english", "background": "ex_navy"}).state
+	var enemy := Encounters.generate("spain", rng, kind)
+	enemy.party = DiceCombat.npc_party(enemy, rng)
+	var side := Encounters.player_side(s)
+	side.conditions = ids.map(func(id): return Encounters._condition(id))
+	var b := DiceCombat.new()
+	b.rng.seed = seed
+	b.setup(DiceCombat.make_side(side), DiceCombat.make_side(enemy), mode, 1.0)
+	return b
+
+
+func test_conditions_change_the_odds():
+	var clear := battle("navy")
+	var fog := with_conditions("navy", ["fog"])
+	assert_eq(fog.band, clear.band + 1, "in fog you sight each other late and close")
+	fog.band = 0
+	clear.band = 0
+	assert_lt(fog.odds(0, "master_gunner", "round"), clear.odds(0, "master_gunner", "round"), "firing at a shadow")
+	assert_gt(fog.odds(0, "boatswain", "flee"), clear.odds(0, "boatswain", "flee"), "a ship can lose herself in fog")
+	var calm := with_conditions("navy", ["calm"])
+	calm.band = 0
+	assert_lt(calm.odds(0, "boatswain", "flee"), clear.odds(0, "boatswain", "flee"), "nobody runs in a dead calm")
+
+
+func test_dusk_turns_to_night_and_fog_can_lift():
+	var b := with_conditions("merchant", ["dusk", "fog"])
+	b.conditions[1].ends = 1.0
+	for r in 5:  # just the turning of the rounds, so nobody wins first
+		b.begin_round()
+	assert_true(b.has_condition("night"), "dusk becomes night after four rounds")
+	assert_false(b.has_condition("fog"), "the fog lifted")
+
+
+func test_dawn_catches_the_side_attacked():
+	var b := with_conditions("merchant", ["dawn"], "attack")
+	var calm := battle("merchant", "attack")
+	assert_eq(b.gauge, 0, "the attacker has the gauge")
+	assert_lt(b.sides[1].morale, calm.sides[1].morale)
+
+
+func test_a_fort_fires_on_the_side_it_is_against():
+	var b := with_conditions("navy", [])
+	var f := Encounters._condition("fort", "Havana")
+	f.merge({"port_name": "Havana", "guns": 24, "gunnery": 20, "gun_weight": 24, "side": 1}, true)
+	b.conditions = [f]
+	b.next_queue = b._roll_order()
+	assert_true(b.next_queue.any(func(q): return q.post == "@fort"))
+	var fired := false
+	for r in 4:
+		b.band = 1  # in range of the fort, not grappled
+		b.result = ""
+		b.play_round({})
+		fired = fired or b.entries.any(func(e): return e.text.begins_with("The fort at Havana"))
+	assert_true(fired, "the fort takes its turns")
+	b.result = ""
+	b.band = 1
+	assert_eq(b.ai_orders(1).get("boatswain", ""), "open", "she wants out from under the guns")
+
+
+func test_forts_take_sides():
+	Ports.reset()
+	var s: Dictionary = NewGame.build({"nationality": "english", "background": "ex_navy"}).state
+	var spanish := Encounters.generate("spain", rng, "merchant")
+	assert_eq(Encounters.fort_target(s, spanish, "attack", "havana"), 0, "attack a Spaniard under Havana's walls and the fort fires on you")
+	var pirate := Encounters.generate("pirates", rng, "pirate")
+	assert_eq(Encounters.fort_target(s, pirate, "defend", "port_royal"), 1, "Port Royal's fort guards you from a pirate")
+
+
+func test_captains_fight_to_their_temper():
+	var b := battle("navy")
+	b.sides[1].temper = "timid"
+	b.sides[1].hull = b.sides[1].hull_start * 0.5
+	b.band = 1
+	assert_eq(b.ai_orders(1).get("boatswain", ""), "open", "a timid captain breaks off when it goes badly")
+	b.sides[1].temper = "bold"
+	assert_ne(b.ai_orders(1).get("boatswain", ""), "open", "a bold one comes on")
+	assert_eq(DiceCombat.temperament({"traits": ["hot_headed"]}), "bold")
+	assert_eq(DiceCombat.temperament({"traits": ["calm"]}), "steady")
+	assert_eq(DiceCombat.temperament({"traits": []}), "")

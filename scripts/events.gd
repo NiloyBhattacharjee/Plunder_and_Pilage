@@ -22,7 +22,7 @@ const VERBS := {  # verb: [min args, max args]
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
 	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
 	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1],
-	"morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
+	"patrols": [2, 2], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
 	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc", "base"]
@@ -93,10 +93,27 @@ func pick(where: String, ctx: Dictionary) -> Dictionary:
 	var chance: float = cfg().sea_daily_chance if where == "sea" else cfg().port_chance
 	if rng.randf() >= chance:
 		return {}
+	var inst := _draw(where, ctx)
+	return _materialize(inst, ctx) if not inst.is_empty() else {}
+
+
+## Something to put on the map for the player to find (an event with a "find" key), not yet happening:
+## its new faces are made when it's reached. `exclude`: events already out there.
+func pick_find(ctx: Dictionary, exclude := []) -> Dictionary:
+	return _draw("find", ctx, exclude)
+
+
+## A particular event, bound to the situation now (for finds placed by the world: wreckage after a battle).
+func instance_of(id: String, ctx: Dictionary) -> Dictionary:
+	return _instance(events[id], ctx, {}) if events.has(id) else {}
+
+
+## A weighted pick among the events that could happen here now.
+func _draw(where: String, ctx: Dictionary, exclude := []) -> Dictionary:
 	var pool := []
 	var total := 0.0
 	for ev in events.values():
-		if ev.get("priority", false) or not _eligible(ev, where):
+		if ev.get("priority", false) or not _eligible(ev, where) or ev.id in exclude:
 			continue
 		var inst := _instance(ev, ctx, {})
 		if inst.is_empty():
@@ -111,11 +128,15 @@ func pick(where: String, ctx: Dictionary) -> Dictionary:
 	for p in pool:
 		r -= p[1]
 		if r <= 0.0:
-			return _materialize(p[0], ctx)
+			return p[0]
 	return {}
 
 
 ## New faces are only created for the event that actually happens.
+func materialize(inst: Dictionary, ctx: Dictionary) -> Dictionary:
+	return _materialize(inst, ctx)
+
+
 func _materialize(inst: Dictionary, ctx: Dictionary) -> Dictionary:
 	var roles: Dictionary = events[inst.id].get("roles", {})
 	for name in roles:
@@ -135,6 +156,8 @@ func _materialize(inst: Dictionary, ctx: Dictionary) -> Dictionary:
 
 
 func _fits(ev: Dictionary, where: String) -> bool:
+	if ev.has("find"):  # waits on the map to be sailed to
+		return where == "find"
 	var w: String = ev.get("where", "sea")
 	return w == "any" or w == where
 
@@ -655,6 +678,11 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			var c := People.person(who)
 			Encounters.add_intel(s, c.id, ["all"], res.title.to_lower())
 			return "You know the weak points of the %s, %s's ship" % [c.ship, c.name]
+		"patrols":  # you know where a navy will be, and keep out of its way
+			var pf := _faction(a[1], ctx)
+			s.patrol_warning = s.get("patrol_warning", {})
+			s.patrol_warning[pf] = Clock.day + float(a[2])
+			return "You know the %s patrols for %d days" % [Data.table("factions")[pf].adjective, int(a[2])]
 		"reveal_cove":
 			var found := Bases.reveal_random()
 			return "You learn of a hidden anchorage: %s" % Bases.cove(found).name if found != "" else ""

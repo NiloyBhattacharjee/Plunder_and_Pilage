@@ -553,7 +553,7 @@ func _build_ledger() -> void:
 		var e: Dictionary = ledger[i]
 		var d := Clock.date_of(e.day)
 		UIKit.label(g, "%d/%d/%d" % [d.day, d.month, d.year])
-		UIKit.label(g, Ports.port(e.port).name)
+		UIKit.label(g, Ports.port(e.port).name if Ports.state.has(e.port) else "At sea")
 		UIKit.label(g, "Bought" if e.qty > 0 else "Sold", "", Style.c("dim"))
 		UIKit.label(g, "%d %s" % [absi(e.qty), Data.table("goods")[e.good].name.to_lower()])
 		UIKit.label(g, "%+d" % e.value)

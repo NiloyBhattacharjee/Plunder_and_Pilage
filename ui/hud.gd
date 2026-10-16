@@ -13,6 +13,7 @@ signal save_pressed
 signal load_pressed
 signal map_mode_changed(good: String)  # "" = political, "@standing" = your standing, "@routes" = merchant traffic
 signal flag_changed(flag: String)
+signal ambition_pressed
 
 var ship: Node2D
 var _messages: PackedStringArray = []
@@ -30,6 +31,7 @@ var _colours: OptionButton
 var _compass: Control
 var _log: Label
 var _portrait_for := ""
+var _ambition: Button
 
 
 func _ready() -> void:
@@ -102,6 +104,8 @@ func _ready() -> void:
 	_small_button(actions, "Crew & ship (C)", "Your captain, ship, officers, crew and the people you know.").pressed.connect(crew_pressed.emit)
 	_small_button(actions, "Save (F5)", "Quick-save.").pressed.connect(save_pressed.emit)
 	_small_button(actions, "Load (F9)", "Quick-load.").pressed.connect(load_pressed.emit)
+	_ambition = _small_button(actions, "Ambition", "What your captain is striving for. Achieve it for a title, and sometimes a lasting edge.")
+	_ambition.pressed.connect(ambition_pressed.emit)
 	_modes = OptionButton.new()
 	_modes.tooltip_text = "Map mode. Trade modes show the last prices you know for a good at each port, and how old they are."
 	_modes.add_theme_font_size_override("font_size", 15)
@@ -225,7 +229,15 @@ func _process(_delta: float) -> void:
 		_portrait.add_child(Portrait.make(cap, "captain", 48))
 	_portrait.tooltip_text = People.describe(cap)
 	_cap_name.text = "Capt. " + cap.name
-	_cap_name.tooltip_text = People.describe(cap)
+	Ambitions.ensure(s)
+	_cap_name.tooltip_text = People.describe(cap) + ("\n\nKnown as: " + ", ".join(s.titles.map(func(id): return Ambitions.table()[id].title)) if not s.titles.is_empty() else "")
+	var ctx := {"s": s, "stats": st, "port": ship.anchored_at, "storm": false}
+	if s.ambition.is_empty():
+		_ambition.text = "Choose an ambition!"
+		_ambition.modulate = Color(1, 1, 1, 0.75 + 0.25 * sin(Time.get_ticks_msec() / 300.0))  # a gentle pulse until you do
+	else:
+		_ambition.text = "Ambition: " + Ambitions.summary(s, ctx)
+		_ambition.modulate = Color.WHITE
 	_cap_line.text = "%s %s.  %s" % [Data.table("ships")[s.type].name, s.name, Career.status_text(s)]
 
 	var u: Dictionary = Data.rules.upkeep

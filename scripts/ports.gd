@@ -235,6 +235,7 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	s.gold += income
 	Economy.add(id, good, qty)
 	log_trade(s, id, good, -qty, income, income - paid)
+	Ambitions.tally(s, "trade_profit", maxf(0.0, income - paid))
 	var text := "Sold %d %s for %d.%s" % [qty, _name(good), income, note]
 	if n_stolen > 0:  # plunder: the crew take their share by the articles
 		text += " " + Crew.plunder(s, income * n_stolen / float(qty))

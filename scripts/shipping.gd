@@ -48,18 +48,23 @@ func _tick(dd: float) -> void:
 		_mirror(player.position)
 	for n in npcs.duplicate():
 		move(n, dd, player.position, player.state)
+	_fights()
 	_contacts(player)
 	_update_sprites(player.position)
 
 
 ## One NPC's movement: follow its route, or chase/flee the player when it has reason to.
 func move(n: Dictionary, dd: float, player_pos: Vector2, s: Dictionary) -> void:
+	if n.has("fight"):  # hove to, broadside to broadside
+		return
 	var e: Dictionary = n.enemy
 	var st := ShipStats.effective(e.type, e.upgrades)
 	var dist: float = n.pos.distance_to(player_pos)
+	var vis := Weather.visibility(player_pos)  # fog and the dark: you can slip past, or creep up unseen
+	var sight := nm(cfg().sight_nm) * vis
 	var target: Vector2
 	var free_course := false  # off its route: deep keels won't follow into shallows
-	if dist > nm(cfg().sight_nm):
+	if dist > sight:
 		n.hostile = null  # out of sight: they'll judge you afresh next time
 	elif n.hostile == null and n.kind != "merchant":
 		n.hostile = Career.npc_hostile(s, e, rng)
@@ -68,13 +73,13 @@ func move(n: Dictionary, dd: float, player_pos: Vector2, s: Dictionary) -> void:
 	var detour: bool = n.get("detour_until", 0.0) > Clock.day  # an island was in the way: following a path round it
 	if detour and not n.route.is_empty():
 		target = n.route[0]
-	elif n.kind != "merchant" and n.hostile == true and dist < nm(cfg().chase_nm) and s.hull > 0:
+	elif n.kind != "merchant" and n.hostile == true and dist < nm(cfg().chase_nm) * vis and s.hull > 0:
 		target = player_pos
 		free_course = true
 		n.chasing = true
 		if not was_chasing:
 			alert.emit("The %s is bearing down on you from the %s!" % [n.enemy.name, Geo.compass_name(Geo.bearing(n.pos - player_pos))])
-	elif n.kind == "merchant" and dist < nm(cfg().sight_nm) and wary(n, s):
+	elif n.kind == "merchant" and dist < sight and wary(n, s):
 		target = n.pos + (n.pos - player_pos).normalized() * 200.0
 		free_course = true
 	elif not n.route.is_empty():
@@ -192,9 +197,16 @@ func daily() -> void:
 	_meetings()
 
 
+## Pirates fall on merchants and navies run down pirates. Where you can see, it's a fight that lasts a while,
+## and you can come up and take a side; out of sight it's over before you'd know.
 func _meetings() -> void:
-	for p in npcs.filter(func(n): return n.kind == "pirate"):
-		for m in npcs.filter(func(n): return n.kind == "merchant" and not n.has("contract") and not n.has("captain_id")):
+	var player_pos: Vector2 = world.ship.position
+	var sight := nm(cfg().sight_nm) * 1.5 * Weather.visibility(player_pos)
+	for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("fight")):
+		for m in npcs.filter(func(n): return n.kind == "merchant" and not n.has("contract") and not n.has("captain_id") and not n.has("fight")):
+			if p.pos.distance_to(m.pos) < nm(cfg().contact_nm) * 2.0 and p.pos.distance_to(player_pos) < sight:
+				_start_fight(p, m)
+				break
 			if p.pos.distance_to(m.pos) < nm(cfg().contact_nm) * 2.0:
 				for g in m.enemy.cargo:
 					p.enemy.cargo[g] = p.enemy.cargo.get(g, 0) + m.enemy.cargo[g]
@@ -203,11 +215,67 @@ func _meetings() -> void:
 				if m.has("voyage"):
 					Economy.lose_voyage(m.voyage, "pirates")
 				remove(m)
-	for v in npcs.filter(func(n): return n.kind == "navy" or n.kind == "hunter"):
-		for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("contract") and not n.has("captain_id")):
+	for v in npcs.filter(func(n): return (n.kind == "navy" or n.kind == "hunter") and not n.has("fight") and not n.get("treasure", false)):
+		for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("contract") and not n.has("captain_id") and not n.has("fight")):
+			if v.pos.distance_to(p.pos) < nm(cfg().contact_nm) * 2.0 and v.pos.distance_to(player_pos) < sight:
+				_start_fight(v, p)
+				break
 			if v.pos.distance_to(p.pos) < nm(cfg().contact_nm) * 2.0:
 				_say(p, "The %s navy ran down the pirate %s." % [Data.table("factions")[v.enemy.faction].adjective, p.enemy.name])
 				remove(p)
+
+
+func _start_fight(a: Dictionary, v: Dictionary) -> void:
+	var until := Clock.day + float(Data.rules.at_sea.npc_battle_days)
+	a.fight = {"with": v.id, "until": until, "attacker": true}
+	v.fight = {"with": a.id, "until": until, "attacker": false}
+	a.cooldown = 0.0
+	v.cooldown = 0.0
+	var where := Geo.compass_name(Geo.bearing(a.pos - world.ship.position))
+	alert.emit("Gunfire to the %s! The %s %s has fallen on the %s %s. (Sail closer to take a hand.)" % [where, a.enemy.label, a.enemy.name, v.enemy.label, v.enemy.name])
+
+
+## Fights whose time is up end on their own.
+func _fights() -> void:
+	for n in npcs.duplicate():
+		if n.has("fight") and n.fight.attacker and Clock.day >= n.fight.until and not world.busy():
+			resolve_fight(n)
+
+
+## How a fight between two NPC ships ends: the stronger usually wins (the one who chose the fight has an edge),
+## and nobody comes out of it unhurt. A ship taken or sunk leaves wreckage. Returns the winner.
+func resolve_fight(a: Dictionary) -> Dictionary:
+	var v := find(a.fight.with)
+	a.erase("fight")
+	if v.is_empty():
+		return a
+	v.erase("fight")
+	var pa := AtSea.strength(a.enemy) * float(Data.rules.at_sea.attacker_edge)
+	var a_wins := rng.randf() < pa / (pa + AtSea.strength(v.enemy))
+	var w: Dictionary = a if a_wins else v
+	var l: Dictionary = v if a_wins else a
+	AtSea.hurt(w.enemy, rng.randf_range(0.15, 0.4))
+	w.cooldown = 0.0  # come up on the winner now, and she's in no state to run far
+	var pos: Vector2 = (a.pos + v.pos) / 2.0
+	if a_wins and l.kind == "merchant":
+		for g in l.enemy.cargo:
+			w.enemy.cargo[g] = w.enemy.cargo.get(g, 0) + l.enemy.cargo[g]
+		_say(l, "The pirate %s took the merchantman %s; her cargo will never reach %s." % [w.enemy.name, l.enemy.name, Ports.port(l.dest).name if Ports.state.has(l.dest) else "port"], true)
+		if l.has("voyage"):
+			Economy.lose_voyage(l.voyage, "pirates")
+		remove(l)
+	elif l.kind == "pirate":
+		_say(l, "The %s ran down the pirate %s. She went down fighting." % [w.enemy.name, l.enemy.name], true)
+		remove(l)
+	else:
+		AtSea.hurt(l.enemy, rng.randf_range(0.3, 0.5))
+		_say(l, "The %s beat off the %s, and both ships limp away." % [w.enemy.name, l.enemy.name], true)
+		return w
+	if world.get("finds") != null:
+		var inst := Events.instance_of("battle_wreckage", world._event_ctx())
+		if not inst.is_empty():
+			world.finds.spawn(inst, pos, 0.0)
+	return w
 
 
 func _say(n: Dictionary, text: String, always := false) -> void:
@@ -378,7 +446,7 @@ func _ports_of(f: String) -> Array:
 # ---- drawing: sprites for ships within sight -------------------------------
 
 func _update_sprites(player_pos: Vector2) -> void:
-	var sight := nm(cfg().sight_nm)
+	var sight := nm(cfg().sight_nm) * Weather.visibility(player_pos)
 	for n in npcs:
 		var visible: bool = n.pos.distance_to(player_pos) < sight or Bases.watch_points().any(func(w): return n.pos.distance_to(w) < sight)  # watchtowers see too
 		if visible and not _sprites.has(n.id):
@@ -411,6 +479,24 @@ func _draw() -> void:
 				draw_rect(Rect2(n.pos + back * (6.0 + k * 3.0) - Vector2(1, 1), Vector2(2, 2)), Color(0.95, 0.98, 1.0, 0.6 - k * 0.1))
 			draw_string_outline(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, 4, Color(0.04, 0.08, 0.16, 0.7))
 			draw_string(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, Color(0.95, 0.95, 0.9))
+			if n.has("fight") and n.fight.attacker:
+				_gunfire(n)
+
+
+## Two ships in a fight on the chart: flashes along their sides and drifting powder smoke.
+func _gunfire(a: Dictionary) -> void:
+	var v := find(a.fight.with)
+	if v.is_empty():
+		return
+	var t := Time.get_ticks_msec() / 1000.0
+	for k in 6:
+		var ph := fposmod(t * 0.7 + k / 6.0, 1.0)
+		var from: Vector2 = a.pos if k % 2 == 0 else v.pos
+		var to: Vector2 = v.pos if k % 2 == 0 else a.pos
+		var at := from.lerp(to, 0.15 + (k % 3) * 0.05)
+		draw_circle(at + Vector2(ph * 6.0, -ph * 8.0), 2.0 + ph * 5.0, Color(0.85, 0.83, 0.8, 0.55 * (1.0 - ph)))
+		if ph < 0.12:
+			draw_circle(from.lerp(to, 0.12), 2.5, Color(1.0, 0.8, 0.35, 0.9))
 
 
 # ---- saving ----------------------------------------------------------------

@@ -1,0 +1,179 @@
+{
+ "_comment": "Ambitions, Paradox style: the captain chases one at a time (scripts/ambitions.gd). Progress is a 'value' of your situation (any number the event conditions know: gold, fear, honour, prizes, bases...) or a 'tally' of deeds since you took it up (ships_taken, treasure_taken, lawful_prizes, rescues, finds, rivals_beaten, pardons, trade_profit). 'requires': event conditions for it to be offered. On success: 'rewards' (event outcomes), the 'title' for life, and any lasting 'bonus' (enemy_morale: added to every enemy's morale when you fight).",
+ "scourge": {
+  "name": "Scourge of the Main",
+  "goal": "Take five ships",
+  "description": "Five prizes, and every master between Havana and Cartagena will know your topsails.",
+  "tally": "ships_taken",
+  "target": 5,
+  "title": "Scourge of the Main",
+  "rewards": [
+   "fear +5",
+   "morale +10 90"
+  ],
+  "bonus": {
+   "enemy_morale": -5
+  }
+ },
+ "plate_fleet": {
+  "name": "The plate fleet",
+  "goal": "Take a treasure galleon",
+  "description": "Every year a galleon carries the silver of the Main to Havana. Every pirate dreams of one. Few live to try twice.",
+  "tally": "treasure_taken",
+  "target": 1,
+  "title": "the Galleon-Taker",
+  "rewards": [
+   "notoriety +10",
+   "fear +5",
+   "morale +20 120"
+  ],
+  "bonus": {
+   "enemy_morale": -5
+  }
+ },
+ "corsair": {
+  "name": "Corsair of the Crown",
+  "goal": "Take three lawful prizes under your letter of marque",
+  "description": "Serve your sovereign well and the Admiralty remembers.",
+  "tally": "lawful_prizes",
+  "target": 3,
+  "requires": [
+   "privateer"
+  ],
+  "title": "Corsair of the Crown",
+  "rewards": [
+   "relation marque +10",
+   "honour +3"
+  ]
+ },
+ "squadron": {
+  "name": "A squadron of my own",
+  "goal": "Sail with two ships in company",
+  "description": "One ship is a captain. Three is a commodore.",
+  "value": "prizes",
+  "target": 2,
+  "title": "Commodore",
+  "rewards": [
+   "honour +2",
+   "morale +5 3650"
+  ]
+ },
+ "fortune": {
+  "name": "A fortune",
+  "goal": "Amass 10,000 gold",
+  "description": "Enough to buy a plantation, a seat on a council, or a very great deal of rum.",
+  "value": "gold",
+  "target": 10000,
+  "title": "the Rich",
+  "rewards": [
+   "honour +2",
+   "relation home +5"
+  ]
+ },
+ "merchant": {
+  "name": "Merchant adventurer",
+  "goal": "Clear 5,000 gold profit in trade",
+  "description": "Buy cheap, sell dear, and know before anyone else where dear is.",
+  "tally": "trade_profit",
+  "target": 5000,
+  "requires": [
+   "not pirate"
+  ],
+  "title": "Merchant Adventurer",
+  "rewards": [
+   "relation home +5",
+   "skill captain trade +1"
+  ]
+ },
+ "terror": {
+  "name": "A name to frighten children",
+  "goal": "Reach 25 fear",
+  "description": "They'll strike at the sight of your colours. Or fight like rats in a corner.",
+  "value": "fear",
+  "target": 25,
+  "title": "the Terror",
+  "rewards": [
+   "notoriety +5"
+  ],
+  "bonus": {
+   "enemy_morale": -8
+  }
+ },
+ "gentleman": {
+  "name": "A gentleman of fortune",
+  "goal": "Reach 25 honour",
+  "description": "Keep your word, spare your prisoners, and let them say what they like about pirates.",
+  "value": "honour",
+  "target": 25,
+  "title": "the Gentleman",
+  "rewards": [
+   "relation home +10",
+   "morale +5 3650"
+  ]
+ },
+ "haven": {
+  "name": "A haven",
+  "goal": "Make a hidden cove your base",
+  "description": "Somewhere to careen, store plunder, and sleep without one eye open.",
+  "value": "bases",
+  "target": 1,
+  "title": "Lord of the Cays",
+  "rewards": [
+   "morale +10 60"
+  ]
+ },
+ "lifesaver": {
+  "name": "Friend to sailors",
+  "goal": "Save two ships from their attackers",
+  "description": "Come up on a fight at sea and take the weaker side.",
+  "tally": "rescues",
+  "target": 2,
+  "title": "the Sea's Friend",
+  "rewards": [
+   "honour +3",
+   "relation home +5"
+  ]
+ },
+ "eagle_eye": {
+  "name": "Eyes of a hawk",
+  "goal": "Find six things at sea",
+  "description": "Wrecks, castaways, dispatches, turtles: the sea gives to those who look.",
+  "tally": "finds",
+  "target": 6,
+  "title": "Eagle-Eye",
+  "rewards": [
+   "skill captain navigation +1",
+   "opinion crew +3"
+  ]
+ },
+ "nemesis": {
+  "name": "Settle the score",
+  "goal": "Beat your rival in battle",
+  "description": "There's a captain out there who's wronged you. Find them.",
+  "tally": "rivals_beaten",
+  "target": 1,
+  "requires": [
+   "rivals >= 1"
+  ],
+  "title": "the Unbowed",
+  "rewards": [
+   "fear +3",
+   "honour +2",
+   "morale +10 60"
+  ]
+ },
+ "pardon": {
+  "name": "A clean slate",
+  "goal": "Win a royal pardon",
+  "description": "Every governor sells forgiveness, for a price. Pay it and start again.",
+  "tally": "pardons",
+  "target": 1,
+  "requires": [
+   "wanted"
+  ],
+  "title": "the Reformed",
+  "rewards": [
+   "honour +3"
+  ]
+ }
+}

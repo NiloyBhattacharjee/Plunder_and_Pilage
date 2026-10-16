@@ -43,6 +43,73 @@ static func generate(faction: String, rng: RandomNumberGenerator, kind := "", ty
 	return enemy
 
 
+## What the light, the weather and the place bring to a fight starting at `pos` (dice_combat.conditions):
+## up to one of each. A fort is filled in with its port, its guns and the side it fires on (-1: it holds fire).
+static func conditions(s: Dictionary, enemy: Dictionary, mode: String, pos: Vector2, terrain: TerrainGrid) -> Array:
+	var out := []
+	var light := Weather.light()
+	if DiceCombat.cfg().conditions.has(light):
+		out.append(_condition(light))
+	var storm: String = Weather.wind_at(pos).storm
+	var weather: String = storm if storm != "" else ("calm" if Weather.calm else "")
+	if DiceCombat.cfg().conditions.has(weather):
+		out.append(_condition(weather))
+	var f: Dictionary = DiceCombat.cfg().conditions.fort
+	for id in Data.table("ports"):
+		var p: Dictionary = Data.table("ports")[id]
+		if pos.distance_to(Geo.latlon_to_px(p.lat, p.lon)) < float(f.range_nm) * Geo.px_per_nm():
+			var c := _condition("fort", p.name)
+			c.port = id
+			c.port_name = p.name
+			c.guns = int(f.guns[p.size])
+			c.gunnery = int(f.gunnery[p.size])
+			c.gun_weight = int(f.gun_weight[p.size])
+			c.side = fort_target(s, enemy, mode, id)
+			c.text += " " + ["It will fire on you.", "It will fire on her.", "Its gunners watch, but hold their fire."][c.side if c.side >= 0 else 2]
+			out.append(c)
+			return out
+	if terrain != null and _shoal_water(pos, terrain):
+		out.append(_condition("shoals"))
+	return out
+
+
+static func _condition(id: String, port := "") -> Dictionary:
+	var c: Dictionary = DiceCombat.cfg().conditions[id].duplicate(true)
+	c.id = id
+	c.name = c.name.replace("{port}", port)
+	c.text = c.text.replace("{port}", port)
+	return c
+
+
+## Which ship a port's fort fires on: 0 you, 1 her, -1 neither (or both, so it waits). It fires on you if its
+## harbour is closed to you, if your colours are at war with it, or if you attack one of its own ships under its
+## walls; on her if her nation is at war with it, or if she attacks you, its guest, in its waters.
+static func fort_target(s: Dictionary, enemy: Dictionary, mode: String, port_id: String) -> int:
+	var pf: String = Ports.port(port_id).faction
+	var on_you: bool = not Career.port_access(s, port_id).open or Factions.at_war(Career.flag_faction(s.get("flag", "white")), pf) \
+		or (mode in ["attack", "ambush"] and enemy.faction == pf)
+	var on_her: bool = Factions.at_war(enemy.faction, pf) or (mode in ["defend", "flee"] and enemy.faction != pf and not on_you)
+	if on_you == on_her:
+		return -1
+	return 0 if on_you else 1
+
+
+static func _shoal_water(pos: Vector2, terrain: TerrainGrid) -> bool:
+	var cell := float(terrain.cell_px)
+	for d in [Vector2.ZERO, Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
+		var t := terrain.at(pos + d * cell * 1.5)
+		if t == TerrainGrid.SHALLOW or t == TerrainGrid.REEF:
+			return true
+	return false
+
+
+## The conditions in a line for a sighting: "Night. Fog. Under the guns of Havana: it will fire on you."
+static func conditions_text(conds: Array) -> String:
+	if conds.is_empty():
+		return ""
+	return "\nConditions: " + " ".join(conds.map(func(c): return c.name + "." if c.id != "fort" else "%s: %s" % [c.name, c.text.get_slice(". ", 1) if c.text.contains(". ") else c.text]))
+
+
 ## A rough look through the glass: guns exact, crew estimated.
 static func sighting(enemy: Dictionary, rng: RandomNumberGenerator) -> String:
 	var st := ShipStats.effective(enemy.type, enemy.upgrades)

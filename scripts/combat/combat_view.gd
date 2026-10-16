@@ -49,6 +49,11 @@ func start(player_data: Dictionary, enemy: Dictionary, mode: String, _wind_dir: 
 	_log("[i]The %s %s. Find her weak points, break her, and make her strike.[/i]" % [enemy.label, enemy.name])
 	if not battle.sides[1].known.is_empty():
 		_log("What you know of her: %s." % ", ".join(battle.sides[1].known.map(func(w): return DiceCombat.weak_name(w).to_lower())))
+	for c in battle.conditions:
+		_log("[b]%s.[/b] %s" % [c.name, c.text])
+	var temper: String = battle.sides[1].get("temper", "")
+	if temper != "":
+		_log("Her captain, %s, is %s: %s." % [enemy.captain.name, DiceCombat.cfg().temperaments[temper].name, DiceCombat.cfg().temperaments[temper].text])
 	_advance()
 
 
@@ -193,6 +198,7 @@ func _build_ui() -> void:
 	_info.offset_top = 100
 	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info.theme_type_variation = &"Header"
+	_info.mouse_filter = Control.MOUSE_FILTER_PASS  # hover for what the conditions do
 	_info.add_theme_constant_override("outline_size", 8)
 	_info.add_theme_color_override("font_outline_color", Style.c("parchment_dark"))
 	hud.add_child(_info)
@@ -252,6 +258,9 @@ func _refresh() -> void:
 	for b in bands.size():
 		track.append("[ %s ]" % bands[b].to_upper() if b == battle.band else bands[b])
 	_info.text = "  —  ".join(track) + "\n%s the weather gauge" % ("You hold" if battle.gauge == 0 else "They hold")
+	if not battle.conditions.is_empty():
+		_info.text += "\n" + "  ·  ".join(battle.conditions.map(func(c): return c.name))
+	_info.tooltip_text = "\n\n".join(battle.conditions.map(func(c): return "%s: %s" % [c.name, c.text]))
 
 
 func _build_order() -> void:
@@ -307,6 +316,10 @@ func _special_chip(q: Dictionary, px: int) -> void:
 		text = "Ally"
 		tip = "Your ally the %s fires a broadside." % a.name
 		col = SIDE_COL[0].lightened(0.25)
+	elif q.post == "@fort":
+		text = "Fort"
+		tip = "The fort at %s fires on %s." % [battle.fort().port_name, "you" if battle.fort().side == 0 else "her"]
+		col = SIDE_COL[1 - int(battle.fort().side)].darkened(0.2)
 	elif q.post == "@melee":
 		text = "Melee"
 		tip = "The boarders fight hand to hand: one roll, both sides take losses."
@@ -525,6 +538,12 @@ func _show_entry(e: Dictionary) -> void:
 		stage.broadside(e.side, e.check.success)
 	elif e.text.begins_with("Your ally the "):
 		stage.broadside(0, not e.text.contains("misses"), _ally_named(e.text))
+	elif e.text.begins_with("The fort at "):
+		stage.fort_fire(other_side(e.side), e.text.contains(" hits "))
+
+
+static func other_side(i: int) -> int:
+	return 1 - i
 
 
 func _log(text: String) -> void:

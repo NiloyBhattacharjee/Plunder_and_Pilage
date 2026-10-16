@@ -133,7 +133,7 @@ func _build_market() -> void:
 			var age := int(Clock.day) - int(best.day)
 			var sale_tip := "Best place you know of to sell it: %s." % Ports.port(best.port).name
 			if not est.is_empty():
-				var how: String = {"seen": "you saw it there", "news": "news on the quay", "papers": "a captured ship's papers", "rumour": "tavern talk"}.get(est.heard.get("source", "seen"), "")
+				var how: String = {"seen": "you saw it there", "news": "news on the quay", "papers": "a captured ship's papers", "hail": "a ship you spoke at sea", "rumour": "tavern talk"}.get(est.heard.get("source", "seen"), "")
 				sale_tip += "\nHeard %d days ago (%s): it sold at %s." % [age, how, Market.fmt(est.heard.sell)]
 				if age > 0:
 					sale_tip += "\n%s reckons it's about %s now, give or take %d%%. Old news leans on what the port usually pays; trade skill and allies make the guess better." % [

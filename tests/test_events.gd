@@ -92,7 +92,7 @@ func test_every_choice_of_every_event_resolves():
 		for port in ["", "port_royal", "nassau"]:
 			for id in Events.events:
 				var ev: Dictionary = Events.events[id]
-				if not Events._fits(ev, "port" if port != "" else "sea"):
+				if not Events._fits(ev, "port" if port != "" else "sea") and not (port == "" and Events._fits(ev, "find")):
 					continue
 				for i in ev.choices.size():
 					rich_state(kind)
@@ -162,9 +162,9 @@ func test_chains_wait_for_their_moment():
 
 
 func test_once_and_cooldown():
-	var ev: Dictionary = Events.events.whale
+	var ev: Dictionary = Events.events.waterspout
 	assert_true(Events._eligible(ev, "sea"))
-	Events.fired.whale = Clock.day
+	Events.fired.waterspout = Clock.day
 	assert_false(Events._eligible(ev, "sea"))
 	Clock.day += Data.rules.events.cooldown_days + 1
 	assert_true(Events._eligible(ev, "sea"))
@@ -178,3 +178,12 @@ func test_events_survive_save_and_load():
 	Events.load_state(JSON.to_native(JSON.parse_string(JSON.stringify(JSON.from_native(d)))))
 	assert_true(Events.flags.has("met_morgan"))
 	assert_eq(Events.queue[0].id, "whale")
+
+
+func test_finds_wait_on_the_map_not_in_the_daily_roll():
+	assert_false(Events._eligible(Events.events.whale, "sea"), "whales are found, not rolled")
+	assert_true(Events._eligible(Events.events.whale, "find"))
+	assert_false(Events._eligible(Events.events.waterspout, "find"))
+	var inst := Events.pick_find(ctx(""))
+	assert_true(Events.events[inst.id].has("find"))
+	assert_true(Events.pick_find(ctx(""), Events.events.keys()).is_empty(), "never one already out there")

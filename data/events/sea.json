@@ -33,6 +33,7 @@
   },
 
   "flotsam_cask": {
+    "find": "cask", "find_near": "sea", "cooldown": 40,
     "title": "Flotsam",
     "text": "The lookout spots casks bobbing in the swell, the wreck of somebody's cargo.",
     "roles": {"good": {"from": "good", "where": ["price <= 40"]}, "n": {"from": "number", "range": [5, 20]}},
@@ -43,6 +44,7 @@
   },
 
   "castaways": {
+    "find": "castaway", "find_near": "reef", "cooldown": 40,
     "title": "Castaways",
     "text": "A ragged figure on a sandbar waves a shirt on a stick. Through the glass: three, four men, burnt black by the sun.",
     "roles": {"newcomer": {"from": "new"}},
@@ -92,6 +94,7 @@
   },
 
   "whale": {
+    "find": "whale", "find_near": "sea", "cooldown": 40,
     "title": "Whales",
     "text": "A pod of whales surfaces alongside, blowing and rolling, close enough to touch.",
     "weight": 6,
@@ -114,6 +117,7 @@
   },
 
   "fish_shoal": {
+    "find": "fish", "find_near": "sea", "cooldown": 40,
     "title": "A shoal of fish",
     "text": "The sea boils with fish. Dolphins and flying fish leap all around the bow.",
     "conditions": ["food < 20"],
@@ -124,6 +128,7 @@
   },
 
   "drifting_longboat": {
+    "find": "boat", "find_near": "sea", "cooldown": 40,
     "title": "A drifting longboat",
     "text": "A longboat drifts on the swell. In it, a {nation_adj} officer and two seamen, half-dead. Their ship went down three days ago.",
     "roles": {"nation": {"from": "nation"}, "officer": {"from": "new", "nation": "{nation}"}},
@@ -180,6 +185,7 @@
   },
 
   "message_in_bottle": {
+    "find": "bottle", "find_near": "sea", "cooldown": 40,
     "title": "A bottle in the sea",
     "text": "The boatswain fishes a corked bottle out of the sea. Inside: a scrap of chart, a cross, and the words 'Twenty paces from the twin palms, {port}'.",
     "roles": {"port": {"from": "port", "where": ["not here"]}},
@@ -240,6 +246,7 @@
   },
 
   "abandoned_ship": {
+    "find": "wreck", "find_near": "sea", "cooldown": 40,
     "title": "A ship with no one aboard",
     "text": "A {nation_adj} brigantine drifts with her sails in rags. No one answers your hail. The galley fire is cold; the table is laid for dinner.",
     "roles": {"nation": {"from": "nation"}, "good": {"from": "good"}, "n": {"from": "number", "range": [10, 30]}},

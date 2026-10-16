@@ -31,6 +31,7 @@ use the role's name or "they". Historical figures and strangers described in the
 |---|---|
 | `title`, `text` | Shown in the dialog. `{captain}`, `{ship}`, `{port}` and every role are filled in. `{role_adj}` gives a nation's adjective. |
 | `where` | `sea` (daily roll at sea, the default), `port` (on arrival) or `any`. |
+| `find` | Makes it a thing found at sea instead of a daily roll: it waits on the map as a marker of this kind (`cask`, `boat`, `wreck`, `wreckage`, `whale`, `bottle`, `castaway`, `fish`, `turtle`, `satchel`; see `rules.json` `finds`) and happens when you sail up to it. `find_near`: `sea` (deep water, the default) or `reef`. |
 | `weight` | Relative chance against other valid events (default 10). `weight_mods`: `[condition, multiplier]` pairs. |
 | `conditions` | All must hold. |
 | `roles` | Variables bound when the event fires (see below). If a role can't be filled, the event can't fire. |
@@ -77,6 +78,7 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `skill {r} gunnery +1`, `trait {r} brave`, `untrait {r} drunkard`, `reveal {r}` | People change |
 | `flag NAME [days]`, `unflag NAME` | Remember something for later events |
 | `morale +10 30` | A morale modifier for 30 days, named after the event |
+| `patrols spain 30` | You know where that navy patrols for 30 days: its ships won't trouble you |
 | `calm 3`, `expose`, `share +0.1` | Talk 3 plotters round; learn who leads the unrest; change the crew's share |
 | `confidence`, `mutiny`, `depose` | A vote of confidence (lose it and you're out); the mutiny breaks now; the captain steps down |
 | `favour {r} +1`, `secret KIND [{r} or any] [fake]`, `scandal {r}` | Favours (negative: you owe them); a secret (letters, ledger, bribes, schedule) about someone; an official recalled in disgrace |

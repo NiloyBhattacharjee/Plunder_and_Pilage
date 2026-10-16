@@ -28,6 +28,23 @@ func wind_at(pos: Vector2) -> Dictionary:
 	return {"dir": wind_dir, "strength": wind_strength, "storm": ""}
 
 
+## The light of the hour: "dawn", "day", "dusk" or "night" (matching the map's day and night tint).
+static func light() -> String:
+	var hour := fposmod(Clock.day, 1.0) * 24.0
+	if hour >= 4.5 and hour < 7.0:
+		return "dawn"
+	if hour >= 17.5 and hour < 20.0:
+		return "dusk"
+	return "night" if hour >= 20.0 or hour < 4.5 else "day"
+
+
+## How far a lookout sees here, as a share of a clear day's sight: fog, rain and the dark hide ships,
+## both from you and you from them.
+func visibility(pos: Vector2) -> float:
+	var v: Dictionary = Data.rules.visibility
+	return float(v.get(wind_at(pos).storm, 1.0)) * float(v.get(light(), 1.0))
+
+
 func move_storms(delta_days: float) -> void:
 	for s in storms:
 		s.pos += s.vel * delta_days
