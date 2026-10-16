@@ -315,7 +315,7 @@ func _ports_of(f: String) -> Array:
 func _update_sprites(player_pos: Vector2) -> void:
 	var sight := nm(cfg().sight_nm)
 	for n in npcs:
-		var visible: bool = n.pos.distance_to(player_pos) < sight
+		var visible: bool = n.pos.distance_to(player_pos) < sight or Bases.watch_points().any(func(w): return n.pos.distance_to(w) < sight)  # watchtowers see too
 		if visible and not _sprites.has(n.id):
 			var shown := Career.flag_faction(n.flag)
 			news.emit("Sail ho: %s %s to the %s." % ["a pirate" if shown == "pirates" else ("a " + Data.table("factions")[shown].adjective if shown != "" else "an unmarked"),

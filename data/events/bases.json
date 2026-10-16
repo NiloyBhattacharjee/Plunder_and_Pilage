@@ -1,0 +1,98 @@
+{
+  "_comment": "Bases: discoveries, production, the people who run them, and the troubles that come of being found. scripts/bases.gd runs the raids themselves. See docs/events.md.",
+
+  "cove_rumour": {
+    "title": "A turtler's tale",
+    "text": "An old turtle hunter in the tavern, paid in rum, tells of an anchorage no chart shows: deep water, good shelter, and nobody for leagues.",
+    "where": "port", "weight": 6, "cooldown": 120,
+    "conditions": ["gold >= 20"],
+    "choices": [
+      {"text": "Buy him another and hear where (20 gold)", "outcomes": ["gold -20", "reveal_cove"], "result": "He draws it on the table in spilled rum. You copy it carefully."},
+      {"text": "Tall tales", "outcomes": [], "result": "He's still telling it to someone else as you leave."}
+    ]
+  },
+
+  "base_books_short": {
+    "title": "Short in the books",
+    "text": "The accounts from {base} don't add up. Someone is skimming the treasury, and it's hard not to look at whoever runs the place.",
+    "where": "any", "cooldown": 90, "weight": 8,
+    "roles": {"base": {"from": "base", "where": ["managed", "manager_opinion < 10"]}},
+    "choices": [
+      {"text": "Send word: it stops now", "check": {"who": "captain", "skill": "intimidation", "dc": 12},
+       "outcomes": ["base_loyalty {base} -5"], "result": "The skimming stops. The mood at {base} sours a little.",
+       "fail_outcomes": ["base_gold {base} -20%"], "fail_result": "The letter goes unanswered, and more goes missing."},
+      {"text": "Let it go: a manager has to live", "outcomes": ["base_gold {base} -15%", "base_loyalty {base} +5"], "result": "An expensive kind of loyalty."}
+    ]
+  },
+
+  "base_garrison_brawl": {
+    "title": "Trouble at {base}",
+    "text": "Word from {base}: the garrison has been drinking and fighting, and two men are dead over a game of dice. They're bored, and short of everything.",
+    "where": "any", "cooldown": 60, "weight": 10,
+    "roles": {"base": {"from": "base", "where": ["loyalty < 45", "garrison >= 5"]}},
+    "choices": [
+      {"text": "Send money for their wages and a cask of rum", "conditions": ["gold >= 100"], "outcomes": ["gold -100", "base_loyalty {base} +15"], "result": "Payday cures most things."},
+      {"text": "Order the ringleaders flogged", "outcomes": ["base_garrison {base} -2", "base_loyalty {base} -5"], "result": "Order of a sort. The garrison is two men lighter and no happier."}
+    ]
+  },
+
+  "base_bumper_crop": {
+    "title": "A good harvest",
+    "text": "The fields at {base} have done better than anyone hoped. The storehouse is filling with sugar.",
+    "where": "any", "cooldown": 120, "weight": 8,
+    "conditions": ["month >= 1", "month <= 5"],
+    "roles": {"base": {"from": "base", "where": ["built.plantation"]}},
+    "choices": [
+      {"text": "Good news", "outcomes": ["base_store {base} sugar +30"], "result": "Thirty more hogsheads, waiting for you."}
+    ]
+  },
+
+  "base_fishermen": {
+    "title": "Seen",
+    "text": "A fishing boat put into the cove at {base} for water and saw everything: the guns, the stores, your prizes at the dock. It sails for {port_name} tomorrow.",
+    "where": "any", "cooldown": 60, "weight": 10,
+    "roles": {"base": {"from": "base", "where": ["visibility >= 25"]}, "port_name": {"from": "port", "where": ["faction != pirates"]}},
+    "choices": [
+      {"text": "Pay them to forget", "conditions": ["gold >= 60"], "outcomes": ["gold -60", "base_visibility {base} -5"], "result": "They take the money. Whether they keep quiet is another matter."},
+      {"text": "Keep them at {base}, by force", "outcomes": ["base_visibility {base} -10", "honour -2", "base_loyalty {base} -3"], "result": "Fishermen don't come home, and nobody hears about the cove from them."},
+      {"text": "Let them go", "outcomes": ["base_visibility {base} +15"], "result": "By the end of the month every tavern in {port_name} will know where you hide."}
+    ]
+  },
+
+  "base_hurricane": {
+    "title": "Hurricane at {base}",
+    "text": "A hurricane has torn through {base}. Roofs are gone, the dock is half under water, and the garrison spent the night in the hills.",
+    "where": "any", "cooldown": 180, "weight": 6,
+    "conditions": ["month >= 8", "month <= 10"],
+    "roles": {"base": {"from": "base", "where": ["built.dock"]}},
+    "choices": [
+      {"text": "Send money to rebuild at once", "conditions": ["gold >= 250"], "outcomes": ["gold -250", "base_loyalty {base} +5"], "result": "Timber and nails on the next sloop. The damage is made good."},
+      {"text": "They'll make do", "outcomes": ["base_damage {base}", "base_loyalty {base} -5"], "result": "Not everything can be saved."}
+    ]
+  },
+
+  "base_manager_ambition": {
+    "title": "{base} has a new master",
+    "text": "Your manager at {base} has been telling the garrison that the cove is better off without you, and the garrison is listening. A letter arrives: the base will pay you no more tribute.",
+    "where": "any", "cooldown": 120, "weight": 25,
+    "roles": {"base": {"from": "base", "where": ["managed", "manager_opinion <= -25"]}},
+    "choices": [
+      {"text": "Sail there and take it back", "check": {"who": "captain", "skill": "authority", "dc": 14, "bonus": [["fear >= 20", "Your fearsome name", 2]]},
+       "outcomes": ["base_loyalty {base} +10", "fear +2"], "result": "Your arrival is enough: the garrison hand you the manager in irons.",
+       "fail_outcomes": ["base_lost {base}"], "fail_result": "The garrison stands with their new master. {base} is theirs now."},
+      {"text": "Buy the garrison back", "conditions": ["gold >= 300"], "outcomes": ["gold -300", "base_loyalty {base} +20"], "result": "Silver speaks louder than speeches."},
+      {"text": "Let them have it", "outcomes": ["base_lost {base}"], "result": "Not worth the blood."}
+    ]
+  },
+
+  "base_deserters_arrive": {
+    "title": "Men looking for a home",
+    "text": "A boatload of deserters from a {nation_adj} warship has turned up at {base}, asking to join the garrison.",
+    "where": "any", "cooldown": 90, "weight": 6,
+    "roles": {"base": {"from": "base"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Take them in", "outcomes": ["base_garrison {base} +6", "base_visibility {base} +5"], "result": "Six more trained hands, and the navy will be looking for them."},
+      {"text": "Send them on their way", "outcomes": [], "result": "They row off toward the next cove along."}
+    ]
+  }
+}

@@ -22,6 +22,8 @@ const SCHEMA := {
 		"skill", "prisoner_willingness", "relation_hit", "notoriety"], "refs": {"ships": "ships", "faction": "factions"}},
 	"backgrounds": {"required": ["name", "description", "stats", "skills", "traits", "gold", "ship", "crew", "relations"],
 		"refs": {"ship": "ships", "traits": "traits"}},
+	"coves": {"required": ["name", "lat", "lon", "shelter", "soil", "water", "description"]},
+	"buildings": {"required": ["name", "cost", "days", "upkeep", "needs", "visibility", "description"], "refs": {"needs": "buildings"}},
 	"contracts": {"required": ["name", "description", "employer", "needs", "objective", "days", "tiers", "success", "lie_chance", "trap_chance"]},
 }
 

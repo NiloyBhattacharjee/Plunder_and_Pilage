@@ -10,6 +10,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 	Factions.reset()
 	Politics.reset()
 	Bonds.reset()
+	Bases.reset()
 	Contracts.reset()
 	Events.reset()
 	var bg: Dictionary = Data.table("backgrounds")[cfg.background]

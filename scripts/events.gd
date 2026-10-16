@@ -20,10 +20,12 @@ const VERBS := {  # verb: [min args, max args]
 	"flag": [1, 2], "unflag": [1, 1], "abandon": [1, 1],
 	"favour": [2, 2], "secret": [1, 3], "influence": [3, 3], "stir": [1, 1], "scandal": [1, 1], "council_vote": [2, 2], "join_council": [0, 0],
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
+	"reveal_cove": [0, 0], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
+	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1],
 	"morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
-	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc"]
+	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc", "base"]
 
 var events := {}
 var errors := PackedStringArray()
@@ -190,6 +192,7 @@ func _bind(spec: Dictionary, ctx: Dictionary, vars: Dictionary) -> Variant:
 		"ally": cands = Bonds.allies(s).filter(func(k): return not k.begins_with("f:"))
 		"rival": cands = Bonds.rivals(s).filter(func(k): return not k.begins_with("f:"))
 		"captain_npc": cands = Bonds.roster()
+		"base": cands = Bases.bases.keys()
 		"here": cands = [ctx.port] if ctx.port != "" else []
 		"port": cands = Ports.state.keys()
 		"nation": cands = Career.nations()
@@ -305,6 +308,8 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"allies": return Bonds.allies(s).size()
 		"rivals": return Bonds.rivals(s).size()
 		"neutral": return Bonds.neutral(s)
+		"bases": return Bases.bases.size()
+		"at_base": return ctx.get("base", "") != ""
 		"secrets": return s.get("secrets", []).size()
 		"council_member": return s.get("council_member", false)
 		"council_leader": return Politics.council_leader == "player"
@@ -344,6 +349,15 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"at_war": return Factions.at_war(id, _faction(rest, ctx))
 			"mine": return id == _home(ctx.s)
 			"standing": return ctx.s.relations.get(id, 0)
+	elif Bases.bases.has(id):
+		var b: Dictionary = Bases.bases[id]
+		match head:
+			"loyalty": return b.loyalty
+			"visibility": return b.visibility
+			"garrison": return b.garrison
+			"built": return rest in b.buildings
+			"managed": return b.manager != ""
+			"manager_opinion": return People.person(b.manager).relations.get(ctx.s.captain, 0) if b.manager != "" else 0
 	elif Data.table("goods").has(id):
 		match head:
 			"price": return Data.table("goods")[id].base_price
@@ -629,6 +643,43 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 				Bonds.all(s).erase(key)
 				return "Peace with %s" % Bonds.name_of(key)
 			return ""
+		"reveal_cove":
+			var found := Bases.reveal_random()
+			return "You learn of a hidden anchorage: %s" % Bases.cove(found).name if found != "" else ""
+		"base_gold", "base_loyalty", "base_visibility", "base_garrison":
+			if not Bases.bases.has(a[1]):
+				return ""
+			var b: Dictionary = Bases.bases[a[1]]
+			var field: String = {"base_gold": "gold", "base_loyalty": "loyalty", "base_visibility": "visibility", "base_garrison": "garrison"}[verb]
+			var amt := float(a[2].trim_suffix("%"))
+			if a[2].ends_with("%"):
+				amt = b[field] * amt / 100.0
+			b[field] = maxf(0.0, b[field] + amt) if field != "loyalty" and field != "visibility" else clampf(b[field] + amt, 0.0, 100.0)
+			if field == "garrison":
+				b.garrison = int(b.garrison)
+			return "%s: %s %+d" % [b.name, field, int(amt)]
+		"base_store":
+			if not Bases.bases.has(a[1]):
+				return ""
+			var b: Dictionary = Bases.bases[a[1]]
+			b.storage[a[2]] = maxf(0.0, b.storage.get(a[2], 0.0) + float(a[3]))
+			return "%s: %s %+d" % [b.name, Data.table("goods")[a[2]].name.to_lower(), int(a[3])]
+		"base_damage":
+			if not Bases.bases.has(a[1]):
+				return ""
+			var b: Dictionary = Bases.bases[a[1]]
+			var lost: Array = b.buildings.filter(func(x): return x != "dock")
+			if lost.is_empty():
+				return ""
+			var gone: String = lost[rng.randi() % lost.size()]
+			b.buildings.erase(gone)
+			return "%s: the %s is destroyed" % [b.name, Bases.building(gone).name.to_lower()]
+		"base_lost":
+			if not Bases.bases.has(a[1]):
+				return ""
+			var name: String = Bases.bases[a[1]].name
+			Bases.bases.erase(a[1])
+			return "%s is lost to you" % name
 		"own_ship":
 			return Bonds.former_officer(s, _who(a[1], ctx, vars), int(a[2]))
 		"join_council":
@@ -708,6 +759,8 @@ static func show(v: Variant) -> String:
 		return Data.table("factions")[id].name
 	if Data.table("goods").has(id):
 		return Data.table("goods")[id].name.to_lower()
+	if Data.table("coves").has(id):
+		return Bases.cove(id).name
 	return id
 
 
@@ -812,9 +865,9 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"prizes", "hostages", "contracts", "year", "month", "date", "guns", "stolen", "cargo", "relation", "captain", "captain_trait",
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
-	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral"]
+	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base"]
 const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality"]
-const CAND_KEYS := ["bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
+const CAND_KEYS := ["loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
 	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held"]
 
 

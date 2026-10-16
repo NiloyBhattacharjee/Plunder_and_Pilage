@@ -19,6 +19,19 @@ var zoom := 1.0:
 func _draw() -> void:
 	var s := 1.0 / zoom
 	var red := Color(Style.c("bad"), 0.8)
+	for id in Bases.discovered:  # coves you've found: an anchor, or your own flag
+		var cp := Bases.cove_pos(id)
+		var mine := Bases.bases.has(id)
+		var col: Color = Style.c("wax") if mine else Style.c("ink")
+		draw_circle(cp, 5.0 * s, Style.c("parchment_light"))
+		draw_arc(cp, 5.0 * s, 0.0, TAU, 16, col, 1.5 * s)
+		draw_line(cp + Vector2(0, -3.5) * s, cp + Vector2(0, 3.5) * s, col, 1.5 * s)  # an anchor, roughly
+		draw_line(cp + Vector2(-2.5, -1.5) * s, cp + Vector2(2.5, -1.5) * s, col, 1.5 * s)
+		var label: String = Bases.cove(id).name + (" (your base)" if mine else "")
+		if mine and not Bases.bases[id].raid.is_empty() and Bases.bases[id].raid.warned:
+			label += " - RAID COMING"
+		draw_string_outline(Style.font("italic"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), int(4 * s), Style.c("parchment_light"))
+		draw_string(Style.font("italic"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), col)
 	for h in Contracts.hints():  # where your contracts send you, inked on the chart
 		var at: Vector2
 		if h.has("radius"):

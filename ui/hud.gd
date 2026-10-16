@@ -271,7 +271,10 @@ func _process(_delta: float) -> void:
 		_speeds[i].disabled = Clock.speed_index == i
 
 	_enter_port.visible = ship.anchored_at != ""
-	if ship.anchored_at != "":
+	var base: String = ship.get_parent().at_base if ship.get_parent() and "at_base" in ship.get_parent() else ""
+	if base != "" and ship.route.is_empty():
+		_status.text = "At anchor in %s%s" % [Bases.cove(base).name, " (your base)" if Bases.bases.has(base) else ""]
+	elif ship.anchored_at != "":
 		_status.text = "At anchor in " + Data.table("ports")[ship.anchored_at].name
 	elif not ship.route.is_empty():
 		_status.text = "Sailing %s, %.1f knots, %s%s" % [Geo.compass_name(ship.heading), ship.speed_knots,

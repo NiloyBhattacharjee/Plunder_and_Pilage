@@ -48,6 +48,18 @@ func rich_state(kind: String) -> void:
 		r[1]: {"type": "rivalry", "level": 2, "since": "", "strain": 0, "history": []}}
 	People.person(r[2]).relations[s.captain] = 40
 	People.person(r[1]).relations[s.captain] = -30
+	Bases.reset()  # a base with a bit of everything, and a manager who doesn't like you
+	Bases.discovered = ["vieques"]
+	s.gold = 5000.0
+	Bases.claim(s, "vieques")
+	var base: Dictionary = Bases.bases.vieques
+	base.buildings = ["dock", "plantation"]
+	base.loyalty = 30.0
+	base.visibility = 40.0
+	base.garrison = 10
+	base.manager = s.crew[5]
+	People.person(base.manager).relations[s.captain] = -40
+	s.gold = 2000.0
 	var trait_holder: String = s.officers.values()[0]
 	People.person(trait_holder).traits = ["ambitious"]
 	s.secrets = []

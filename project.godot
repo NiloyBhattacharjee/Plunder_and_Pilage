@@ -18,6 +18,7 @@ Style="*res://scripts/style.gd"
 Factions="*res://scripts/factions.gd"
 Politics="*res://scripts/politics.gd"
 Bonds="*res://scripts/bonds.gd"
+Bases="*res://scripts/bases.gd"
 Contracts="*res://scripts/contracts.gd"
 Events="*res://scripts/events.gd"
 

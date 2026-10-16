@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://ui/choice_dialog.tscn" id="10"]
 [ext_resource type="Script" path="res://scripts/sea_layer.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/shipping.gd" id="12"]
+[ext_resource type="PackedScene" path="res://ui/base_screen.tscn" id="13"]
 
 [node name="WorldMap" type="Node2D"]
 script = ExtResource("1")
@@ -50,6 +51,8 @@ limit_top = 0
 [node name="PortScreen" parent="." instance=ExtResource("7")]
 
 [node name="CrewScreen" parent="." instance=ExtResource("8")]
+
+[node name="BaseScreen" parent="." instance=ExtResource("13")]
 
 [node name="PrizeScreen" parent="." instance=ExtResource("9")]
 

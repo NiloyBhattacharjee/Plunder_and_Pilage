@@ -17,7 +17,10 @@ var current_npc := {}     # the NPC ship you're dealing with, if any
 var chase_id := ""        # the NPC ship you're chasing
 var _chase_timer := 0.0
 var _in_event := false
-var _attacked := false   # you opened fire in the last battle (it matters to named captains)   # an event's "time" outcome runs days; don't start another inside it
+var _attacked := false
+var at_base := ""         # the cove you're anchored at, if any (a cove isn't a port: you count as at sea)
+var cove_anchors := {}    # cove id -> navigable anchorage
+var _raid_base := ""      # the base you're fighting for   # you opened fire in the last battle (it matters to named captains)   # an event's "time" outcome runs days; don't start another inside it
 
 ## Set by the new-game screen before switching here: {name, nationality, background, ship_name} or {"load": true}.
 static var start_config := {}
@@ -40,6 +43,9 @@ func _ready() -> void:
 		port_positions[id] = Geo.latlon_to_px(p.lat, p.lon)
 		anchorages[id] = terrain.nearest_sea(port_positions[id])
 	$PortLayer.port_positions = port_positions
+	for id in Data.table("coves"):
+		if not id.begins_with("_"):
+			cove_anchors[id] = terrain.nearest_sea(Bases.cove_pos(id))
 
 	camera.limit_right = int(Data.map.size[0])
 	camera.limit_bottom = int(Data.map.size[1])
@@ -74,6 +80,9 @@ func _ready() -> void:
 	Contracts.shipping = shipping
 	Politics.news.connect(hud.show_message)
 	Bonds.news.connect(hud.show_message)
+	Bases.news.connect(hud.show_message)
+	$BaseScreen.message.connect(hud.show_message)
+	$BaseScreen.closed.connect($PortLayer.queue_redraw)
 	Contracts.changed.connect($PortLayer.queue_redraw)
 	shipping.contact.connect(_on_contact)
 	shipping.news.connect(hud.show_message)
@@ -120,6 +129,19 @@ func _daily() -> void:
 		hud.show_message(m)
 	Politics.prune_secrets(s)
 	Bonds.ensure_on_map(shipping)
+	if ship.anchored_at == "" and not ship.route.is_empty():
+		var found := Bases.look_for_coves(s, ship.position)
+		if found != "":
+			hud.show_message(found)
+			$PortLayer.queue_redraw()
+	var base_day := Bases.daily(s, at_base)
+	for m in base_day.messages:
+		hud.show_message(m)
+	if base_day.messages.size() > 0:
+		$PortLayer.queue_redraw()
+	if base_day.battle != "" and not busy():
+		defend_base(base_day.battle)
+		return
 	if Clock.date().day == 1:
 		Politics.leverage_month(s)
 		for m in Bonds.monthly(s):
@@ -165,11 +187,22 @@ func _set_course(target: Vector2) -> void:
 	if ship.state.hull <= 0:
 		return
 	chase_id = ""
+	at_base = ""
 	var npc: Dictionary = shipping.npc_at(target, 14.0 / camera.zoom.x)
 	if not npc.is_empty():
 		chase_id = npc.id
 		hud.show_message("Giving chase to the %s." % npc.enemy.name)
 		_chase_timer = 0.0
+		return
+	var cove := _cove_near(target)
+	if cove != "":
+		if cove == at_base:
+			_at_cove(cove)
+			return
+		var cpath := terrain.find_path(ship.position, cove_anchors[cove])
+		if not cpath.is_empty():
+			ship.set_route(cpath, "cove:" + cove)
+			hud.show_message("Setting course for %s." % Bases.cove(cove).name)
 		return
 	var port_id := _port_near(target)
 	if port_id != "" and port_id == ship.anchored_at:
@@ -189,6 +222,55 @@ func _set_course(target: Vector2) -> void:
 		hud.show_message("Setting course for %s." % Data.table("ports")[port_id].name)
 
 
+func _cove_near(pos: Vector2) -> String:
+	var radius := PORT_CLICK_RADIUS / camera.zoom.x
+	for id in Bases.discovered:
+		if pos.distance_to(Bases.cove_pos(id)) < radius or pos.distance_to(cove_anchors[id]) < radius:
+			return id
+	return ""
+
+
+## Arriving at a cove: claim it, or step ashore at your own base.
+func _at_cove(id: String) -> void:
+	ship.anchored_at = ""
+	at_base = id
+	if Bases.bases.has(id):
+		Bases.visit(id)
+		var leave := Bases.shore_leave(ship.state, id)
+		if leave != "":
+			hud.show_message(leave)
+		$BaseScreen.open(id, ship)
+		return
+	UIKit.pause_clock()
+	var why := Bases.claim_problem(ship.state, id)
+	var pick: int = await dialog.ask(Bases.cove(id).name, "%s\n\nMake it your base? It costs %d gold to set up, and %d hands stay behind as a garrison. A base needs men, food and money, and the more you use it the easier it is to find." % [
+		Bases.cove(id).description, Data.rules.bases.claim_cost, Data.rules.bases.claim_garrison],
+		[{"text": "Make it ours", "disabled": why != "", "tooltip": why if why != "" else "Shelter %d. %s%s" % [Bases.cove(id).shelter,
+			"Good soil for a plantation. " if Bases.cove(id).soil else "", "A spring: the garrison needs no water brought in." if Bases.cove(id).water else "No fresh water: bring it."]},
+		{"text": "Not now"}])
+	if pick == 0:
+		hud.show_message(Bases.claim(ship.state, id))
+		$PortLayer.queue_redraw()
+		$BaseScreen.open(id, ship)
+		return
+	UIKit.resume_clock()
+
+
+## A raid on a base you're anchored at: fight it at sea, with the shore guns beside you.
+func defend_base(id: String) -> void:
+	var b: Dictionary = Bases.bases[id]
+	var r: Dictionary = b.raid
+	var enemy := Encounters.generate(r.faction, rng, r.kind)
+	if r.captain != "" and People.chars.has(r.captain):
+		var c := People.person(r.captain)
+		enemy.name = c.ship
+		enemy.captain = c.duplicate(true)
+		enemy.captain_id = r.captain
+	_raid_base = id
+	hud.show_message("%s is attacking %s!" % [r.label.capitalize(), b.name])
+	start_combat(enemy, "defend")
+
+
 func _port_near(pos: Vector2) -> String:
 	var radius := PORT_CLICK_RADIUS / camera.zoom.x
 	for id in port_positions:
@@ -206,6 +288,9 @@ func _zoom(factor: float) -> void:
 
 
 func _on_arrived(id: String) -> void:
+	if id.begins_with("cove:"):
+		_at_cove(id.substr(5))
+		return
 	var access := Career.port_access(ship.state, id)
 	if access.open:
 		hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
@@ -255,7 +340,7 @@ func _on_arrived(id: String) -> void:
 
 
 func _event_ctx() -> Dictionary:
-	return {"s": ship.state, "stats": ship.stats, "port": ship.anchored_at, "storm": ship.wind.get("storm", "") != ""}
+	return {"s": ship.state, "stats": ship.stats, "port": ship.anchored_at, "storm": ship.wind.get("storm", "") != "", "base": at_base}
 
 
 ## Shows an event, applies the choice, and shows what came of it. A choice can start a fight.
@@ -376,7 +461,7 @@ func _load() -> void:
 
 ## True while a screen, dialog or battle has the player's attention.
 func busy() -> bool:
-	return combat != null or _in_event or port_screen.visible or crew_screen.visible or prize_screen.visible or dialog.visible
+	return combat != null or _in_event or $BaseScreen.visible or port_screen.visible or crew_screen.visible or prize_screen.visible or dialog.visible
 
 
 # ---- Encounters and battle -------------------------------------------------
@@ -470,6 +555,11 @@ func start_combat(enemy: Dictionary, mode: String) -> void:
 	var w := Weather.wind_at(ship.position)
 	var side := Encounters.player_side(s)
 	side.allies = Bonds.battle_allies(s, ship.position, shipping).filter(func(a): return a.id == "" or a.id != enemy.get("captain_id", ""))
+	if _raid_base != "" and Bases.bases.has(_raid_base):  # the shore guns join in
+		for bid in ["battery", "fort"]:
+			if Bases.has(Bases.bases[_raid_base], bid):
+				side.allies.append({"name": Bases.building(bid).name.to_lower() + " at " + Bases.bases[_raid_base].name, "guns": Bases.building(bid).guns * 2,
+					"gun_weight": 12, "gunnery": 10, "id": ""})
 	_attacked = mode in ["attack", "ambush"]
 	if not side.allies.is_empty():
 		hud.show_message("Your allies close in to fight beside you: " + ", ".join(side.allies.map(func(a): return "the " + a.name)) + ".")
@@ -497,6 +587,11 @@ func _on_combat_finished(result: Dictionary) -> void:
 		hud.show_message(m)
 	for m in Bonds.on_battle(s, e, result.outcome, _attacked):
 		hud.show_message(m)
+	if _raid_base != "" and Bases.bases.has(_raid_base):
+		var won: bool = result.outcome in ["enemy_struck", "enemy_sunk"]
+		hud.show_message(Bases.resolve_raid(s, _raid_base, 4 if won else -3))
+		$PortLayer.queue_redraw()
+	_raid_base = ""
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
 		shipping.remove(current_npc)
 	current_npc = {}
