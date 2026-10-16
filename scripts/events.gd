@@ -18,9 +18,11 @@ const VERBS := {  # verb: [min args, max args]
 	"cargo": [2, 2], "loot": [2, 2], "food": [1, 1], "water": [1, 1], "hull": [1, 1], "sails": [1, 1], "wages": [1, 1], "paywages": [0, 0],
 	"skill": [3, 3], "trait": [2, 2], "untrait": [2, 2], "reveal": [1, 1],
 	"flag": [1, 2], "unflag": [1, 1], "abandon": [1, 1],
+	"favour": [2, 2], "secret": [1, 3], "influence": [3, 3], "stir": [1, 1], "scandal": [1, 1], "council_vote": [2, 2], "join_council": [0, 0],
 	"morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
-const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader"]
+const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
+	"official", "creditor", "enemy_official", "council"]
 
 var events := {}
 var errors := PackedStringArray()
@@ -180,6 +182,10 @@ func _bind(spec: Dictionary, ctx: Dictionary, vars: Dictionary) -> Variant:
 		"officer": cands = s.officers.values().filter(func(id): return People.chars.has(id))
 		"captain": cands = [s.captain]
 		"ringleader": cands = [s.unrest.leader] if s.unrest.leader in s.crew else []
+		"official": cands = Politics.officials_at(ctx.port) if ctx.port != "" else []
+		"creditor": cands = Politics.creditors(s)
+		"enemy_official": cands = Politics.enemies(s)
+		"council": cands = Politics.council_members()
 		"here": cands = [ctx.port] if ctx.port != "" else []
 		"port": cands = Ports.state.keys()
 		"nation": cands = Career.nations()
@@ -291,6 +297,11 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"sick": return Crew.sick_count(s)
 		"shares": return s.articles.pay == "shares"
 		"crew_share": return s.articles.crew_share * 100.0
+		"owes": return Politics.creditors(s).size()
+		"secrets": return s.get("secrets", []).size()
+		"council_member": return s.get("council_member", false)
+		"council_leader": return Politics.council_leader == "player"
+		"power": return Politics.power(ctx.port).get(rest, 0.0) if ctx.port != "" else 0.0
 		"true": return true
 	return null
 
@@ -310,6 +321,7 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"nationality": return c.nationality
 			"age": return c.age
 			"hidden": return not c.hidden.is_empty()
+			"office": return c.get("role", "")
 		if head in People.STATS or head in People.SKILLS:
 			return People.value(c, head)
 	elif Ports.state.has(id):
@@ -323,6 +335,7 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 		match head:
 			"at_war": return Factions.at_war(id, _faction(rest, ctx))
 			"mine": return id == _home(ctx.s)
+			"standing": return ctx.s.relations.get(id, 0)
 	elif Data.table("goods").has(id):
 		match head:
 			"price": return Data.table("goods")[id].base_price
@@ -566,6 +579,31 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 		"time":
 			Clock.advance(float(a[1]))
 			return "%d days pass" % int(a[1])
+		"favour":
+			var who := _who(a[1], ctx, vars)
+			Politics.add_favours(who, s, int(a[2]))
+			return ("%s owes you %d favour%s" if int(a[2]) > 0 else "You owe %s %d favour%s") % [People.person(who).name, absi(int(a[2])), "" if absi(int(a[2])) == 1 else "s"]
+		"secret":
+			var about := _who(a[2], ctx, vars) if a.size() > 2 and a[2] != "any" else ""
+			if about == s.captain:
+				about = ""
+			return Politics.gain_secret(s, a[1], about, a.size() > 3 and a[3] == "fake", ctx.port if about == "" and ctx.port != "" and ctx.port != "nassau" else "")
+		"influence":
+			var g: String = a[2]
+			Politics.shift(a[1], g, float(a[3]))
+			return "%s in %s %+d" % [Data.table("politics").groups[g].name, Ports.port(a[1]).name, int(a[3])]
+		"stir":
+			Crew.stir(s, int(a[1]))
+			return ""
+		"scandal":
+			var c := People.person(_who(a[1], ctx, vars))
+			return Politics.replace(c.port, c.role, "was recalled in disgrace") if c.port != "" else ""
+		"council_vote":
+			return Politics.council_vote(s, a[1], a[2] == "yes", ctx).text
+		"join_council":
+			Politics.council_members()
+			s.council_member = true
+			return "You have a seat on the council of captains"
 		"morale":
 			Crew.add_mod(s, "event_" + res.id, res.title, float(a[1]), float(a[2]))
 			return "Morale %+d for %d days" % [int(a[1]), int(a[2])]
@@ -595,6 +633,11 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			Crew.captain_dies(s, "voted out by the crew", true)
 			return "The crew vote you out, %d to %d" % [v.no, v.yes]
 	return ""
+
+
+## One outcome outside an event (favours, council votes): the same language, nothing to substitute.
+func apply_outcome(o: String, ctx: Dictionary) -> String:
+	return _apply(o, ctx, {}, {"fight": {}, "mutiny": false, "id": "politics", "title": "Politics"})
 
 
 func _faction(word: String, ctx: Dictionary) -> String:
@@ -738,10 +781,10 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"prizes", "hostages", "contracts", "year", "month", "date", "guns", "stolen", "cargo", "relation", "captain", "captain_trait",
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
-	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share"]
-const TEXT_KEYS := ["date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality"]
-const CAND_KEYS := ["trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
-	"here", "contraband", "shipyard", "at_war", "mine", "price", "held"]
+	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power"]
+const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality"]
+const CAND_KEYS := ["office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
+	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held"]
 
 
 func _check_cond(c: String, where: String, candidate: bool) -> PackedStringArray:

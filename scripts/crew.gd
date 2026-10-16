@@ -389,6 +389,22 @@ static func calm(s: Dictionary, n: int) -> void:
 		People.person(others[0]).relations[s.captain] = People.person(others[0]).relations.get(s.captain, 0) + 5
 
 
+## Someone's money in the forecastle: n more hands join the plotters (and if nobody leads them yet, someone will).
+static func stir(s: Dictionary, n: int) -> void:
+	var u: Dictionary = s.unrest
+	if u.leader == "" and not s.crew.is_empty():
+		var pool: Array = s.crew.filter(func(id): return "ringleader" in tags(People.person(id)))
+		u.leader = (pool if not pool.is_empty() else s.crew)[0]
+		u.support = [u.leader]
+		u.since = Clock.day
+	for id in s.crew:
+		if n <= 0:
+			break
+		if not id in u.support and not "loyal" in tags(People.person(id)):
+			u.support.append(id)
+			n -= 1
+
+
 ## The mutiny itself: the plotters against the captain and whoever stands with them.
 ## {won, outcome: crushed|deposed|killed|split, check, text}
 static func mutiny(s: Dictionary, rng: RandomNumberGenerator) -> Dictionary:

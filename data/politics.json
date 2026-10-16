@@ -1,0 +1,95 @@
+{
+  "_comment": "Political intrigue (scripts/politics.gd). roles: the officials each port can have (ports pick theirs in 'offices'). groups: interest groups; their influence sets the port's laws (vigilance against smuggling and false colours, tariff on trade, pirates: -1 hang them all .. +1 welcome, pardon: cheaper pardons). influence: starting influence by nation. favours: what calling in a favour does (outcomes use the event language, docs/events.md). secrets: what can be learned and about whom. council: the pirate council of Nassau.",
+
+  "roles": {
+    "governor":       {"name": "Governor", "group": "", "favours": ["pull_strings", "pardon"]},
+    "harbour_master": {"name": "Harbour master", "group": "merchants", "favours": ["blind_eye"]},
+    "commander":      {"name": "Garrison commander", "group": "military", "favours": ["patrol_warning"]},
+    "merchant":       {"name": "Merchant prince", "group": "merchants", "favours": ["market_tip"]},
+    "planter":        {"name": "Planter", "group": "planters", "favours": ["fresh_hands"]},
+    "priest":         {"name": "Priest", "group": "church", "favours": ["sanctuary"]},
+    "broker":         {"name": "Broker", "group": "poor", "favours": ["fresh_hands", "blind_eye"]}
+  },
+
+  "offices": {
+    "default": ["governor", "harbour_master", "commander", "merchant", "planter", "priest"],
+    "small":   ["governor", "harbour_master", "commander", "merchant"],
+    "pirates": ["broker"]
+  },
+
+  "goals": {
+    "get_rich":     {"name": "get rich", "traits": ["greedy", "corrupt", "in_debt"], "group": ""},
+    "promotion":    {"name": "be promoted home", "traits": ["ambitious"], "group": ""},
+    "crush_piracy": {"name": "crush piracy", "traits": ["loyal_to_crown", "reformer"], "group": "military"},
+    "protect_trade":{"name": "protect trade", "traits": ["honest"], "group": "merchants"},
+    "revenge":      {"name": "settle old scores", "traits": ["vengeful"], "group": ""},
+    "keep_order":   {"name": "keep things quiet", "traits": [], "group": ""}
+  },
+
+  "groups": {
+    "planters":  {"name": "Planters", "description": "Sugar and tobacco estates. Want cheap goods and labour, and don't ask where either came from.",
+                  "laws": {"vigilance": 0.25, "tariff": 0.0, "pirates": 0.1, "pardon": 0.0}},
+    "merchants": {"name": "Merchants", "description": "Shipowners and traders. Pirates rob them; smugglers undercut them.",
+                  "laws": {"vigilance": 0.6, "tariff": -0.05, "pirates": -0.8, "pardon": 0.2}},
+    "military":  {"name": "Military", "description": "The garrison and the navy's friends. Order, patrols, and the gallows for pirates.",
+                  "laws": {"vigilance": 0.7, "tariff": 0.05, "pirates": -1.0, "pardon": -0.3}},
+    "church":    {"name": "Church", "description": "Priests and the pious. Hard on sin, soft on repentant sinners.",
+                  "laws": {"vigilance": 0.4, "tariff": 0.05, "pirates": -0.4, "pardon": 0.6}},
+    "poor":      {"name": "Townsfolk", "description": "Sailors, tavern keepers, labourers. Pirates spend money here.",
+                  "laws": {"vigilance": 0.1, "tariff": 0.0, "pirates": 0.7, "pardon": 0.3}}
+  },
+
+  "influence": {
+    "england": {"planters": 30, "merchants": 30, "military": 15, "church": 10, "poor": 15},
+    "spain":   {"planters": 20, "merchants": 15, "military": 25, "church": 30, "poor": 10},
+    "france":  {"planters": 35, "merchants": 15, "military": 15, "church": 20, "poor": 15},
+    "dutch":   {"planters": 10, "merchants": 50, "military": 15, "church": 10, "poor": 15},
+    "pirates": {"planters": 0, "merchants": 10, "military": 0, "church": 0, "poor": 90}
+  },
+
+  "favours": {
+    "pull_strings":   {"name": "Smooth things over with the Crown", "cost": 1, "outcomes": ["relation port +15"],
+                       "description": "A quiet word in the right ear: standing with this nation +15."},
+    "pardon":         {"name": "A pardon, signed and sealed", "cost": 3, "needs": "pirate",
+                       "description": "Forgiveness without the fee. Every other effect of a pardon still applies."},
+    "blind_eye":      {"name": "A blind eye in the harbour", "cost": 1,
+                       "description": "For two months this port lets you in whatever your name or standing."},
+    "patrol_warning": {"name": "Where the patrols will be", "cost": 1,
+                       "description": "For a month this nation's warships won't find you unless you go looking for them."},
+    "market_tip":     {"name": "The prices in every port", "cost": 1,
+                       "description": "His agents' letters: today's prices for everything, everywhere."},
+    "sanctuary":      {"name": "A blessing and a sermon", "cost": 1, "outcomes": ["morale +10 30", "honour +2"],
+                       "description": "A Mass for the crew and a word for your soul: morale +10 for a month, honour +2."},
+    "fresh_hands":    {"name": "Men who need a ship", "cost": 1, "outcomes": ["crew +8"],
+                       "description": "Eight hands who'll sign on, no questions asked and no bounty to pay."}
+  },
+
+  "secrets": {
+    "letters":  {"name": "Private letters", "about": ["governor", "commander", "priest"], "power": 3,
+                 "text": "Private letters in {name}'s hand, full of things no {role} should ever have written."},
+    "ledger":   {"name": "A smuggling ledger", "about": ["merchant", "planter", "harbour_master"], "power": 2,
+                 "text": "A ledger proving {name} trades in contraband behind the customs house's back."},
+    "bribes":   {"name": "Proof of bribery", "about": ["harbour_master", "commander", "governor"], "power": 2,
+                 "text": "Receipts showing {name} takes money to look the other way."},
+    "schedule": {"name": "A sailing schedule", "about": ["merchant"], "power": 1, "expires_days": 40,
+                 "text": "The sailing dates and course of {name}'s richest ship. Worth something until she sails."}
+  },
+  "secret_value": 120, "blackmail_favours": 2, "blackmail_grudge": -35, "sell_grudge": -40, "sell_discovered": 0.35,
+  "expose_standing": 5, "forgery_spot_dc": 13,
+
+  "council": {
+    "members": 5, "join_notoriety": 25, "join_pirate_relation": 15, "bribe": 150, "bribe_opinion": 15,
+    "topics": {
+      "leader":  {"name": "Who leads the council"},
+      "pardon":  {"name": "Take the King's Pardon",
+                  "yes": ["relation england +10", "relation pirates -5", "notoriety -10"], "no": ["relation pirates +5", "relation england -5"]},
+      "defend":  {"name": "Defend Nassau against the Crown",
+                  "yes": ["relation pirates +5", "relation england -10", "fear +2"], "no": ["relation pirates -5"]},
+      "punish":  {"name": "Punish a captain who broke the code",
+                  "yes": ["relation pirates +3", "fear +1"], "no": ["relation pirates -3", "honour +1"]}
+    }
+  },
+
+  "drift": 0.1, "goal_push": 2, "official_death_chance": 0.008, "summer_death_mult": 2.5, "promotion_chance": 0.02,
+  "scheme_chance": 0.15, "grudge": -30, "contract_influence": 6
+}

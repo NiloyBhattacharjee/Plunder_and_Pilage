@@ -37,6 +37,7 @@ func refresh() -> void:
 	_build_ship()
 	_build_officers()
 	_build_crew()
+	_build_people()
 
 
 func _build_captain(cap: Dictionary) -> void:
@@ -352,3 +353,45 @@ func _build_bonds(box: Node) -> void:
 		UIKit.label(box, "%s and %s are friends." % [People.person(pair[0]).name, People.person(pair[1]).name], "", Style.c("good"))
 	for pair in feuds.slice(0, 6):
 		UIKit.label(box, "%s and %s can't stand each other." % [People.person(pair[0]).name, People.person(pair[1]).name], "", Style.c("bad"))
+
+
+## Everyone you've dealt with ashore: officials, the council, and the secrets you hold.
+func _build_people() -> void:
+	var box: VBoxContainer = %PeopleBox
+	UIKit.clear(box)
+	var s: Dictionary = ship.state
+	var P: Dictionary = Data.table("politics")
+	UIKit.label(box, "People you know", "Officials you've met in port, and Nassau's captains. Their opinion of you, what they want, and favours owed either way.
+Unknown traits show as ?. Use favours and secrets in each port's Politics tab.", Style.c("header"))
+	var known: Array = []
+	for port_id in Politics.officials:
+		for id in Politics.officials[port_id].values():
+			if People.chars.has(id):
+				known.append(id)
+	if s.get("council_member", false):
+		known.append_array(Politics.council)
+	if known.is_empty():
+		UIKit.label(box, "Nobody yet. Visit a port and see who runs it.", "", Style.c("dim"))
+	var g := UIKit.grid(box, 6)
+	for h in ["", "Name", "Where", "Opinion", "Wants", "Favours"]:
+		UIKit.label(g, h, "", Style.c("header"))
+	for id in known:
+		var c := People.person(id)
+		g.add_child(Portrait.make(c, "captain", 36))
+		UIKit.label(g, "%s (%s)" % [c.name, People.trait_names(c)], People.describe(c))
+		var role: String = "Council captain" if c.role == "council" else P.roles[c.role].name
+		UIKit.label(g, "%s, %s" % [role, Ports.port(c.port).name] if c.port != "" else role)
+		var op: int = c.relations.get(s.captain, 0)
+		UIKit.label(g, "%+d" % op, "", Style.c("good") if op >= 20 else (Style.c("bad") if op <= Data.table("politics").grudge else Color(0, 0, 0, 0)))
+		UIKit.label(g, P.goals[c.get("goal", "keep_order")].name if c.role != "council" else "plunder")
+		var owed := Politics.favours(id, s)
+		UIKit.label(g, ("owes you %d" % owed) if owed > 0 else (("you owe %d" % -owed) if owed < 0 else ""), "", Style.c("bad") if owed < 0 else Color(0, 0, 0, 0))
+	UIKit.label(box, "")
+	UIKit.label(box, "Secrets", "Letters, ledgers, receipts and schedules. Use them in the Politics tab of the port where their subject holds office.", Style.c("header"))
+	var secrets: Array = s.get("secrets", [])
+	if secrets.is_empty():
+		UIKit.label(box, "None. Captured ships, tavern clerks and dangerous friends are where secrets come from.", "", Style.c("dim"))
+	for sec in secrets:
+		var where: String = Ports.port(sec.port).name if sec.port != "" else "nowhere now"
+		var stale := " Worthless in %d days." % int(sec.expires - Clock.day) if sec.expires >= 0 else ""
+		UIKit.label(box, "%s (%s)%s%s%s" % [Politics.describe(sec), where, " It may be forged." if sec.doubt else "", " You're blackmailing them." if sec.leverage else "", stale])

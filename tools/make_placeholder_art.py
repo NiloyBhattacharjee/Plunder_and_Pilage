@@ -403,7 +403,124 @@ def make_panel():
     save(img, A / "ui" / "panel.png")
 
 
+def make_hud_icons():
+    """Ink pictograms for the top bar, engraved like the rest: 48x48, transparent."""
+    S = 48
+    wash = lambda rgb: tuple(int(c * 0.55 + 234 * 0.45) for c in rgb) + (255,)
+
+    def icon(name, draw, hatch=True):
+        img = Image.new("RGBA", (S * 2, S * 2), (0, 0, 0, 0))  # drawn at 2x, then smoothed down
+        d = ImageDraw.Draw(img)
+        draw(d)
+        if hatch:
+            img = engrave(img, spacing=5, shadow_from=0.55, alpha=110)
+        save(img.resize((S, S), Image.LANCZOS), A / "icons" / "hud" / f"{name}.png")
+
+    def crew(d):  # a sailor's bust
+        d.ellipse([34, 12, 62, 42], fill=wash((210, 170, 130)), outline=INK, width=3)
+        d.pieslice([16, 44, 80, 108], 180, 360, fill=wash((60, 80, 120)), outline=INK, width=3)
+        d.line([(30, 20), (66, 20)], fill=INK, width=5)  # hat brim
+
+    def morale(d):  # a tankard of grog
+        d.rectangle([24, 26, 62, 82], fill=wash((150, 100, 50)), outline=INK, width=3)
+        d.arc([52, 36, 80, 68], -90, 90, fill=INK, width=4)
+        d.ellipse([22, 16, 64, 34], fill=CREAM, outline=INK, width=3)
+        for x in (32, 42, 52):
+            d.line([(x, 40), (x, 76)], fill=INK, width=1)
+
+    def hull(d):  # a hull in profile
+        d.polygon([(8, 46), (88, 46), (76, 76), (20, 76)], fill=wash((120, 80, 40)), outline=INK)
+        d.line([(8, 46), (88, 46)], fill=INK, width=3)
+        for x in (28, 44, 60):
+            d.rectangle([x, 54, x + 6, 60], fill=INK)
+        d.line([(48, 46), (48, 10)], fill=INK, width=3)
+
+    def sails(d):  # a full square sail
+        d.line([(48, 6), (48, 90)], fill=INK, width=3)
+        d.line([(18, 18), (78, 18)], fill=INK, width=3)
+        d.polygon([(20, 20), (76, 20), (82, 70), (14, 70)], fill=CREAM, outline=INK)
+        d.arc([14, 50, 82, 90], 200, 340, fill=INK, width=2)
+
+    def hold(d):  # a barrel
+        d.ellipse([22, 10, 74, 26], fill=wash((150, 110, 60)), outline=INK, width=3)
+        d.rectangle([22, 18, 74, 80], fill=wash((150, 110, 60)))
+        d.line([(22, 18), (22, 80)], fill=INK, width=3)
+        d.line([(74, 18), (74, 80)], fill=INK, width=3)
+        d.arc([22, 72, 74, 88], 0, 180, fill=INK, width=3)
+        for y in (34, 62):
+            d.line([(22, y), (74, y)], fill=INK, width=3)
+
+    def notoriety(d):  # a skull
+        d.ellipse([22, 12, 74, 62], fill=CREAM, outline=INK, width=3)
+        d.rectangle([34, 58, 62, 78], fill=CREAM, outline=INK, width=3)
+        d.ellipse([32, 32, 44, 46], fill=INK)
+        d.ellipse([52, 32, 64, 46], fill=INK)
+        d.polygon([(48, 48), (44, 56), (52, 56)], fill=INK)
+        for x in (40, 48, 56):
+            d.line([(x, 62), (x, 78)], fill=INK, width=2)
+
+    def contracts(d):  # a sealed scroll
+        d.rectangle([20, 18, 76, 76], fill=CREAM, outline=INK, width=3)
+        d.ellipse([14, 10, 30, 26], fill=CREAM, outline=INK, width=3)
+        d.ellipse([66, 68, 82, 84], fill=CREAM, outline=INK, width=3)
+        for y in (32, 42, 52):
+            d.line([(30, y), (66, y)], fill=INK, width=2)
+        d.ellipse([52, 56, 70, 74], fill=(139, 42, 31, 255), outline=INK, width=2)
+
+    def unrest(d):  # crossed cutlasses
+        for a, b in (((16, 80), (76, 14)), ((80, 80), (20, 14))):
+            d.line([a, b], fill=INK, width=6)
+        d.line([(10, 68), (28, 86)], fill=INK, width=5)
+        d.line([(68, 86), (86, 68)], fill=INK, width=5)
+
+    def sick(d):  # a physician's flask
+        d.rectangle([40, 8, 56, 30], fill=CREAM, outline=INK, width=3)
+        d.ellipse([18, 26, 78, 86], fill=wash((90, 150, 80)), outline=INK, width=3)
+        d.line([(48, 42), (48, 70)], fill=CREAM, width=6)
+        d.line([(34, 56), (62, 56)], fill=CREAM, width=6)
+
+    def date(d):  # an hourglass
+        d.line([(22, 10), (74, 10)], fill=INK, width=5)
+        d.line([(22, 86), (74, 86)], fill=INK, width=5)
+        d.polygon([(28, 14), (68, 14), (48, 48)], fill=wash((230, 200, 140)), outline=INK)
+        d.polygon([(48, 48), (68, 82), (28, 82)], fill=CREAM, outline=INK)
+        d.polygon([(48, 64), (60, 82), (36, 82)], fill=wash((210, 170, 100)))
+
+    def gold(d):  # a stack of coins
+        for i, y in enumerate((60, 48, 36)):
+            d.ellipse([18 + i * 4, y, 70 + i * 4, y + 20], fill=wash((220, 180, 50)), outline=INK, width=3)
+        d.text((48 + 8, 46), "$", fill=INK, anchor="mm")
+
+    for name, fn in [("crew", crew), ("morale", morale), ("hull", hull), ("sails", sails), ("hold", hold),
+                     ("notoriety", notoriety), ("contracts", contracts), ("unrest", unrest), ("sick", sick),
+                     ("date", date), ("gold", gold)]:
+        icon(name, fn)
+
+
+def make_topbar():
+    """The top bar: a strip of paper with an engraved double rule along the bottom, tiled sideways."""
+    rnd = random.Random(11)
+    img = Image.new("RGBA", (96, 64), (234, 217, 176, 255))
+    px = img.load()
+    for y in range(64):
+        for x in range(96):
+            n = rnd.randint(-9, 9) - (y // 10)
+            r, g, b, a = px[x, y]
+            px[x, y] = (r + n, g + n, b + int(n * 0.8), 255)
+    img = img.filter(ImageFilter.GaussianBlur(0.7))
+    d = ImageDraw.Draw(img)
+    d.line([(0, 57), (95, 57)], fill=INK, width=2)
+    d.line([(0, 61), (95, 61)], fill=(59, 42, 26, 140), width=1)
+    d.line([(0, 63), (95, 63)], fill=INK, width=1)
+    save(img, A / "ui" / "topbar.png")
+
+
 if __name__ == "__main__":
+    import sys
+    if "--hud" in sys.argv:  # just the top bar and its icons
+        make_hud_icons()
+        make_topbar()
+        raise SystemExit
     make_ships()
     flags = make_flags()
     (ROOT / "data" / "flags.json").write_text("{\n" + ",\n".join(f'  "{k}": ' + json.dumps(v, ensure_ascii=False) for k, v in flags.items()) + "\n}\n", encoding="utf-8")

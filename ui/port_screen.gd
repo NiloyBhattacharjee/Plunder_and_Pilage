@@ -53,13 +53,16 @@ func refresh() -> void:
 	var law_text := "No contraband laws." if laws.contraband.is_empty() else "Contraband: %s. Customs vigilance %d%%." % [
 		", ".join(laws.contraband.map(func(g): return Data.table("goods")[g].name)), int(laws.vigilance * 100)]
 	law_text += "  Stolen goods sell at %s here." % ("full price through the fence" if p.get("fence", false) else "half price, no questions asked")
-	%Info.text = "Governor: %s\n%s\n%s\nGold %d   Hold %d / %d tons" % [p.governor, p.description, law_text,
-		ship.state.gold, Market.cargo_used(ship.state.cargo), ship.capacity()]
+	var gov := Politics.official(port_id, "governor")
+	law_text += "  " + Politics.law_text(port_id)
+	%Info.text = "%s\n%s\n%s\nGold %d   Hold %d / %d tons" % ["Governor: " + People.person(gov).name if gov != "" else "Ruled by the council of captains",
+		p.description, law_text, ship.state.gold, Market.cargo_used(ship.state.cargo), ship.capacity()]
 	_build_market()
 	_build_shipyard()
 	_refresh_tavern()
 	_build_governor()
 	_build_contracts()
+	_build_politics()
 
 
 func _build_market() -> void:
@@ -256,7 +259,7 @@ func _build_governor() -> void:
 	var s: Dictionary = ship.state
 	var p := Ports.port(port_id)
 	var f: String = p.faction
-	UIKit.label(box, "Governor %s" % p.governor, "", Style.c("header"))
+	UIKit.label(box, "Governor %s" % (People.person(Politics.official(port_id, "governor")).name if f != "pirates" else ""), "", Style.c("header"))
 	UIKit.label(box, "Your standing with %s: %+d.  You are: %s." % [Career.fname(f), s.relations.get(f, 0), Career.status_text(s)],
 		"Standing changes prices here (x%.2f), who will deal with you, and whether the harbour stays open." % Career.price_mult(s, port_id))
 	UIKit.label(box, Factions.war_summary(), "", Style.c("dim"))
@@ -264,7 +267,7 @@ func _build_governor() -> void:
 		UIKit.label(box, "You're here under false colours. The governor's door is not one to knock on.", "", Style.c("bad"))
 		return
 	if f == "pirates":
-		UIKit.label(box, "There is no governor's mansion here, only the council of captains (milestone 8b).", "", Style.c("dim"))
+		UIKit.label(box, "There is no governor's mansion here. The haven is ruled by its council of captains: see the Politics tab.", "", Style.c("dim"))
 		return
 
 	UIKit.label(box, "")
@@ -295,12 +298,12 @@ func _build_governor() -> void:
 
 	if c.pirate:
 		UIKit.label(box, "")
-		var cost := Career.pardon_cost(s, f)
-		var why2 := Career.pardon_problem(s, f)
+		var cost := Career.pardon_cost(s, f, port_id)
+		var why2 := Career.pardon_problem(s, f, port_id)
 		var tip2 := "%s forgives you%s. Notoriety halves; standing with %s rises to at least 0.\nThe Brethren will call you a turncoat (standing -%d), crew who love the trade will resent it, and other nations remember." % [
 			Career.fname(f), "" if cost == 0 else " for %d gold" % cost, Career.fname(f), Data.rules.pardon.pirate_relation_hit]
 		var b2 := UIKit.button(box, ("Accept the King's Pardon (free)" if cost == 0 else "Seek a pardon (%d gold)" % cost),
-			_act.bind(func(): return {"ok": true, "text": " ".join(Career.pardon(s, f))}), why2 if why2 != "" else tip2)
+			_act.bind(func(): return {"ok": true, "text": " ".join(Career.pardon(s, f, false, port_id))}), why2 if why2 != "" else tip2)
 		b2.disabled = why2 != ""
 
 
@@ -364,6 +367,120 @@ func _build_contracts() -> void:
 				"The enemy pays well for those seals. Your employer will never trust you again, and if word gets out (%d%%), %s brands you a traitor." % [
 					int(Data.rules.contracts.betray.discovery * 100), Data.table("factions")[c.faction].name])
 		UIKit.button(r, "Abandon", _act.bind(func(): return {"ok": true, "text": Contracts.abandon(c, s)}), "Counts as failing the job.")
+
+
+## Who holds power, the laws it makes, the people in office, the secrets you hold over them, and Nassau's council.
+func _build_politics() -> void:
+	var box: VBoxContainer = %PolBox
+	UIKit.clear(box)
+	var s: Dictionary = ship.state
+	var P: Dictionary = Data.table("politics")
+	var ctx := {"s": s, "stats": ship.stats, "port": port_id, "storm": false}
+	var power := Politics.power(port_id)
+	var groups: Array = power.keys().filter(func(g): return power[g] >= 1.0)
+	groups.sort_custom(func(a, b): return power[a] > power[b])
+	UIKit.label(box, "Who holds power", "Interest groups and their sway over the governor. The strongest shape the laws.\nWorking for a group (political contracts) raises its influence; scandals cut it.", Style.c("header"))
+	var row := UIKit.row(box)
+	for g in groups:
+		var gd: Dictionary = P.groups[g]
+		var prefs := "Wants: customs %d%%, tariff %+d%%, pirates %s, pardons %s." % [int(gd.laws.vigilance * 100), int(gd.laws.tariff * 100),
+			"welcome" if gd.laws.pirates > 0.3 else ("hanged" if gd.laws.pirates < -0.6 else "watched"), "easier" if gd.laws.pardon > 0.2 else "harder"]
+		UIKit.label(row, "%s %d%%    " % [gd.name, power[g]], gd.description + "\n" + prefs, Style.c("good") if g == Politics.dominant(port_id) else Color(0, 0, 0, 0))
+	var t := Politics.target_laws(port_id)
+	var laws: Dictionary = Ports.state[port_id].laws
+	var lrow := UIKit.row(box)
+	for pair in [["vigilance", "Customs vigilance %d%%" % int(laws.vigilance * 100), "Catches smugglers and sees through false colours. Moves gradually toward what the powerful want (%d%%)." % int(t.vigilance.value * 100)],
+			["tariff", "Tariff %+d%%" % int(laws.get("tariff", 0.0) * 100), "Added to the price of everything you buy and taken off what you sell."],
+			["pirates", "Pirates: %s" % ("welcome" if laws.get("pirates", 0.0) > 0.4 else ("tolerated" if laws.get("pirates", 0.0) > -0.2 else ("hunted" if laws.get("pirates", 0.0) > -0.6 else "hanged"))),
+				"Where pirates are welcome, a wanted pirate can still come ashore. Where they're hanged, the harbour master's bribe costs more."],
+			["pardon", "Pardons %s" % ("cheaper" if laws.get("pardon", 0.0) > 0.1 else ("dearer" if laws.get("pardon", 0.0) < -0.1 else "at the usual price")), "Where the church is strong, repentance costs less."]]:
+		var parts := PackedStringArray()
+		for p in t[pair[0]].parts:
+			if absf(p[1]) >= 0.005:
+				parts.append("%s %+.2f" % p)
+		UIKit.label(lrow, pair[1] + "    ", pair[2] + "\n" + ", ".join(parts))
+	UIKit.label(box, "")
+
+	var here := Politics.officials_at(port_id)
+	if not here.is_empty():
+		UIKit.label(box, "People who matter", "Favours are owed both ways and tied to the person (and to you: a new captain starts afresh).\nCall one in for what gold can't buy, or ask now and owe them; they'll call it in when it suits them.", Style.c("header"))
+	for id in here:
+		var c := People.person(id)
+		var line := UIKit.row(box)
+		line.add_child(Portrait.make(c, "captain", 44))
+		var owed := Politics.favours(id, s)
+		UIKit.label(line, "%s: %s.  Opinion of you %+d.  Wants to %s.  %s" % [P.roles[c.role].name, c.name, c.relations.get(s.captain, 0),
+			P.goals[c.get("goal", "keep_order")].name, ("Owes you %d favour%s." % [owed, "" if owed == 1 else "s"]) if owed > 0 else (("You owe them %d." % -owed) if owed < 0 else "")],
+			People.describe(c))
+		if disguised and c.role == "governor":
+			continue
+		var acts := UIKit.row(box)  # favours on their own line, under the person
+		var indent := Control.new()
+		indent.custom_minimum_size = Vector2(52, 0)
+		acts.add_child(indent)
+		for kind in P.roles[c.role].favours:
+			var f: Dictionary = P.favours[kind]
+			var why := Politics.favour_problem(id, s, kind, false)
+			var b := UIKit.button(acts, "%s (%d)" % [f.name, f.cost], _act.bind(func(): return {"ok": true, "text": Politics.use_favour(id, s, kind, ctx)}),
+				why if why != "" else f.description)
+			b.disabled = why != ""
+			if why != "":
+				var ask := Politics.favour_problem(id, s, kind, true)
+				var ab := UIKit.button(acts, "Ask", _act.bind(func(): return {"ok": true, "text": Politics.use_favour(id, s, kind, ctx, true)}),
+					ask if ask != "" else f.description + "\nYou'll owe %s %d favour%s." % [c.name, f.cost, "" if f.cost == 1 else "s"])
+				ab.disabled = ask != ""
+
+	var mine: Array = s.get("secrets", []).filter(func(x): return x.port == port_id)
+	if not mine.is_empty():
+		UIKit.label(box, "")
+		UIKit.label(box, "Secrets you hold here", "Blackmail: favours now and every month, and an enemy. Sell: to the person who likes them least. Expose: the Crown recalls them and thanks you.\nA forgery ruins whatever you try.", Style.c("header"))
+	for sec in mine:
+		var line := UIKit.row(box)
+		UIKit.label(line, Politics.describe(sec) + (" (it may be forged)" if sec.doubt else "") + (" (you're blackmailing them)" if sec.leverage else ""))
+		if sec.kind == "schedule":
+			UIKit.button(line, "Act on it", _act.bind(func(): return {"ok": true, "text": Politics.act_on_schedule(s, sec)}), "Lie in wait on her course.")
+		elif not sec.leverage:
+			UIKit.button(line, "Blackmail", _act.bind(func(): return {"ok": true, "text": Politics.blackmail(s, sec)}), "Favours now and every month after. They'll want you gone.")
+		var rival := Politics.rival_of(sec)
+		if rival != "":
+			UIKit.button(line, "Sell to %s (%d)" % [People.person(rival).name, Politics.value(sec)], _act.bind(func(): return {"ok": true, "text": Politics.sell(s, sec)}),
+				"%s likes them least. Gold and a favour; %d%% chance they learn who sold it." % [People.person(rival).name, int(P.sell_discovered * 100)])
+		if Ports.port(port_id).faction != "pirates" and not disguised:
+			UIKit.button(line, "Expose to the Crown", _act.bind(func(): return {"ok": true, "text": Politics.expose(s, sec)}),
+				"A scandal: they're recalled and replaced, their side loses influence, and %s thanks you." % Data.table("factions")[Ports.port(port_id).faction].name)
+
+	if port_id == "nassau":
+		_build_council(box, s)
+
+
+func _build_council(box: Node, s: Dictionary) -> void:
+	UIKit.label(box, "")
+	var lead := Politics.council_leader
+	UIKit.label(box, "The council of captains", "Nassau's captains decide its great matters by vote: pardons, defence, the code. You can win votes with friendship, gold and favours, and lead the council by vote or by the sword.", Style.c("header"))
+	for id in Politics.council_members():
+		var c := People.person(id)
+		var line := UIKit.row(box)
+		line.add_child(Portrait.make(c, "captain", 44))
+		var owed := Politics.favours(id, s)
+		UIKit.label(line, "%s of the %s%s.  Opinion of you %+d.%s" % [c.name, c.ship, " (leader)" if id == lead else "", c.relations.get(s.captain, 0),
+			"  Owes you %d." % owed if owed > 0 else ""], People.describe(c))
+		var b := UIKit.button(line, "Buy their vote (%d)" % Data.table("politics").council.bribe, _act.bind(func(): return {"ok": true, "text": Politics.bribe(s, id)}),
+			"Gold talks: their opinion of you +%d." % Data.table("politics").council.bribe_opinion)
+		b.disabled = s.gold < Data.table("politics").council.bribe
+	var row := UIKit.row(box)
+	if not s.get("council_member", false):
+		var why := Politics.council_problem(s)
+		var j := UIKit.button(row, "Take a seat on the council", _act.bind(func():
+			s.council_member = true
+			return {"ok": true, "text": "You sit with the captains of Nassau now."}), why if why != "" else "Votes, favours and enemies come with it.")
+		j.disabled = why != ""
+	elif lead == "player":
+		UIKit.label(row, "You lead the council.", "", Style.c("good"))
+	else:
+		UIKit.button(row, "Stand for leader", _act.bind(func(): return {"ok": true, "text": Politics.leadership_vote(s)}),
+			"Each captain backs whoever they like better, with favours counting for you. Lose, and the leader holds it against you.")
+		UIKit.button(row, "Challenge %s to a duel" % People.person(lead).name, _act.bind(func(): return {"ok": true, "text": Politics.challenge(s)}),
+			"By the old code. Your swordplay against theirs. Win and the council is yours; lose and you'll carry the scar.")
 
 
 func _refresh_tavern() -> void:

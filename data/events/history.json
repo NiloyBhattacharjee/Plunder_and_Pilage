@@ -60,6 +60,17 @@
     ]
   },
 
+  "treaty_of_utrecht": {
+    "title": "The Treaty of Utrecht",
+    "text": "Peace, signed at Utrecht. Every letter of marque in the Caribbean is waste paper overnight, and thousands of privateersmen are out of work, with ships, guns and nothing to do with them. Many will turn pirate before the year is out.",
+    "where": "any", "once": true, "priority": true,
+    "conditions": ["date >= 1713-04-11", "date < 1714-01-01"],
+    "choices": [
+      {"text": "Look for honest work", "conditions": ["not pirate"], "outcomes": ["morale -5 30"], "result": "The crew aren't happy. Peace pays badly."},
+      {"text": "Sign on the out-of-work privateersmen", "outcomes": ["crew +10", "morale +3 20"], "result": "Hard men, good gunners, and hungry. Where will you take them?"},
+      {"text": "The sea's full of prizes and short of warships", "conditions": ["pirate"], "outcomes": ["relation pirates +5", "morale +5 30"], "result": "A golden age, the old hands call it."}
+    ]
+  },
   "treasure_fleet_wreck": {
     "title": "The Plate Fleet is lost",
     "text": "The whole Spanish treasure fleet, eleven ships laden with silver, has been wrecked by a hurricane on the Florida coast. The Spanish are salvaging it, and every pirate in the Caribbean is on his way.",

@@ -1,6 +1,48 @@
 {
-  "_comment": "Contract templates. employer: governor (any lawful port) or broker (ports with a 'broker' in ports.json). needs: marque (a letter of marque from the employer's nation) and/or standing (minimum standing with the employer's faction; brokers count the Brethren). objective: raid (take or sink `count` ships of the target nation near a port), intercept (a named ship sails the map; take her, or sink her unless capture is true), deliver (carry dispatches or contraband to `dest`). target: enemy (a nation at war with the employer), nation (any nation but the employer's), pirates. Tiers unlock with the employer's trust in you. success: standing with the employer's faction, trust, and other relations ('target' means the target's faction). Placeholders: {target} {ship} {port} {dest} {good} {qty} {count} {captain}.",
+  "_comment": "Contract templates. employer: any office from data/politics.json (governor, harbour_master, commander, merchant, planter, priest, broker). needs: marque (a letter of marque from the employer's nation) and/or standing (minimum standing with the employer's faction; brokers count the Brethren). objective: raid (take or sink `count` ships of the target nation near a port), intercept (a named ship sails the map; take her, or sink her unless capture is true), deliver (carry dispatches or contraband to `dest`). target: enemy (a nation at war with the employer), nation (any nation but the employer's), own (the employer's own nation), pirates. group: the interest group whose influence the job raises. reward_secret: a secret about one of the employer's colleagues. Tiers unlock with the employer's trust in you. success: standing with the employer's faction, trust, and other relations ('target' means the target's faction). Placeholders: {target} {ship} {port} {dest} {good} {qty} {count} {captain}.",
 
+  "dirt_on_the_governor": {
+    "name": "Steal the governor's letters",
+    "description": "The governor's private packet sails aboard the {target} {ship} for {dest}. Take her quietly and bring the letters to {port}'s merchants, who would very much like a governor they can lean on. Attacking a {target} ship is piracy, of course.",
+    "employer": "merchant", "needs": {"standing": 0}, "objective": "intercept", "kind": "merchant", "capture": true, "target": "own",
+    "cargo": ["cloth", "wine"], "days": 30, "group": "merchants", "reward_secret": {"kind": "letters", "about": "governor"},
+    "tiers": [{"trust": 0, "reward": 300, "ships": ["sloop", "schooner"]}, {"trust": 15, "reward": 600, "ships": ["brigantine"]}, {"trust": 35, "reward": 1000, "ships": ["brigantine"]}],
+    "success": {"standing": 0, "trust": 12},
+    "lie_chance": 0.15, "trap_chance": 0.1
+  },
+  "ruin_a_rival_house": {
+    "name": "Ruin a rival house: the {ship}",
+    "description": "A rival trading house is undercutting the merchants of {port}. Their {ship} sails for {dest} with {good}. Take her, and the market is ours. She flies the same flag we do, so mind who sees you.",
+    "employer": "merchant", "needs": {"standing": 5}, "objective": "intercept", "kind": "merchant", "capture": true, "target": "own",
+    "cargo": ["sugar", "tobacco", "indigo"], "days": 35, "group": "merchants",
+    "tiers": [{"trust": 0, "reward": 400, "ships": ["sloop", "brigantine"]}, {"trust": 15, "reward": 800, "ships": ["fluyt"]}, {"trust": 35, "reward": 1500, "ships": ["fluyt", "galleon"]}],
+    "success": {"standing": 2, "trust": 10},
+    "lie_chance": 0.1, "trap_chance": 0.05
+  },
+  "garrison_patrol": {
+    "name": "Clear the coast of the {ship}",
+    "description": "The garrison commander wants the pirate {captain} and the {ship} gone from the waters near {port}, and the governor to know who did it. The military's word will carry more weight after.",
+    "employer": "commander", "needs": {"standing": 5}, "objective": "intercept", "kind": "pirate", "capture": false, "target": "pirates", "days": 40, "group": "military",
+    "tiers": [{"trust": 0, "reward": 500, "ships": ["sloop", "schooner"]}, {"trust": 15, "reward": 1000, "ships": ["brigantine"]}, {"trust": 35, "reward": 2000, "ships": ["brig"]}],
+    "success": {"standing": 6, "trust": 10, "relations": {"pirates": -6}},
+    "lie_chance": 0.0, "trap_chance": 0.05
+  },
+  "alms_voyage": {
+    "name": "Carry alms and medicine to {dest}",
+    "description": "The church of {port} is sending alms, medicine and letters to the poor of {dest}. A safe passage will be remembered in the pulpit, and in the governor's council.",
+    "employer": "priest", "needs": {"standing": -5}, "objective": "deliver", "cargo": ["parcel"], "days": 30, "group": "church",
+    "tiers": [{"trust": 0, "reward": 150}, {"trust": 15, "reward": 300}, {"trust": 35, "reward": 600}],
+    "success": {"standing": 4, "trust": 12},
+    "lie_chance": 0.0, "trap_chance": 0.0
+  },
+  "planters_goods": {
+    "name": "Cheap {good} for the planters: {qty} to {dest}",
+    "description": "The planters want {good} without the Crown's duties on it. Run {qty} into {dest} past the customs house; every cargo that gets through makes the planters stronger in council.",
+    "employer": "planter", "needs": {"standing": -10}, "objective": "deliver", "cargo": ["contraband"], "days": 35, "group": "planters",
+    "tiers": [{"trust": 0, "reward": 350, "qty": 20}, {"trust": 15, "reward": 700, "qty": 35}, {"trust": 35, "reward": 1300, "qty": 60}],
+    "success": {"standing": 2, "trust": 10},
+    "lie_chance": 0.15, "trap_chance": 0.1
+  },
   "raid_shipping": {
     "name": "Raid {target} shipping off {port}",
     "description": "The Admiralty wants {target} trade strangled. Take or sink {count} {target} ships within a day's sail of {port}.",

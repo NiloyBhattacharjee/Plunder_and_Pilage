@@ -172,28 +172,31 @@ static func check_peace(s: Dictionary) -> String:
 	return ""
 
 
-static func pardon_cost(s: Dictionary, f: String) -> int:
+static func pardon_cost(s: Dictionary, f: String, port_id := "") -> int:
 	if f in Factions.pardons:
 		return 0
-	return int(Data.rules.pardon.base_cost + s.reputation.notoriety * Data.rules.pardon.per_notoriety)
+	var cost: float = Data.rules.pardon.base_cost + s.reputation.notoriety * Data.rules.pardon.per_notoriety
+	if port_id != "":  # where the church holds sway, repentance comes cheaper
+		cost *= clampf(1.0 - Ports.state[port_id].laws.get("pardon", 0.0) * 0.5, 0.5, 1.5)
+	return int(cost)
 
 
-static func pardon_problem(s: Dictionary, f: String) -> String:
+static func pardon_problem(s: Dictionary, f: String, port_id := "") -> String:
 	if not s.career.pirate:
 		return "You've nothing to be pardoned for."
 	if f == "pirates":
 		return "The Brethren have no pardons to give."
 	if s.relations.get(f, 0) < Data.rules.pardon.min_standing:
 		return "%s would sooner hang you." % fname(f)
-	if s.gold < pardon_cost(s, f):
-		return "The pardon costs %d gold." % pardon_cost(s, f)
+	if s.gold < pardon_cost(s, f, port_id):
+		return "The pardon costs %d gold." % pardon_cost(s, f, port_id)
 	return ""
 
 
 ## Old crew may resent it, and old enemies remember: only the pardoning nation forgives.
-static func pardon(s: Dictionary, f: String) -> Array:
+static func pardon(s: Dictionary, f: String, free := false, port_id := "") -> Array:
 	var p: Dictionary = Data.rules.pardon
-	var cost := pardon_cost(s, f)
+	var cost := 0 if free else pardon_cost(s, f, port_id)
 	s.gold -= cost
 	s.career.pirate = false
 	s.career.pardoned_by.append(f)
@@ -223,17 +226,21 @@ static func port_access(s: Dictionary, port_id: String) -> Dictionary:
 	var rel: int = s.relations.get(f, 0)
 	var pa: Dictionary = Data.rules.port_access
 	var reason := ""
-	if f == "pirates":
+	var tolerant: bool = Ports.state[port_id].laws.get("pirates", 0.0) > 0.4  # the townsfolk rule here, and pirates spend money
+	if s.get("blind_eye", {}).get(port_id, 0.0) > Clock.day:
+		reason = ""  # the harbour master owes you
+	elif f == "pirates":
 		if rel <= pa.closed:
 			reason = "The Brethren remember the pirates you've hanged."
-	elif wanted(s) and not p.get("fence", false):
+	elif wanted(s) and not p.get("fence", false) and not tolerant:
 		reason = "Your name is posted on every quay. The governor will hang you on sight."
 	elif rel <= pa.closed:
 		reason = "%s has closed its ports to you." % fname(f)
 	var detect := clampf(pa.detect_base + s.reputation.notoriety * pa.detect_per_notoriety
 		+ Ports.state[port_id].laws.vigilance * pa.detect_per_vigilance, 0.05, 0.9)
+	var harsh: float = 1.0 - minf(0.0, Ports.state[port_id].laws.get("pirates", 0.0))  # a hanging town's harbour master costs more
 	return {"open": reason == "", "reason": reason, "detect": detect,
-		"bribe": int(pa.bribe_base + s.reputation.notoriety * pa.bribe_per_notoriety)}
+		"bribe": int((pa.bribe_base + s.reputation.notoriety * pa.bribe_per_notoriety) * harsh)}
 
 
 ## Can these colours get you past this port's fort? A flag of a nation not at war with the port.
@@ -246,7 +253,8 @@ static func flag_fools_port(s: Dictionary, port_id: String) -> bool:
 static func price_mult(s: Dictionary, port_id: String) -> float:
 	var pa: Dictionary = Data.rules.port_access
 	var rel: int = s.relations.get(Ports.port(port_id).faction, 0)
-	return clampf(1.0 - rel * pa.price_per_standing, pa.price_clamp[0], pa.price_clamp[1])
+	var tariff: float = Ports.state[port_id].laws.get("tariff", 0.0)
+	return clampf(1.0 - rel * pa.price_per_standing, pa.price_clamp[0], pa.price_clamp[1]) * (1.0 + tariff)
 
 
 ## Will this ship attack you on sight? Navies judge you by your record and by the colours you fly.
@@ -258,6 +266,8 @@ static func npc_hostile(s: Dictionary, enemy: Dictionary, rng: RandomNumberGener
 		"warship":
 			if enemy.kind == "hunter" and wanted(s):
 				return true
+			if s.get("patrol_warning", {}).get(enemy.faction, 0.0) > Clock.day:
+				return false  # you know where they'll be, and keep out of their way
 			if shown == "pirates" or Factions.at_war(shown, enemy.faction):
 				return true
 			if s.relations.get(enemy.faction, 0) < Data.rules.encounters.hostile_relation:

@@ -1,0 +1,231 @@
+{
+  "_comment": "Political intrigue: secrets for sale, officials at odds, favours called in, schemes against you, the Nassau council. See docs/events.md and data/politics.json.",
+
+  "clerk_sells_secret": {
+    "title": "A clerk with something to sell",
+    "text": "A clerk from the governor's house finds you in a tavern. He has papers concerning {target}, and debts to pay.",
+    "where": "port", "weight": 8,
+    "conditions": ["port_faction != pirates", "gold >= 80"],
+    "roles": {"target": {"from": "official"}},
+    "choices": [
+      {"text": "Buy them (80 gold)", "hidden": true, "check": {"who": "captain", "skill": "experience", "dc": 9},
+       "outcomes": ["gold -80", "secret ledger {target}"], "result": "Genuine, as far as you can tell.",
+       "fail_outcomes": ["gold -80", "secret ledger {target} fake"], "fail_result": "You pay and pocket them."},
+      {"text": "Turn him over to {target}", "outcomes": ["favour {target} +1", "opinion {target} +10"], "result": "{target} thanks you warmly. The clerk is not seen again."},
+      {"text": "Not interested", "outcomes": [], "result": "He finds another buyer."}
+    ]
+  },
+
+  "officials_feud": {
+    "title": "A quarrel in high places",
+    "text": "{a} and {b} are at daggers drawn over who controls the town's trade, and each wants you on their side.",
+    "where": "port", "weight": 8,
+    "conditions": ["port_faction != pirates"],
+    "roles": {"a": {"from": "official"}, "b": {"from": "official"}},
+    "choices": [
+      {"text": "Back {a}", "outcomes": ["favour {a} +1", "opinion {a} +10", "opinion {b} -15"], "result": "{a} owes you. {b} will remember."},
+      {"text": "Back {b}", "outcomes": ["favour {b} +1", "opinion {b} +10", "opinion {a} -15"], "result": "{b} owes you. {a} will remember."},
+      {"text": "Play them against each other", "check": {"who": "captain", "skill": "charisma", "dc": 14},
+       "outcomes": ["favour {a} +1", "favour {b} +1"], "result": "Both think you're on their side. For now.",
+       "fail_outcomes": ["opinion {a} -10", "opinion {b} -10"], "fail_result": "They compare notes. Neither trusts you now."},
+      {"text": "Stay out of it", "outcomes": [], "result": "Wise, perhaps."}
+    ]
+  },
+
+  "favour_called_in": {
+    "title": "{creditor} calls in a favour",
+    "text": "A letter from {creditor}: you owe a favour, and now it's wanted. A {nation_adj} merchantman, a friend's ship by the sound of it, is to be taken and her papers sent on.",
+    "where": "any", "weight": 30, "cooldown": 30,
+    "conditions": ["owes >= 1"],
+    "roles": {"creditor": {"from": "creditor"}, "nation": {"from": "nation", "where": ["standing >= 0"]}},
+    "choices": [
+      {"text": "Do it", "outcomes": ["favour {creditor} +1", "fight merchant {nation} attack"], "result": "A debt is a debt."},
+      {"text": "Offer gold instead", "conditions": ["gold >= 200"], "outcomes": ["gold -200", "favour {creditor} +1", "opinion {creditor} -5"], "result": "{creditor} takes it, with ill grace."},
+      {"text": "Refuse", "outcomes": ["opinion {creditor} -25"], "result": "You've made an enemy, and you still owe the favour."}
+    ]
+  },
+
+  "favour_called_in_crew": {
+    "title": "{creditor} needs hands",
+    "text": "{creditor} sends word: they need your crew for a few days' work no one is to ask about. You owe them.",
+    "where": "port", "weight": 30, "cooldown": 30,
+    "conditions": ["owes >= 1", "crew >= 10"],
+    "roles": {"creditor": {"from": "creditor"}},
+    "choices": [
+      {"text": "Lend the crew", "outcomes": ["favour {creditor} +1", "time 3", "morale -3 15"], "result": "Three days of moving crates by night. The men grumble; the debt is paid."},
+      {"text": "Refuse", "outcomes": ["opinion {creditor} -20"], "result": "{creditor} doesn't forget."}
+    ]
+  },
+
+  "scheme_turn_officer": {
+    "title": "Your officer and a stranger",
+    "text": "{informant} has seen {officer} drinking with one of {enemy}'s men, three nights running. Money changed hands.",
+    "where": "any", "weight": 20, "cooldown": 60,
+    "roles": {"enemy": {"from": "enemy_official"}, "officer": {"from": "officer"}, "informant": {"from": "crew", "where": ["opinion >= 0"]}},
+    "choices": [
+      {"text": "Confront {officer}", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["opinion {officer} +10"], "result": "{officer} confesses everything: {enemy} wanted your plans and your course. They're yours again.",
+       "fail_outcomes": ["leave {officer}", "gold -15%"], "fail_result": "{officer} slips ashore that night, and takes the ship's purse."},
+      {"text": "Feed {officer} false plans", "check": {"who": "captain", "skill": "experience", "dc": 14},
+       "outcomes": ["secret bribes {enemy}", "opinion {enemy} -10"], "result": "{enemy} acts on your lies and is made a fool of, and you learn how they pay their spies.",
+       "fail_outcomes": ["leave {officer}"], "fail_result": "{officer} sees through it and goes over to {enemy} for good."},
+      {"text": "Dismiss {officer} at once", "outcomes": ["leave {officer}"], "result": "Better safe."}
+    ]
+  },
+
+  "scheme_bribe_crew": {
+    "title": "Silver in the forecastle",
+    "text": "Spanish silver keeps turning up in the crew's dice games, and nobody aboard has been paid in silver. Someone, perhaps {enemy}, is buying your men.",
+    "where": "any", "weight": 20, "cooldown": 60,
+    "conditions": ["crew >= 10"],
+    "roles": {"enemy": {"from": "enemy_official"}},
+    "choices": [
+      {"text": "Trace the money", "check": {"who": "post.quartermaster", "skill": "authority", "dc": 13},
+       "outcomes": ["secret bribes {enemy}", "calm 3"], "result": "It leads back to {enemy}. You have proof now, and the plot is broken.",
+       "fail_outcomes": ["stir 4"], "fail_result": "The trail goes cold, and the men who took the money keep it, and their new loyalties."},
+      {"text": "Confiscate every coin", "outcomes": ["morale -5 20", "stir 2"], "result": "Resented, but it slows the rot."},
+      {"text": "Ignore it", "outcomes": ["stir 5"], "result": "The money keeps coming."}
+    ]
+  },
+
+  "scheme_frame": {
+    "title": "Your name on the handbills",
+    "text": "Handbills on every quay accuse you of crimes you never committed: a burned village, a murdered crew. The style of the printing points to {enemy}.",
+    "where": "port", "weight": 20, "cooldown": 60,
+    "conditions": ["port_faction != pirates"],
+    "roles": {"enemy": {"from": "enemy_official"}},
+    "choices": [
+      {"text": "Find the printer", "check": {"who": "captain", "skill": "intimidation", "dc": 12},
+       "outcomes": ["secret bribes {enemy}"], "result": "The printer talks. You have {enemy}'s receipts, and a weapon of your own.",
+       "fail_outcomes": ["notoriety +6", "relation port -5"], "fail_result": "The printer is gone. The lies stick."},
+      {"text": "Pay to have them torn down", "conditions": ["gold >= 80"], "outcomes": ["gold -80", "notoriety +2"], "result": "Most of them come down. Some of the mud sticks."},
+      {"text": "Let them say what they like", "outcomes": ["notoriety +6", "relation port -5", "fear +1"], "result": "Your name grows. Not in a good way."}
+    ]
+  },
+
+  "scheme_false_tip": {
+    "title": "A tip too good to be true",
+    "text": "A stranger, generous with the rum, tells you the course of a rich ship from {port}. He seems to want very much for you to go.",
+    "where": "port", "weight": 12, "cooldown": 60,
+    "conditions": ["port_faction != pirates"],
+    "roles": {"enemy": {"from": "enemy_official"}},
+    "choices": [
+      {"text": "Go hunting", "outcomes": ["event ambush_trap 3 20"], "result": "You'll be waiting on her course in a few days."},
+      {"text": "Ask who sent him", "check": {"who": "captain", "skill": "intimidation", "dc": 13},
+       "outcomes": ["opinion {enemy} -5"], "result": "{enemy}. It was a trap. You thank him, and don't go.",
+       "fail_outcomes": [], "fail_result": "He vanishes into the crowd."},
+      {"text": "Ignore him", "outcomes": [], "result": "If it sounds too good..."}
+    ]
+  },
+
+  "ambush_trap": {
+    "title": "The trap closes",
+    "text": "No rich merchantman: a {nation_adj} warship, cleared for action, waiting just where the stranger said your prize would be.",
+    "chain_only": true,
+    "conditions": ["at_sea"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Fight", "outcomes": ["fight hunter {nation} defend"], "result": "So be it."},
+      {"text": "Run", "outcomes": ["fight hunter {nation} flee"], "result": "Every sail you have."}
+    ]
+  },
+
+  "assassin": {
+    "title": "A knife in the dark",
+    "text": "A man with a knife is waiting in the alley behind the tavern. He doesn't want your purse. Somebody, {enemy} most likely, wants you dead.",
+    "where": "port", "weight": 15, "cooldown": 90,
+    "roles": {"enemy": {"from": "enemy_official"}},
+    "choices": [
+      {"text": "Fight him off", "check": {"who": "captain", "skill": "swordplay", "dc": 13},
+       "outcomes": ["fear +2"], "result": "He runs, bleeding. A message for {enemy}.",
+       "fail_outcomes": ["wound captain"], "fail_result": "You drive him off, but not before he marks you."},
+      {"text": "Run for the ship", "check": {"who": "captain", "skill": "experience", "dc": 10},
+       "outcomes": [], "result": "You make it, and post a guard on the gangway.",
+       "fail_outcomes": ["wound captain"], "fail_result": "He catches you on the quay."}
+    ]
+  },
+
+  "exile_passage": {
+    "title": "An exile",
+    "text": "{exile}, a disgraced official with a price on their head, begs passage to {dest}, where friends are waiting. The governor here would pay well to have them back.",
+    "where": "port", "weight": 8,
+    "conditions": ["port_faction != pirates"],
+    "roles": {"exile": {"from": "new", "pool": "official"}, "dest": {"from": "port", "where": ["not here", "faction != pirates"]}},
+    "choices": [
+      {"text": "Smuggle {exile} to safety", "check": {"who": "captain", "skill": "experience", "dc": 11},
+       "outcomes": ["honour +2", "event exile_arrives 0 60"], "result": "You get {exile} aboard under the nose of the harbour watch.",
+       "fail_outcomes": ["relation port -10", "honour +2", "event exile_arrives 0 60"], "fail_result": "You're seen. The governor will remember this."},
+      {"text": "Hand {exile} over to the governor", "outcomes": ["gold +150", "relation port +6", "honour -3"], "result": "The reward is generous. {exile} is led away in chains."},
+      {"text": "Turn {exile} away", "outcomes": [], "result": "Not your trouble."}
+    ]
+  },
+
+  "exile_arrives": {
+    "title": "Safe in {dest}",
+    "text": "{exile} steps ashore in {dest}, among friends at last, and presses something into your hand: copies of their enemy's private letters.",
+    "where": "port", "chain_only": true,
+    "conditions": ["port == {dest}"],
+    "roles": {"exile": {"from": "new", "pool": "official"}, "dest": {"from": "port"}},
+    "choices": [
+      {"text": "Take them", "outcomes": ["secret letters any", "gold +100"], "result": "A dangerous gift."}
+    ]
+  },
+
+  "schedule_prize": {
+    "title": "Right on schedule",
+    "text": "There she is: the ship from the sailing schedule, low in the water, exactly where the papers said she'd be.",
+    "chain_only": true,
+    "conditions": ["at_sea"],
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Take her", "outcomes": ["fight merchant {nation} ambush"], "result": "Out of the sun, as planned."},
+      {"text": "Let her go", "outcomes": [], "result": "Not today."}
+    ]
+  },
+
+  "council_invitation": {
+    "title": "The captains' council",
+    "text": "In the ruined fort above Nassau harbour, the captains of the council are drinking. One of them waves you over: your name is known now, and there's a seat for you if you want it.",
+    "where": "port", "once": true, "weight": 40,
+    "conditions": ["port == nassau", "not council_member", "notoriety >= 25", "relation.pirates >= 15"],
+    "choices": [
+      {"text": "Take the seat", "outcomes": ["join_council", "relation pirates +3"], "result": "You sit with the Brethren's captains now. Votes, favours, and enemies come with it."},
+      {"text": "Not yet", "outcomes": [], "result": "The offer stands, for now."}
+    ]
+  },
+
+  "council_pardon_debate": {
+    "title": "The council and the pardon",
+    "text": "The King's Pardon splits the council. {speaker} wants every captain to take it while it's offered; others would rather hang.",
+    "where": "port", "cooldown": 60, "weight": 40,
+    "conditions": ["port == nassau", "council_member", "pardon_open.england"],
+    "roles": {"speaker": {"from": "council"}},
+    "choices": [
+      {"text": "Speak for the pardon", "outcomes": ["council_vote pardon yes"], "result": "The vote is taken."},
+      {"text": "Speak against it", "outcomes": ["council_vote pardon no"], "result": "The vote is taken."}
+    ]
+  },
+
+  "council_code_breaker": {
+    "title": "A breach of the code",
+    "text": "{accused} marooned a shipmate over a share of plunder, and the council must decide whether the code was broken.",
+    "where": "port", "cooldown": 90, "weight": 30,
+    "conditions": ["port == nassau", "council_member"],
+    "roles": {"accused": {"from": "council"}},
+    "choices": [
+      {"text": "Vote to punish {accused}", "outcomes": ["council_vote punish yes", "opinion {accused} -20"], "result": "The vote is taken."},
+      {"text": "Speak for {accused}", "outcomes": ["council_vote punish no", "opinion {accused} +15", "favour {accused} +1"], "result": "The vote is taken. {accused} won't forget you stood up for them."}
+    ]
+  },
+
+  "council_defence": {
+    "title": "The Crown is coming",
+    "text": "Word from the Carolinas: the Crown means to take Nassau back. The council must decide whether to fight for the haven or scatter.",
+    "where": "port", "once": true, "weight": 40,
+    "conditions": ["port == nassau", "council_member", "date >= 1717-06-01"],
+    "choices": [
+      {"text": "Fight for Nassau", "outcomes": ["council_vote defend yes"], "result": "The vote is taken."},
+      {"text": "Scatter and live", "outcomes": ["council_vote defend no"], "result": "The vote is taken."}
+    ]
+  }
+}

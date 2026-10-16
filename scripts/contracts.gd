@@ -8,7 +8,6 @@ extends Node
 
 signal changed
 
-var employers := {}   # "port:role" -> character id
 var offers := {}      # port id -> {day, list: [contract]}
 var active: Array = []
 var next_id := 1
@@ -21,7 +20,6 @@ func _ready() -> void:
 
 
 func reset() -> void:
-	employers = {}
 	offers = {}
 	active = []
 	next_id = 1
@@ -37,20 +35,9 @@ static func template(id: String) -> Dictionary:
 
 # ---- employers -----------------------------------------------------------------
 
-## The governor or broker of a port, met for the first time when you ask. "" if the port has none.
+## Employers are the port's officials (see Politics): the governor, the broker, the merchant prince...
 func employer(port_id: String, role: String) -> String:
-	var p := Ports.port(port_id)
-	if (role == "governor" and p.faction == "pirates") or (role == "broker" and not p.has("broker")):
-		return ""
-	var key := port_id + ":" + role
-	if not employers.has(key):
-		var c := People.generate({"mix": Data.rules.people.recruit_mix[p.faction], "pool": "official"})
-		c.name = p.governor if role == "governor" else p.broker
-		c.age = maxi(c.age, 34)
-		c.role = role
-		c.port = port_id
-		employers[key] = People.add(c)
-	return employers[key]
+	return Politics.official(port_id, role)
 
 
 static func employer_faction(e: Dictionary) -> String:
@@ -91,7 +78,7 @@ func offers_at(port_id: String, s: Dictionary) -> Array:
 	var o: Dictionary = offers.get(port_id, {})
 	if o.is_empty() or Clock.day - o.day >= cfg().refresh_days:
 		o = {"day": Clock.day, "list": []}
-		for role in ["governor", "broker"]:
+		for role in Politics.offices(port_id):
 			var emp := employer(port_id, role)
 			if emp == "":
 				continue
@@ -131,6 +118,10 @@ func make(tid: String, emp_id: String, s: Dictionary) -> Dictionary:
 			c.target = _pick(Career.nations().filter(func(n): return n != f))
 		"pirates":
 			c.target = "pirates"
+		"own":  # a job against the employer's own countrymen: a rival house, the governor's courier
+			if f == "pirates":
+				return {}
+			c.target = f
 	match t.objective:
 		"raid":
 			var ports := _ports_of(c.target)
@@ -178,12 +169,12 @@ func _plan_intercept(c: Dictionary, t: Dictionary, td: Dictionary) -> bool:
 
 
 func _plan_delivery(c: Dictionary, t: Dictionary, e: Dictionary) -> bool:
-	if t.cargo[0] == "dispatches":
+	if t.cargo[0] in ["dispatches", "parcel"]:
 		var dests := _ports_of(c.faction).filter(func(id): return id != e.port)
 		if dests.is_empty():
 			return false
 		c.dest = _pick(dests)
-		c.good = "dispatches"
+		c.good = t.cargo[0]
 		return true
 	var dests := Ports.state.keys().filter(func(id): return not Ports.state[id].laws.contraband.is_empty())
 	if dests.is_empty():
@@ -211,8 +202,8 @@ func problem(c: Dictionary, s: Dictionary, free_tons := 9999.0) -> String:
 	var f: String = c.faction
 	if active.size() >= cfg().max_active:
 		return "You can't juggle more than %d contracts." % cfg().max_active
-	if People.person(c.employer).role == "governor" and s.career.pirate:
-		return "No governor hires a known pirate. Seek a pardon first."
+	if People.person(c.employer).role != "broker" and s.career.pirate and Ports.state[c.employer_port].laws.get("pirates", 0.0) < 0.4:
+		return "No respectable official hires a known pirate here. Seek a pardon first."
 	if trust(c.employer, s) <= -cfg().fail_trust * 3:
 		return "%s won't deal with you again." % People.person(c.employer).name
 	if t.needs.get("marque", false) and s.career.marque != f:
@@ -332,7 +323,7 @@ func fail(c: Dictionary, s: Dictionary, why: String) -> String:
 
 ## Hand over the goods or the dispatches at the destination.
 func deliver(c: Dictionary, s: Dictionary) -> String:
-	if c.good == "dispatches":
+	if c.good in ["dispatches", "parcel"]:
 		return _complete(c, s)
 	if s.cargo.get(c.good, 0.0) < c.qty:
 		return "You no longer carry the %d %s." % [c.qty, Data.table("goods")[c.good].name.to_lower()]
@@ -387,6 +378,14 @@ func collect(c: Dictionary, s: Dictionary, demand := false) -> String:
 	s.gold += pay
 	s.relations[c.faction] = s.relations.get(c.faction, 0) + int(t.success.standing)
 	_add_trust(c.employer, s, gain)
+	if gain > 0:
+		Politics.add_favours(c.employer, s, 1)  # a job well done is a favour owed
+	if t.has("group") and c.employer_port != "":  # political work: their side gains ground
+		Politics.shift(c.employer_port, t.group, Data.table("politics").contract_influence)
+	if t.has("reward_secret"):
+		var target := Politics.official(c.employer_port, t.reward_secret.about)
+		if target != "":
+			text += Politics.gain_secret(s, t.reward_secret.kind, target) + " "
 	ShipStats.captain(s).history.append("%s for %s, %s." % [c.name, e.name, Clock.date_string()])
 	changed.emit()
 	return text + "Paid %d gold for %s. %s trusts you %s." % [pay, c.name, e.name, "more" if gain > 0 else "less"]
@@ -419,7 +418,7 @@ func abandon(c: Dictionary, s: Dictionary) -> String:
 func risk(c: Dictionary, s: Dictionary) -> String:
 	match c.objective:
 		"deliver":
-			if c.good == "dispatches":
+			if c.good in ["dispatches", "parcel"]:
 				return "Low"
 			return "%d%% seizure at %s" % [int(seizure_risk(c) * 100 / (cfg().trap_seizure_mult if c.trap else 1.0)), Ports.port(c.dest).name]
 		"raid":
@@ -507,11 +506,10 @@ func _pick(arr: Array) -> Variant:
 
 
 func save_state() -> Dictionary:
-	return {"employers": employers, "offers": offers, "active": active, "next_id": next_id, "rng": str(rng.state)}
+	return {"offers": offers, "active": active, "next_id": next_id, "rng": str(rng.state)}
 
 
 func load_state(d: Dictionary) -> void:
-	employers = d.employers
 	offers = d.offers
 	active = d.active
 	next_id = d.next_id

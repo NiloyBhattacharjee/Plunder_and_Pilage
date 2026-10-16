@@ -71,6 +71,7 @@ func _ready() -> void:
 	crew_screen.message.connect(hud.show_message)
 	shipping.setup(terrain, self)
 	Contracts.shipping = shipping
+	Politics.news.connect(hud.show_message)
 	Contracts.changed.connect($PortLayer.queue_redraw)
 	shipping.contact.connect(_on_contact)
 	shipping.news.connect(hud.show_message)
@@ -115,6 +116,9 @@ func _daily() -> void:
 	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
 	for m in Contracts.daily(s):
 		hud.show_message(m)
+	Politics.prune_secrets(s)
+	if Clock.date().day == 1:
+		Politics.leverage_month(s)
 	if s.has("succession") and not busy():
 		run_succession()
 		return
