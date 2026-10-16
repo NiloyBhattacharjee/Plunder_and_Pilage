@@ -479,6 +479,8 @@ func _life_event(id: String) -> void:
 		port_screen.reopen()
 		return
 	await run_event(Events.materialize(inst, _event_ctx()))
+	for n in PortLife.settle(here, ship.state):  # a riot you calmed ends now
+		hud.show_message(n.text)
 	if ship.anchored_at == here and combat == null and not port_screen.visible:
 		port_screen.reopen()
 

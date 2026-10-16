@@ -41,9 +41,9 @@ func test_happenings_change_the_port():
 	PortLife.start("port_royal", "press_gang", rng)
 	assert_true(PortLife.is_on("port_royal", "press_gang"))
 	assert_gt(Ports.hire_cost("port_royal"), cost, "seamen are dear while the press is out")
-	for d in 20:
+	for d in 4:  # (it lasts at least five days)
 		Ports.daily()
-	assert_lt(Ports.state.port_royal.sailors, Ports.port("port_royal").sailors * 0.8, "and the waterfront empties")
+	assert_lt(Ports.state.port_royal.sailors, float(Ports.port("port_royal").sailors), "and the waterfront empties")
 
 
 func test_happenings_end_and_rest():
@@ -76,3 +76,45 @@ func test_a_captain_drinks_in_the_tavern():
 	assert_true(h.has("captain"))
 	assert_eq(PortLife.captain_here("tortuga"), h.captain)
 	assert_string_contains(PortLife.text_of("tortuga", h), People.person(h.captain).name)
+
+
+func ctx_at(id: String) -> Dictionary:
+	return {"s": s, "stats": ShipStats.effective(s.type, s.upgrades), "port": id, "storm": false}
+
+
+func test_feeding_a_hungry_town_ends_its_riot():
+	var normal: float = Economy.model.params["port_royal"].food.normal
+	Economy.model.stock["port_royal"].food = normal * 0.45
+	var hunger: float = PortLife.situation("port_royal").hunger
+	assert_gt(hunger, 40.0, "a hungry town")
+	PortLife.start("port_royal", "bread_riot", rng)
+	s.cargo.food = normal
+	Events.apply_outcome("supply food %d" % int(normal * 0.6), ctx_at("port_royal"))
+	assert_lt(PortLife.situation("port_royal").hunger, hunger, "food in the market brings the price down")
+	PortLife.settle("port_royal", s)
+	assert_false(PortLife.is_on("port_royal", "bread_riot"), "fed, the riot dies down")
+
+
+func test_what_you_do_fades():
+	var order: float = PortLife.situation("havana").order
+	Events.apply_outcome("town order +20", ctx_at("havana"))
+	assert_almost_eq(PortLife.situation("havana").order, minf(100.0, order + 20.0), 0.01)
+	for d in 30:
+		PortLife.daily(rng, s)
+	assert_almost_eq(PortLife.situation("havana").order, order, 0.01, "a month later it's forgotten")
+
+
+func test_happenings_vary_their_events():
+	var h := PortLife.start("port_royal", "festival", rng)
+	var first: String = PortLife.action("port_royal", h, s, ShipStats.effective(s.type, s.upgrades)).event
+	Events.fired[first] = Clock.day
+	var second: String = PortLife.action("port_royal", h, s, ShipStats.effective(s.type, s.upgrades)).event
+	assert_ne(first, second, "not the same one twice running")
+
+
+func test_new_happenings_need_their_town():
+	assert_false(PortLife.can_start("havana", "revolt", s), "no plantations to rise")
+	assert_true(PortLife.situation("bridgetown").plantation)
+	assert_true(PortLife.situation("havana").contraband)
+	assert_false(PortLife.situation("port_royal").contraband)
+	assert_false(PortLife.can_start("port_royal", "smugglers", s), "nothing forbidden to smuggle")

@@ -7,7 +7,10 @@ class_name PortLife
 ## tavern. Happenings are data (data/port_life.json): when they can start (event conditions, usually on the town.*
 ## keys), how long they last, what they do to the port while they last, and what a visiting captain can do there
 ## (an event, gated by your own standing). Events read the same keys: "town.hunger >= 40", "life.festival".
-## State: Ports.state[id].life = {happenings: [{id, until, captain?}], ended: {happening id: day}}.
+## What you do there moves the town: food you sell into a hungry market lowers its price (and the hunger with it),
+## a feast or a firm hand lifts order. Those nudges (mods) fade over the weeks, and a happening that lasts only while
+## its cause does (a riot, a revolt) dies down once the town is fed or calmed.
+## State: Ports.state[id].life = {happenings: [{id, until, captain?}], ended: {happening id: day}, mods: {stat: amount}}.
 
 
 static func table() -> Dictionary:
@@ -22,7 +25,38 @@ static func _life(id: String) -> Dictionary:
 	var ps: Dictionary = Ports.state[id]
 	if not ps.has("life"):
 		ps.life = {"happenings": [], "ended": {}}
+	if not ps.life.has("mods"):
+		ps.life.mods = {}
 	return ps.life
+
+
+## What you did here, felt by the town for a while: nudge("havana", "order", 10).
+static func nudge(id: String, stat: String, amount: float) -> void:
+	if not Ports.state.has(id):
+		return
+	var mods: Dictionary = _life(id).mods
+	mods[stat] = clampf(float(mods.get(stat, 0.0)) + amount, -60.0, 60.0)
+
+
+## Ends a happening now (a riot put down, a fever burnt out).
+static func end(id: String, what: String) -> void:
+	var life := _life(id)
+	for h in life.happenings.duplicate():
+		if h.id == what:
+			life.happenings.erase(h)
+			life.ended[what] = Clock.day
+
+
+## Happenings that last only while their cause does end once it's gone. Returns news of them.
+static func settle(id: String, s: Dictionary) -> Array:
+	var out := []
+	for h in active(id).duplicate():
+		var d: Dictionary = table()[h.id]
+		if d.get("lasts_while", false) and not can_start(id, h.id, s):
+			end(id, h.id)
+			if d.has("ends_news"):
+				out.append({"text": d.ends_news.format({"port": Ports.port(id).name, "name": name_of(id, h.id)}), "port": id})
+	return out
 
 
 # ---- the town ----------------------------------------------------------------------
@@ -46,8 +80,15 @@ static func situation(id: String) -> Dictionary:
 	var war: bool = p.faction != "pirates" and not Factions.enemies_of(p.faction).is_empty()
 	var order := clampf(50.0 + float(power.get("military", 0.0)) * 0.8 + float(power.get("church", 0.0)) * 0.3
 		- float(power.get("poor", 0.0)) * 0.4 - hunger * 0.4 - (10.0 if war else 0.0) - (20.0 if lawless else 0.0), 0.0, 100.0)
-	return {"wealth": wealth, "prosperity": prosperity, "hunger": hunger, "order": order, "piety": float(power.get("church", 0.0)),
-		"war": war, "lawless": lawless, "fleet": fleet, "food": food, "makes": makes, "needs": needs}
+	var out := {"wealth": wealth, "prosperity": prosperity, "hunger": hunger, "order": order, "piety": float(power.get("church", 0.0)),
+		"war": war, "lawless": lawless, "fleet": fleet, "food": food, "makes": makes, "needs": needs,
+		"plantation": "plantation" in p.get("tags", []), "contraband": not Ports.state[id].laws.contraband.is_empty(),
+		"vigilance": float(Ports.state[id].laws.vigilance) * 100.0}
+	var mods: Dictionary = _life(id).mods  # what's been done here lately
+	for k in mods:
+		if out.has(k):
+			out[k] = clampf(out[k] + mods[k], 0.0, 100.0)
+	return out
 
 
 static func _avg_mult(id: String, goods: Array) -> float:
@@ -140,12 +181,18 @@ static func text_of(id: String, h: Dictionary) -> String:
 		"ship": People.person(h.captain).get("ship", "her") if h.has("captain") and People.chars.has(h.captain) else "her ship", "name": name_of(id, h.id)})
 
 
-## A day in every port: happenings end, and new ones may start where the town is ripe for them.
+## A day in every port: what you did fades, happenings end, and new ones may start where the town is ripe for them.
 ## Returns news: [{text, port}] (the world map passes it on at the speed of a ship).
 static func daily(rng: RandomNumberGenerator, s: Dictionary) -> Array:
 	var news := []
+	var decay: float = table()._town.mod_decay_per_day
 	for id in Ports.state:
 		var life := _life(id)
+		for k in life.mods.keys():
+			life.mods[k] = move_toward(life.mods[k], 0.0, decay)
+			if life.mods[k] == 0.0:
+				life.mods.erase(k)
+		news.append_array(settle(id, s))
 		for h in life.happenings.duplicate():
 			if h.until <= Clock.day:
 				life.happenings.erase(h)
@@ -191,6 +238,7 @@ static func active_anywhere(captain: String) -> bool:
 
 
 ## What you can do about a happening while you're in port: {text, event, problem ("" if you can)}, or {}.
+## A happening has several events; it's the one you've seen least lately that you get (and one that can happen).
 static func action(id: String, h: Dictionary, s: Dictionary, stats: Dictionary) -> Dictionary:
 	var a: Dictionary = table()[h.id].get("action", {})
 	if a.is_empty():
@@ -200,5 +248,10 @@ static func action(id: String, h: Dictionary, s: Dictionary, stats: Dictionary) 
 	var problem := ""
 	if not missing.is_empty():
 		problem = a.get("refused", "") if a.has("refused") else "Requires: " + ", ".join(missing.map(func(c): return Events.humanize(c)))
+	var choices: Array = a.events.filter(func(e): return not Events.instance_of(e, ctx).is_empty())
+	if choices.is_empty() and problem == "":
+		problem = "Nothing you can do about it today."
+	choices.shuffle()
+	choices.sort_custom(func(x, y): return float(Events.fired.get(x, -INF)) < float(Events.fired.get(y, -INF)))
 	return {"text": a.text.format({"captain": People.person(h.captain).name if h.has("captain") and People.chars.has(h.captain) else "",
-		"name": name_of(id, h.id)}), "event": a.event, "problem": problem}
+		"name": name_of(id, h.id)}), "event": choices[0] if not choices.is_empty() else "", "problem": problem}

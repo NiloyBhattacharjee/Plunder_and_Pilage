@@ -44,6 +44,8 @@
     ],
     "outcomes": [
      "gold -150",
+     "town order +8",
+     "town prosperity +5",
      "relation port +5",
      "honour +2",
      "influence {port} poor 5"
@@ -116,18 +118,36 @@
   "text": "The market square is a mob: women waving empty baskets, men with cudgels, militia with bayonets fixed and no idea what to do. Your hold has food in it, and everyone knows ships carry food.",
   "choices": [
    {
+    "text": "Sell a whole cargo of food at a fair price",
+    "conditions": [
+     "cargo.food >= 100"
+    ],
+    "outcomes": [
+     "supply food 100",
+     "gold +200",
+     "town hunger -30",
+     "town order +15",
+     "relation port +6",
+     "honour +3",
+     "influence {port} poor 8"
+    ],
+    "result": "Your boats ply between ship and quay until dark. By morning there's bread in the shops, and your name on every street corner."
+   },
+   {
     "text": "Sell your provisions at a fair price",
     "conditions": [
      "cargo.food >= 30"
     ],
     "outcomes": [
-     "cargo food -30",
+     "supply food 30",
      "gold +60",
+     "town hunger -15",
+     "town order +10",
      "relation port +3",
      "honour +2",
      "influence {port} poor 5"
     ],
-    "result": "They queue at your boat all afternoon. An old woman kisses your hand."
+    "result": "They queue at your boat all afternoon. An old woman kisses your hand, and the square grows quieter."
    },
    {
     "text": "Sell them at what hunger will pay",
@@ -135,8 +155,9 @@
      "cargo.food >= 30"
     ],
     "outcomes": [
-     "cargo food -30",
+     "supply food 30",
      "gold +220",
+     "town order -5",
      "honour -2",
      "influence {port} poor -3"
     ],
@@ -150,6 +171,7 @@
      "dc": 11
     },
     "outcomes": [
+     "town order +15",
      "relation port +4",
      "fear +2",
      "influence {port} military 5",
@@ -161,14 +183,6 @@
      "relation port +1"
     ],
     "fail_result": "A flying cobblestone finds your head before the square is clear."
-   },
-   {
-    "text": "Sign on hungry men for their keep",
-    "outcomes": [
-     "crew +5",
-     "cargo food -10"
-    ],
-    "result": "They'd sail to hell for three meals a day."
    }
   ]
  },
@@ -299,7 +313,8 @@
      "notoriety +5",
      "fear +2",
      "relation port -5",
-     "opinion crew +4"
+     "opinion crew +4",
+     "town order -10"
     ],
     "result": "One guard runs, one is persuaded. The Brethren will sing of it.",
     "fail_outcomes": [
@@ -557,6 +572,746 @@
    },
    {
     "text": "Pretend not to see",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_festival_bravo": {
+  "where": "port",
+  "chain_only": true,
+  "title": "A challenge",
+  "text": "A local swordsman, all lace and swagger, steps out of the crowd and challenges any foreign captain to show what they're made of. The crowd turns to look at you.",
+  "choices": [
+   {
+    "text": "Draw and give them a show",
+    "check": {
+     "who": "captain",
+     "skill": "swordplay",
+     "dc": 13
+    },
+    "outcomes": [
+     "fear +2",
+     "honour +1",
+     "opinion crew +3",
+     "relation port +1"
+    ],
+    "result": "Three passes and the bravo's blade is in the fountain. The crowd roars.",
+    "fail_outcomes": [
+     "wound captain",
+     "opinion crew -2"
+    ],
+    "fail_result": "The bravo is better than they look. You leave with a cut and a lesson."
+   },
+   {
+    "text": "Decline with a joke",
+    "check": {
+     "who": "captain",
+     "skill": "charisma",
+     "dc": 11
+    },
+    "outcomes": [
+     "relation port +1"
+    ],
+    "result": "The crowd laughs with you, not at you.",
+    "fail_outcomes": [
+     "fear -1"
+    ],
+    "fail_result": "The crowd laughs at you."
+   }
+  ]
+ },
+ "life_festival_regatta": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The boat race",
+  "text": "A race of ships' boats across the harbour, for a purse put up by the merchants. Every crew in port is entering, and yours are already arguing about who pulls stroke.",
+  "choices": [
+   {
+    "text": "Enter your boat's crew",
+    "check": {
+     "who": "post.boatswain",
+     "skill": "seamanship",
+     "dc": 12
+    },
+    "outcomes": [
+     "gold +100",
+     "opinion crew +4"
+    ],
+    "result": "Your boat crosses the line a length ahead. The crew won't stop talking about it.",
+    "fail_outcomes": [
+     "gold -30",
+     "opinion crew -1"
+    ],
+    "fail_result": "Fourth, behind a fishing boat. The entry fee is gone."
+   },
+   {
+    "text": "Bet on the favourite",
+    "conditions": [
+     "gold >= 50"
+    ],
+    "outcomes": [
+     "gold +40"
+    ],
+    "result": "The favourite wins, as favourites do."
+   },
+   {
+    "text": "Watch from the quay",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_fair_sharper": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The thimblerig",
+  "text": "A sharper at the fair has taken a week's pay off half your crew with three cups and a pea, and is now working on the rest.",
+  "choices": [
+   {
+    "text": "Show the crowd how the trick is done",
+    "check": {
+     "who": "captain",
+     "skill": "intimidation",
+     "dc": 11
+    },
+    "outcomes": [
+     "gold +60",
+     "opinion crew +3",
+     "relation port +1"
+    ],
+    "result": "The pea is under the sharper's fingernail. The crowd gets its money back, and so does your crew.",
+    "fail_outcomes": [
+     "gold -30"
+    ],
+    "fail_result": "The sharper's friends are bigger than you'd thought. You pay to be left alone."
+   },
+   {
+    "text": "Tell the crew it serves them right",
+    "outcomes": [
+     "opinion crew -1"
+    ],
+    "result": ""
+   }
+  ]
+ },
+ "life_press_bargain": {
+  "where": "port",
+  "chain_only": true,
+  "title": "A bargain with the press",
+  "text": "The lieutenant of the press gang is short of his quota. He offers you the King's bounty for any hands you can spare, no questions asked about who they are.",
+  "choices": [
+   {
+    "text": "Hand over three of the worst",
+    "conditions": [
+     "crew >= 15"
+    ],
+    "outcomes": [
+     "crew -3",
+     "gold +60",
+     "opinion crew -3"
+    ],
+    "result": "The men see it done. They'll remember."
+   },
+   {
+    "text": "Tell him your men are your own",
+    "outcomes": [
+     "opinion crew +2"
+    ],
+    "result": "The crew cheer you up the gangway."
+   }
+  ]
+ },
+ "life_press_rescue": {
+  "where": "port",
+  "chain_only": true,
+  "title": "Taken by the press",
+  "text": "Two of your hands were taken by the press gang last night and are locked in the guardhouse with a dozen others, waiting for a navy boat.",
+  "choices": [
+   {
+    "text": "Storm the guardhouse",
+    "check": {
+     "who": "captain",
+     "skill": "swordplay",
+     "dc": 13
+    },
+    "outcomes": [
+     "fear +2",
+     "relation port -6",
+     "opinion crew +4",
+     "town order -5"
+    ],
+    "result": "A door kicked in, a sentry knocked down, and fourteen men running for the boats. Yours, and some new volunteers.",
+    "fail_outcomes": [
+     "wound captain",
+     "crew -2",
+     "relation port -8"
+    ],
+    "fail_result": "The guard turns out. You get away, but your two stay where they are."
+   },
+   {
+    "text": "Buy them back from the lieutenant",
+    "conditions": [
+     "gold >= 80"
+    ],
+    "outcomes": [
+     "gold -80",
+     "opinion crew +2"
+    ],
+    "result": "Paperwork, a purse, and your men are home by dinner."
+   },
+   {
+    "text": "Leave them to the King's service",
+    "outcomes": [
+     "crew -2",
+     "opinion crew -4"
+    ],
+    "result": "The crew don't forget a captain who leaves men behind."
+   }
+  ]
+ },
+ "life_riot_warehouse": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The hoarder's warehouse",
+  "text": "The mob has found a merchant who has been holding back grain to drive the price up. They're at his warehouse doors with a beam, and the militia is nowhere.",
+  "choices": [
+   {
+    "text": "Help them break it open and share it out",
+    "outcomes": [
+     "cargo food +30",
+     "town hunger -10",
+     "town order -10",
+     "relation port -4",
+     "influence {port} poor 5"
+    ],
+    "result": "Sacks pass hand to hand down the street. Some of them end up in your boat."
+   },
+   {
+    "text": "Stand in the doorway with your officers",
+    "check": {
+     "who": "captain",
+     "skill": "authority",
+     "dc": 12
+    },
+    "outcomes": [
+     "gold +100",
+     "relation port +4",
+     "town order +5",
+     "influence {port} merchants 5"
+    ],
+    "result": "The crowd backs off. The merchant pays handsomely, and hates you for seeing his fear.",
+    "fail_outcomes": [
+     "wound captain",
+     "town order -5"
+    ],
+    "fail_result": "The beam comes through the door, and over you."
+   },
+   {
+    "text": "Buy the grain and sell it at a fair price",
+    "conditions": [
+     "gold >= 200"
+    ],
+    "outcomes": [
+     "gold -200",
+     "town hunger -20",
+     "town order +10",
+     "honour +3",
+     "relation port +4",
+     "influence {port} poor 5"
+    ],
+    "result": "You pay the hoarder his price and sell at cost from the warehouse steps. The riot ends there."
+   }
+  ]
+ },
+ "life_ball_insult": {
+  "where": "port",
+  "chain_only": true,
+  "title": "An insult",
+  "text": "A young officer of the garrison, flushed with wine, says loudly that the governor lets any sea-thief in off the street these days. The room goes quiet.",
+  "choices": [
+   {
+    "text": "Call them out: pistols at dawn",
+    "check": {
+     "who": "captain",
+     "skill": "swordplay",
+     "dc": 13
+    },
+    "outcomes": [
+     "honour +3",
+     "fear +1",
+     "relation port -2"
+    ],
+    "result": "At dawn the officer's shot goes wide. Yours takes the hat off their head. Honour satisfied, and a lesson learned.",
+    "fail_outcomes": [
+     "wound captain",
+     "honour +1"
+    ],
+    "fail_result": "You're hit, but you stood your ground. That counts for something here."
+   },
+   {
+    "text": "Laugh it off",
+    "check": {
+     "who": "captain",
+     "skill": "charisma",
+     "dc": 12
+    },
+    "outcomes": [
+     "relation port +2"
+    ],
+    "result": "Your answer has the whole room laughing at the officer instead.",
+    "fail_outcomes": [
+     "honour -1"
+    ],
+    "fail_result": "Your answer falls flat. People will say you swallowed it."
+   },
+   {
+    "text": "Leave the ball",
+    "outcomes": [
+     "honour -1"
+    ],
+    "result": ""
+   }
+  ]
+ },
+ "life_hanging_speech": {
+  "where": "port",
+  "chain_only": true,
+  "title": "A last speech",
+  "text": "On the cart, one of the condemned looks out over the crowd, sees you, and shouts your name: an old shipmate, it seems, or someone who'd like the crowd to think so.",
+  "choices": [
+   {
+    "text": "Raise your hat to them",
+    "outcomes": [
+     "fear +1",
+     "notoriety +3",
+     "relation port -3",
+     "opinion crew +2"
+    ],
+    "result": "The crowd turns to stare. A ballad about it will be sold by nightfall."
+   },
+   {
+    "text": "Turn and walk away",
+    "outcomes": [
+     "honour -1",
+     "opinion crew -1"
+    ],
+    "result": "Behind you, the drop. Some of the crew saw you go."
+   }
+  ]
+ },
+ "life_fever_hospital": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The fever hospital",
+  "text": "The friars' hospital is overflowing: fever patients on straw in the cloister, and not enough hands to carry water. The prior asks if your surgeon can help.",
+  "choices": [
+   {
+    "text": "Send your surgeon and a working party",
+    "check": {
+     "who": "post.surgeon",
+     "skill": "medicine",
+     "dc": 12
+    },
+    "outcomes": [
+     "honour +2",
+     "relation port +3",
+     "town order +5",
+     "influence {port} church 3"
+    ],
+    "result": "A week of hard work. The town won't forget the foreign ship that came to help.",
+    "fail_outcomes": [
+     "crew -2",
+     "relation port +2"
+    ],
+    "fail_result": "The fever takes two of the working party. The town is grateful; your crew less so."
+   },
+   {
+    "text": "Send medicines and money",
+    "conditions": [
+     "gold >= 60"
+    ],
+    "outcomes": [
+     "gold -60",
+     "relation port +2",
+     "honour +1"
+    ],
+    "result": ""
+   },
+   {
+    "text": "Keep well away",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_fever_crew": {
+  "where": "port",
+  "chain_only": true,
+  "title": "Fever ashore",
+  "text": "The crew have seen the funerals. A deputation comes aft: they want to sail now, before the fever reaches the ship.",
+  "choices": [
+   {
+    "text": "Agree, and keep everyone aboard until you sail",
+    "outcomes": [
+     "opinion crew +2"
+    ],
+    "result": "Nobody goes ashore. The relief is plain."
+   },
+   {
+    "text": "Tell them the ship sails when you say so",
+    "check": {
+     "who": "captain",
+     "skill": "authority",
+     "dc": 12
+    },
+    "outcomes": [
+     "fear +1"
+    ],
+    "result": "They go forward muttering, but they go.",
+    "fail_outcomes": [
+     "opinion crew -4",
+     "crew -1"
+    ],
+    "fail_result": "One man jumps ship that night rather than wait."
+   }
+  ]
+ },
+ "life_captains_loan": {
+  "where": "port",
+  "chain_only": true,
+  "title": "A loan between captains",
+  "text": "{cap} has had a bad cruise: a sprung mast, a crew owed wages, and creditors at the door. Over the second bottle comes the question: could you lend 200 gold, to be repaid from the next prize?",
+  "roles": {
+   "cap": {
+    "from": "captain_npc",
+    "where": [
+     "in_town"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Lend the full 200",
+    "conditions": [
+     "gold >= 200"
+    ],
+    "outcomes": [
+     "gold -200",
+     "bond {cap} 2",
+     "event life_loan_repaid 30 90"
+    ],
+    "result": "{cap} grips your hand. You'll be repaid, they swear."
+   },
+   {
+    "text": "Lend half",
+    "conditions": [
+     "gold >= 100"
+    ],
+    "outcomes": [
+     "gold -100",
+     "bond {cap} 1"
+    ],
+    "result": "Half is better than nothing, and they know it."
+   },
+   {
+    "text": "Refuse",
+    "outcomes": [],
+    "result": "{cap} shrugs. There are other captains."
+   }
+  ]
+ },
+ "life_loan_repaid": {
+  "where": "any",
+  "chain_only": true,
+  "title": "A debt repaid",
+  "text": "A letter finds you, with a heavy purse: {cap} has taken a fat prize, and pays back the loan with interest and thanks.",
+  "roles": {
+   "cap": {
+    "from": "captain_npc"
+   }
+  },
+  "choices": [
+   {
+    "text": "Drink to {cap}'s health",
+    "outcomes": [
+     "gold +260",
+     "bond {cap} 1"
+    ],
+    "result": ""
+   }
+  ]
+ },
+ "life_revolt_shore": {
+  "where": "port",
+  "chain_only": true,
+  "title": "On the beach",
+  "text": "Below the cliffs you find a group who have escaped the burning plantations: a dozen people with a dugout canoe that will never survive the open sea. Their leader speaks for them, steadily: they want passage off this island, and they will work for it.",
+  "choices": [
+   {
+    "text": "Take them aboard as free hands",
+    "outcomes": [
+     "crew +4",
+     "honour +2",
+     "relation port -5",
+     "influence {port} planters -3"
+    ],
+    "result": "They come aboard as crew, with shares like anyone else. The planters will call you a thief; the crew call them shipmates."
+   },
+   {
+    "text": "Give them provisions and a seaworthy boat",
+    "conditions": [
+     "gold >= 40"
+    ],
+    "outcomes": [
+     "gold -40",
+     "cargo food -15",
+     "honour +1",
+     "reveal_cove"
+    ],
+    "result": "Before they go, their leader tells you of an anchorage on the coast where the free people trade with passing ships."
+   },
+   {
+    "text": "Go back to the ship",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_revolt_harbour": {
+  "where": "port",
+  "chain_only": true,
+  "title": "An empty harbour",
+  "text": "With the militia gone inland, the harbour of {port} is unguarded and in a panic. The governor's secretary is going from ship to ship asking captains to man the town's batteries.",
+  "choices": [
+   {
+    "text": "Man the batteries",
+    "outcomes": [
+     "relation port +4",
+     "town order +10",
+     "opinion crew -1"
+    ],
+    "result": "Your gunners stand watch on the walls for three nights. The town is grateful."
+   },
+   {
+    "text": "Use the confusion: empty a planter's warehouse",
+    "conditions": [
+     "not honest"
+    ],
+    "outcomes": [
+     "loot sugar 20",
+     "notoriety +3",
+     "relation port -6",
+     "town order -5"
+    ],
+    "result": "Nobody is watching the warehouses tonight. Somebody should have been."
+   },
+   {
+    "text": "Stay out of it",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_procession": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The procession",
+  "text": "The image of the saint sways past on the shoulders of the confraternity, gold leaf flashing in the candlelight. The whole street kneels. Some of your crew cross themselves.",
+  "choices": [
+   {
+    "text": "Walk barefoot behind the saint",
+    "outcomes": [
+     "honour +1",
+     "relation port +2",
+     "opinion crew +1",
+     "town piety +3"
+    ],
+    "result": "The town notices the foreign captain walking with the penitents."
+   },
+   {
+    "text": "Give to the church",
+    "conditions": [
+     "gold >= 50"
+    ],
+    "outcomes": [
+     "gold -50",
+     "relation port +3",
+     "town order +5",
+     "influence {port} church 4"
+    ],
+    "result": "Your name is read out at mass."
+   },
+   {
+    "text": "Watch from the tavern door",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_procession_thief": {
+  "where": "port",
+  "chain_only": true,
+  "title": "A light-fingered child",
+  "text": "In the crush of the procession, a hand is in your pocket. Your quartermaster grabs the thief: {thief}, all elbows and bare feet, quick as an eel.",
+  "roles": {
+   "thief": {
+    "from": "new"
+   }
+  },
+  "choices": [
+   {
+    "text": "Offer {thief} a place as ship's boy",
+    "outcomes": [
+     "hire {thief}"
+    ],
+    "result": "Quick hands are useful aboard. {thief} grins and comes along."
+   },
+   {
+    "text": "Hand {thief} to the watch",
+    "outcomes": [
+     "relation port +1",
+     "honour -1"
+    ],
+    "result": ""
+   },
+   {
+    "text": "Let {thief} go, with a coin",
+    "conditions": [
+     "gold >= 5"
+    ],
+    "outcomes": [
+     "gold -5",
+     "honour +1"
+    ],
+    "result": "{thief} vanishes into the crowd before you've finished your lecture."
+   }
+  ]
+ },
+ "life_smugglers_buy": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The night market",
+  "text": "Lanterns on the sand, boats run up the beach, and bales of foreign cloth sold by torchlight at half what the shops ask. The customs house is dark.",
+  "choices": [
+   {
+    "text": "Buy a boatload of cloth",
+    "conditions": [
+     "gold >= 100"
+    ],
+    "outcomes": [
+     "gold -100",
+     "cargo cloth +25"
+    ],
+    "result": "Cheap, if you can sell it where nobody asks where it came from."
+   },
+   {
+    "text": "Tip off the customs (they pay informers)",
+    "outcomes": [
+     "gold +50",
+     "relation port +2",
+     "honour -1",
+     "settle smugglers"
+    ],
+    "result": "The soldiers come down the cliff path an hour later. The beach empties."
+   },
+   {
+    "text": "Leave them to it",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_smugglers_sell": {
+  "where": "port",
+  "chain_only": true,
+  "title": "Buyers on the beach",
+  "text": "The smugglers' buyers will take anything that can't be sold over a counter, and pay better than a fence. They've seen what's in your hold.",
+  "roles": {
+   "good": {
+    "from": "good",
+    "where": [
+     "held >= 10"
+    ]
+   },
+   "pay": {
+    "from": "number",
+    "range": [
+     90,
+     220
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Sell them ten {good}",
+    "outcomes": [
+     "cargo {good} -10",
+     "gold +{pay}"
+    ],
+    "result": "Coin counted out by lantern light."
+   },
+   {
+    "text": "Not tonight",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_muster_commission": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The governor's secretary",
+  "text": "A harassed secretary behind a desk heaped with blank commissions. 'Captain. His Excellency needs every ship he can get against the enemy. Do you want a letter of marque, or have you come about something else?'",
+  "roles": {
+   "foe": {
+    "from": "nation",
+    "where": [
+     "at_war.port"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Take a commission",
+    "outcomes": [
+     "marque port"
+    ],
+    "result": ""
+   },
+   {
+    "text": "Ask where the enemy's cruisers have been seen",
+    "outcomes": [
+     "patrols {foe} 30"
+    ],
+    "result": "Reports from the coastguard and the fishing boats, a week old."
+   },
+   {
+    "text": "Neither, thank you",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_muster_veterans": {
+  "where": "port",
+  "chain_only": true,
+  "title": "Hands from the muster",
+  "text": "Privateers in port are poaching each other's crews. A gang of old hands, paid off from a ship that didn't sail, are looking for a captain with a reputation.",
+  "choices": [
+   {
+    "text": "Sign them on",
+    "conditions": [
+     "gold >= 60"
+    ],
+    "outcomes": [
+     "gold -60",
+     "crew +5"
+    ],
+    "result": "Veterans of two wars, and they know it."
+   },
+   {
+    "text": "You have enough hands",
     "outcomes": [],
     "result": ""
    }

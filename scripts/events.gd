@@ -22,7 +22,7 @@ const VERBS := {  # verb: [min args, max args]
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
 	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
 	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1],
-	"patrols": [2, 2], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
+	"patrols": [2, 2], "town": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
 	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc", "base"]
@@ -680,6 +680,30 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			var c := People.person(who)
 			Encounters.add_intel(s, c.id, ["all"], res.title.to_lower())
 			return "You know the weak points of the %s, %s's ship" % [c.ship, c.name]
+		"town":  # the town you're in feels what you did, for a while: town order +10
+			if ctx.port == "":
+				return ""
+			PortLife.nudge(ctx.port, a[1], float(a[2]))
+			return "%s in %s %+d" % [a[1].capitalize(), Ports.port(ctx.port).name, int(a[2])]
+		"supply":  # from your hold into the town's market: food into a hungry town brings its price down
+			if ctx.port == "":
+				return ""
+			var g: String = a[1]
+			var n := minf(float(a[2]), s.cargo.get(g, 0.0))
+			if n <= 0.0:
+				return ""
+			Ports.remove_cargo(s, g, n)
+			Economy.add(ctx.port, g, n)
+			return "%d %s into the market of %s" % [n, Data.table("goods")[g].name.to_lower(), Ports.port(ctx.port).name]
+		"settle":  # a happening here ends now
+			if ctx.port != "" and PortLife.is_on(ctx.port, a[1]):
+				PortLife.end(ctx.port, a[1])
+				return "The %s %s over" % [PortLife.name_of(ctx.port, a[1]).to_lower(), "are" if PortLife.name_of(ctx.port, a[1]).ends_with("s") else "is"]
+			return ""
+		"marque":  # a letter of marque from this nation, if they'll give you one
+			var mf := _faction(a[1], ctx)
+			var why := Career.marque_problem(s, mf)
+			return why if why != "" else Career.grant_marque(s, mf)
 		"patrols":  # you know where a navy will be, and keep out of its way
 			var pf := _faction(a[1], ctx)
 			s.patrol_warning = s.get("patrol_warning", {})

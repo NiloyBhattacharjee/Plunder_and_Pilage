@@ -1,5 +1,5 @@
 {
- "_comment": "Port life (scripts/port_life.gd). Each happening: when (event conditions; town.* keys read the port's situation: wealth, prosperity, hunger, order, piety 0-100, war, lawless, fleet), chance per day once possible, days it lasts, cooldown days before it can come again, effects while it lasts (hire_cost and sailors multiply, rumours adds), an optional market shock (economy.json shocks) when it starts, news that spreads at the speed of a ship, names by nation, captain: true to bring a named captain to the tavern, and an action a visiting captain can take (an event; requires: conditions on you).",
+ "_comment": "Port life (scripts/port_life.gd). Each happening: when (event conditions; town.* keys read the port's situation: wealth, prosperity, hunger, order, piety 0-100, war, lawless, fleet), chance per day once possible, days it lasts, cooldown days before it can come again, effects while it lasts (hire_cost and sailors multiply, rumours adds), an optional market shock (economy.json shocks) when it starts, news that spreads at the speed of a ship, names by nation, captain: true to bring a named captain to the tavern, and an action a visiting captain can take (events: one is picked, the one seen least lately; requires: conditions on you). lasts_while: it ends as soon as its 'when' stops holding (a riot once the town is fed or calmed), with ends_news.",
  "_town": {
   "size_wealth": {
    "small": 25,
@@ -7,7 +7,8 @@
    "large": 75
   },
   "hunger_from": 1.2,
-  "hunger_per_mult": 125
+  "hunger_per_mult": 125,
+  "mod_decay_per_day": 1.5
  },
  "festival": {
   "name": "Feast day",
@@ -36,7 +37,11 @@
   "news": "{port} is holding its {name}.",
   "action": {
    "text": "Join the {name}",
-   "event": "life_festival"
+   "events": [
+    "life_festival",
+    "life_festival_bravo",
+    "life_festival_regatta"
+   ]
   }
  },
  "fair": {
@@ -61,7 +66,10 @@
   "news": "The fair has opened in {port}.",
   "action": {
    "text": "Walk the fair",
-   "event": "life_fair"
+   "events": [
+    "life_fair",
+    "life_fair_sharper"
+   ]
   }
  },
  "press_gang": {
@@ -81,7 +89,14 @@
    "hire_cost": 1.6,
    "sailors": 0.5
   },
-  "news": "The press gangs are out in {port}."
+  "news": "The press gangs are out in {port}.",
+  "action": {
+   "text": "Deal with the press",
+   "events": [
+    "life_press_bargain",
+    "life_press_rescue"
+   ]
+  }
  },
  "bread_riot": {
   "name": "Bread riots",
@@ -103,8 +118,13 @@
   "news": "There are bread riots in {port}.",
   "action": {
    "text": "Go down to the market square",
-   "event": "life_bread_riot"
-  }
+   "events": [
+    "life_bread_riot",
+    "life_riot_warehouse"
+   ]
+  },
+  "lasts_while": true,
+  "ends_news": "The bread riots in {port} have died down."
  },
  "governors_ball": {
   "name": "The governor's ball",
@@ -124,13 +144,16 @@
   "news": "The governor of {port} is giving a ball.",
   "action": {
    "text": "Attend the ball",
-   "event": "life_ball",
    "requires": [
     "relation.port >= 5",
     "not wanted",
     "honour >= 0"
    ],
-   "refused": "No invitation: you need standing 5 with this nation, an honest name (honour 0 or better), and no price on your head."
+   "refused": "No invitation: you need standing 5 with this nation, an honest name (honour 0 or better), and no price on your head.",
+   "events": [
+    "life_ball",
+    "life_ball_insult"
+   ]
   }
  },
  "hanging": {
@@ -149,7 +172,10 @@
   "news": "Pirates hang at {port} this week.",
   "action": {
    "text": "Go to the gallows",
-   "event": "life_hanging"
+   "events": [
+    "life_hanging",
+    "life_hanging_speech"
+   ]
   }
  },
  "fever": {
@@ -171,7 +197,14 @@
    "hire_cost": 1.3
   },
   "market": "epidemic",
-  "news": "Yellow fever has broken out in {port}."
+  "news": "Yellow fever has broken out in {port}.",
+  "action": {
+   "text": "Go to the fever hospital",
+   "events": [
+    "life_fever_hospital",
+    "life_fever_crew"
+   ]
+  }
  },
  "captains_drinking": {
   "name": "A captain in the tavern",
@@ -188,7 +221,118 @@
   "captain": true,
   "action": {
    "text": "Join {captain}'s table",
-   "event": "life_captains_table"
+   "events": [
+    "life_captains_table",
+    "life_captains_loan"
+   ]
+  }
+ },
+ "revolt": {
+  "name": "A rising on the plantations",
+  "text": "The enslaved on the plantations around {port} have risen. Cane fields burn on the hills at night; the militia has marched inland and the planters' families crowd the fort. Whoever escapes heads for the coast, and the sea.",
+  "when": [
+   "town.plantation",
+   "town.order < 45"
+  ],
+  "chance": 0.02,
+  "days": [
+   5,
+   12
+  ],
+  "cooldown": 150,
+  "lasts_while": true,
+  "ends_news": "The rising around {port} is over; the militia is back in town.",
+  "effects": {
+   "sailors": 0.8
+  },
+  "news": "The plantations around {port} have risen in revolt.",
+  "action": {
+   "text": "Go along the shore",
+   "events": [
+    "life_revolt_shore",
+    "life_revolt_harbour"
+   ]
+  }
+ },
+ "procession": {
+  "name": "A procession",
+  "names": {
+   "spain": "La procesión",
+   "france": "La procession"
+  },
+  "text": "The church of {port} carries its saint through the streets: candles, incense, the confraternities in their hoods, and the whole town on its knees as it passes.",
+  "when": [
+   "town.piety >= 25",
+   "not town.lawless"
+  ],
+  "chance": 0.03,
+  "days": [
+   1,
+   3
+  ],
+  "cooldown": 40,
+  "effects": {
+   "rumours": 1
+  },
+  "news": "{port} holds its procession this week.",
+  "action": {
+   "text": "Watch the procession",
+   "events": [
+    "life_procession",
+    "life_procession_thief"
+   ]
+  }
+ },
+ "smugglers": {
+  "name": "The smugglers' night market",
+  "text": "The customs men in {port} look the other way after dark, and the beach below the town fills with boats: foreign cloth, tools and wine for the townsfolk, no questions asked.",
+  "when": [
+   "town.contraband",
+   "town.vigilance < 45",
+   "not town.lawless"
+  ],
+  "chance": 0.04,
+  "days": [
+   2,
+   4
+  ],
+  "cooldown": 25,
+  "action": {
+   "text": "Go down to the beach after dark",
+   "events": [
+    "life_smugglers_buy",
+    "life_smugglers_sell"
+   ],
+   "requires": [
+    "not wanted"
+   ],
+   "refused": "With a price on your head, the smugglers won't risk dealing with you."
+  }
+ },
+ "muster": {
+  "name": "Privateers mustering",
+  "text": "The governor of {port} is fitting out privateers against the enemy: commissions for the asking, a bounty for every prize, and every tavern full of captains looking for hands.",
+  "when": [
+   "town.war",
+   "not town.lawless",
+   "town.order >= 35"
+  ],
+  "chance": 0.03,
+  "days": [
+   6,
+   14
+  ],
+  "cooldown": 60,
+  "effects": {
+   "hire_cost": 1.25
+  },
+  "news": "{port} is commissioning privateers.",
+  "action": {
+   "text": "Call on the governor's secretary",
+   "events": [
+    "life_muster_commission",
+    "life_muster_veterans"
+   ]
   }
  }
 }
