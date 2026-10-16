@@ -405,7 +405,7 @@ func battle_allies(s: Dictionary, pos: Vector2, shipping: Node) -> Array:
 			joins = level(s, "f:" + e.faction) >= 3
 		if joins:
 			var st := ShipStats.effective(e.type, e.upgrades)
-			out.append({"name": e.name, "guns": st.guns, "gun_weight": st.gun_weight, "gunnery": e.get("gunnery", 8), "id": n.get("captain_id", "")})
+			out.append({"name": e.name, "guns": st.guns, "gun_weight": st.gun_weight, "gunnery": e.get("gunnery", 8), "id": n.get("captain_id", ""), "type": e.type})
 	return out
 
 
@@ -548,8 +548,9 @@ func reconsider(s: Dictionary) -> Array:
 
 
 ## A crew member leaves to captain their own ship, and joins the roster, bound to you at `lvl`.
-func former_officer(s: Dictionary, id: String, lvl: int) -> String:
-	if not id in s.crew:
+## An officer leaves to captain a ship of their own: a new one, or `ship` (a squadron ship they take with them).
+func former_officer(s: Dictionary, id: String, lvl: int, ship := {}) -> String:
+	if not id in s.crew and ship.is_empty():
 		return ""
 	var c := People.person(id)
 	for post in s.officers.keys():
@@ -559,8 +560,8 @@ func former_officer(s: Dictionary, id: String, lvl: int) -> String:
 	c.role = "captain"
 	c.faction = "pirates" if s.career.pirate else (Career.home_faction(s) if Career.home_faction(s) != "" else "pirates")
 	var names: Array = Data.table("factions")[c.faction].ship_names
-	c.ship = names[rng.randi() % names.size()]
-	c.ship_type = "sloop"
+	c.ship = ship.get("name", names[rng.randi() % names.size()])
+	c.ship_type = ship.get("type", "sloop")
 	var havens: Array = Ports.state.keys().filter(func(p): return Ports.port(p).get("fence", false)) if c.faction == "pirates" else Contracts._ports_of(c.faction)
 	c.haunt = havens[rng.randi() % havens.size()]
 	c.port = c.haunt

@@ -125,6 +125,9 @@ func xp_needed(level: int) -> int:
 
 ## Skills improve with use. Returns true if the skill went up a level.
 func gain_xp(c: Dictionary, skill: String, amount: float) -> bool:
+	if Growth.has_perk(c, "quick_study"):
+		amount *= 1.5
+	Growth.add_xp(c, amount)
 	c.xp[skill] = c.xp.get(skill, 0.0) + amount
 	var levelled := false
 	while c.skills[skill] < 20 and c.xp[skill] >= xp_needed(c.skills[skill]):

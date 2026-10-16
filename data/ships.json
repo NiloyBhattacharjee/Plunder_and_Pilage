@@ -1,55 +1,55 @@
 {
   "sloop": {
-    "masts": 1, "art": "res://assets/ships/sloop", "name": "Sloop", "description": "Fast, nimble and shallow. The classic pirate ship, but a light hull and a small hold.",
+    "masts": 1, "slots": {"hull": 1, "rigging": 1, "hold": 1, "deck": 1}, "art": "res://assets/ships/sloop", "name": "Sloop", "description": "Fast, nimble and shallow. The classic pirate ship, but a light hull and a small hold.",
     "hull": 100, "sails": 60, "speed_knots": 7.5, "turning": 9, "cargo": 60,
     "crew_min": 20, "crew_max": 75, "guns": 8, "gun_weight": 4, "max_gun_weight": 6,
     "draught": "shallow", "price": 1500, "upkeep": 3, "min_standing": -50,
     "polar": [[0, 0.0], [35, 0.45], [50, 0.75], [70, 0.95], [100, 1.0], [135, 0.9], [180, 0.7]]
   },
   "schooner": {
-    "masts": 2, "art": "res://assets/ships/schooner", "name": "Schooner", "description": "The best ship into the wind, and needs only a small crew. Few guns.",
+    "masts": 2, "slots": {"hull": 1, "rigging": 1, "hold": 1, "deck": 1}, "art": "res://assets/ships/schooner", "name": "Schooner", "description": "The best ship into the wind, and needs only a small crew. Few guns.",
     "hull": 90, "sails": 50, "speed_knots": 7.5, "turning": 8, "cargo": 80,
     "crew_min": 12, "crew_max": 50, "guns": 6, "gun_weight": 4, "max_gun_weight": 6,
     "draught": "shallow", "price": 1800, "upkeep": 3, "min_standing": -30,
     "polar": [[0, 0.0], [30, 0.5], [45, 0.8], [70, 1.0], [100, 1.0], [135, 0.85], [180, 0.65]]
   },
   "brigantine": {
-    "masts": 2, "art": "res://assets/ships/brigantine", "name": "Brigantine", "description": "A good balance of speed, guns and cargo. Master of none.",
+    "masts": 2, "slots": {"hull": 1, "rigging": 1, "hold": 1, "deck": 2}, "art": "res://assets/ships/brigantine", "name": "Brigantine", "description": "A good balance of speed, guns and cargo. Master of none.",
     "hull": 160, "sails": 80, "speed_knots": 6.8, "turning": 7, "cargo": 120,
     "crew_min": 35, "crew_max": 110, "guns": 14, "gun_weight": 6, "max_gun_weight": 9,
     "draught": "medium", "price": 3500, "upkeep": 6, "min_standing": -10,
     "polar": [[0, 0.0], [40, 0.35], [55, 0.65], [80, 0.95], [110, 1.0], [140, 0.95], [180, 0.8]]
   },
   "brig": {
-    "masts": 2, "art": "res://assets/ships/brig", "name": "Brig", "description": "A solid warship for its size. Needs a big crew and sails poorly into the wind.",
+    "masts": 2, "slots": {"hull": 1, "rigging": 1, "hold": 1, "deck": 2}, "art": "res://assets/ships/brig", "name": "Brig", "description": "A solid warship for its size. Needs a big crew and sails poorly into the wind.",
     "hull": 220, "sails": 100, "speed_knots": 6.3, "turning": 6, "cargo": 140,
     "crew_min": 60, "crew_max": 130, "guns": 18, "gun_weight": 9, "max_gun_weight": 12,
     "draught": "medium", "price": 5000, "upkeep": 9, "min_standing": 0,
     "polar": [[0, 0.0], [50, 0.3], [65, 0.6], [90, 0.9], [130, 1.0], [160, 0.95], [180, 0.85]]
   },
   "fluyt": {
-    "masts": 3, "art": "res://assets/ships/fluyt", "name": "Fluyt", "description": "A Dutch cargo carrier. A huge hold and cheap to run, but slow and barely armed.",
+    "masts": 3, "slots": {"hull": 1, "rigging": 1, "hold": 2, "deck": 1}, "art": "res://assets/ships/fluyt", "name": "Fluyt", "description": "A Dutch cargo carrier. A huge hold and cheap to run, but slow and barely armed.",
     "hull": 180, "sails": 90, "speed_knots": 5.5, "turning": 4, "cargo": 320,
     "crew_min": 14, "crew_max": 50, "guns": 6, "gun_weight": 4, "max_gun_weight": 6,
     "draught": "medium", "price": 4000, "upkeep": 4, "min_standing": 0,
     "polar": [[0, 0.0], [55, 0.25], [70, 0.55], [95, 0.85], [140, 1.0], [180, 0.9]]
   },
   "frigate": {
-    "masts": 3, "art": "res://assets/ships/frigate", "name": "Frigate", "description": "Fast for its firepower, a strong all-round warship. Expensive and hungry for crew.",
+    "masts": 3, "slots": {"hull": 2, "rigging": 1, "hold": 1, "deck": 2}, "art": "res://assets/ships/frigate", "name": "Frigate", "description": "Fast for its firepower, a strong all-round warship. Expensive and hungry for crew.",
     "hull": 350, "sails": 140, "speed_knots": 7.0, "turning": 6, "cargo": 200,
     "crew_min": 120, "crew_max": 250, "guns": 32, "gun_weight": 12, "max_gun_weight": 18,
     "draught": "deep", "price": 14000, "upkeep": 20, "min_standing": 20,
     "polar": [[0, 0.0], [50, 0.3], [65, 0.6], [90, 0.9], [130, 1.0], [160, 0.95], [180, 0.85]]
   },
   "galleon": {
-    "masts": 3, "art": "res://assets/ships/galleon", "name": "Galleon", "description": "A massive hull, a massive hold, many guns. Slow, turns badly, and draws deep water.",
+    "masts": 3, "slots": {"hull": 2, "rigging": 1, "hold": 2, "deck": 2}, "art": "res://assets/ships/galleon", "name": "Galleon", "description": "A massive hull, a massive hold, many guns. Slow, turns badly, and draws deep water.",
     "hull": 500, "sails": 160, "speed_knots": 5.2, "turning": 3, "cargo": 450,
     "crew_min": 150, "crew_max": 350, "guns": 40, "gun_weight": 12, "max_gun_weight": 24,
     "draught": "deep", "price": 18000, "upkeep": 25, "min_standing": 30,
     "polar": [[0, 0.0], [55, 0.25], [70, 0.55], [95, 0.85], [140, 1.0], [180, 0.9]]
   },
   "man_of_war": {
-    "masts": 3, "art": "res://assets/ships/man_of_war", "name": "Man-of-war", "description": "The most firepower afloat. Very slow, very expensive, and cannot risk shallow water. Navies don't sell them.",
+    "masts": 3, "slots": {"hull": 2, "rigging": 1, "hold": 2, "deck": 2}, "art": "res://assets/ships/man_of_war", "name": "Man-of-war", "description": "The most firepower afloat. Very slow, very expensive, and cannot risk shallow water. Navies don't sell them.",
     "hull": 800, "sails": 220, "speed_knots": 5.0, "turning": 2, "cargo": 300,
     "crew_min": 300, "crew_max": 600, "guns": 70, "gun_weight": 18, "max_gun_weight": 24,
     "draught": "very_deep", "price": 40000, "upkeep": 50, "min_standing": 60,

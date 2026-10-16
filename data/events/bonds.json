@@ -90,5 +90,31 @@
        "outcomes": ["opinion {officer} +5", "morale +2 20"], "result": "One more voyage, {officer} agrees.",
        "fail_outcomes": ["own_ship {officer} -1"], "fail_result": "{officer} goes anyway, angry, and talks about you in every tavern."}
     ]
+  },
+
+  "deserter_knows_a_ship": {
+    "title": "A deserter's tale",
+    "text": "A sailor who jumped ship from {captain}'s crew is drinking alone in {port}. For the price of a few more drinks, the sailor would gladly tell where that ship is rotten, undermanned or slow.",
+    "where": "port", "cooldown": 45, "weight": 8,
+    "conditions": ["gold >= 40"],
+    "roles": {"captain": {"from": "captain_npc"}},
+    "choices": [
+      {"text": "Buy the drinks and listen (40 gold)", "outcomes": ["gold -40", "intel {captain}"], "result": "You leave with a page of notes on every weakness of {captain}'s ship."},
+      {"text": "Leave the sailor to it", "outcomes": [], "result": "Not your concern."}
+    ]
+  },
+
+  "rival_spy": {
+    "title": "Eyes on {rival}",
+    "text": "A boatman in {port} offers to row out at night and look over {rival}'s ship at anchor: the rig, the timbers, how many hands stand watch.",
+    "where": "port", "cooldown": 60, "weight": 10,
+    "conditions": ["gold >= 60"],
+    "roles": {"rival": {"from": "rival"}},
+    "choices": [
+      {"text": "Pay for the spying (60 gold)", "check": {"who": "captain", "skill": "experience", "dc": 10},
+       "outcomes": ["gold -60", "intel {rival}"], "result": "The boatman comes back with everything. Next time you meet {rival}, you'll know where to strike.",
+       "fail_outcomes": ["gold -60", "opinion {rival} -10"], "fail_result": "The boatman is caught and talks. {rival} knows you're watching."},
+      {"text": "No", "outcomes": [], "result": "You'll take {rival} as you find them."}
+    ]
   }
 }

@@ -1,41 +1,41 @@
 {
-  "copper_sheathing": {
+  "copper_sheathing": { "slot": "hull",
     "name": "Copper sheathing",
     "description": "Copper plates below the waterline. A little faster, and fouls far more slowly. Expensive.",
     "cost": 400, "cost_per_hull": 6, "days": 6, "shipyard": 2,
     "effects": {"mult": {"speed_knots": 1.04, "fouling_rate": 0.25}}
   },
-  "reinforced_hull": {
+  "reinforced_hull": { "slot": "hull",
     "name": "Reinforced hull",
     "description": "Extra frames and planking. Much tougher, but heavier and slower.",
     "cost": 200, "cost_per_hull": 3, "days": 5, "shipyard": 1,
     "effects": {"mult": {"hull": 1.3, "speed_knots": 0.94}}
   },
-  "racing_rig": {
+  "racing_rig": { "slot": "rigging",
     "name": "Racing rig",
     "description": "Taller masts and more canvas. Faster, but it takes more hands to work her.",
     "cost": 150, "cost_per_hull": 2, "days": 3, "shipyard": 1,
     "effects": {"mult": {"speed_knots": 1.08, "crew_min": 1.25}}
   },
-  "expanded_hold": {
+  "expanded_hold": { "slot": "hold",
     "name": "Expanded hold",
     "description": "Rip out a gun deck for cargo space. More hold, fewer gun ports.",
     "cost": 100, "cost_per_hull": 1, "days": 3, "shipyard": 1,
     "effects": {"mult": {"cargo": 1.3, "guns": 0.7}}
   },
-  "better_quarters": {
+  "better_quarters": { "slot": "hold",
     "name": "Better quarters",
     "description": "Hammock space, a galley stove, a proper sick bay. The crew will thank you; the hold won't.",
     "cost": 80, "cost_per_hull": 1, "days": 2, "shipyard": 1,
     "effects": {"mult": {"cargo": 0.9}, "add": {"comfort": 10}}
   },
-  "swivel_guns": {
+  "swivel_guns": { "slot": "deck",
     "name": "Swivel guns",
     "description": "Small rail-mounted guns that sweep a deck clear before and during boarding. Need gunners.",
     "cost": 120, "cost_per_hull": 0, "days": 1, "shipyard": 1,
     "effects": {"add": {"swivels": 6, "crew_min": 4}}
   },
-  "chase_guns": {
+  "chase_guns": { "slot": "deck",
     "name": "Chase guns",
     "description": "Long guns at bow and stern, for firing while chasing or fleeing.",
     "cost": 150, "cost_per_hull": 0, "days": 1, "shipyard": 1,

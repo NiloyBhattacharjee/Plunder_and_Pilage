@@ -42,7 +42,7 @@ static func breakdown(type_id: String, upgrades: Array, key: String) -> String:
 
 
 static func headcount(state: Dictionary) -> int:
-	return state.crew.size() + 1  # the captain eats too
+	return state.crew.size() + 1 + Fleet.headcount(state)  # the captain eats too, and so do the other ships' hands
 
 
 static func captain(state: Dictionary) -> Dictionary:
@@ -103,7 +103,7 @@ static func spread_mult(state: Dictionary) -> float:
 static func daily_cost(state: Dictionary, stats: Dictionary) -> float:
 	var u: Dictionary = Data.rules.upkeep
 	var officers: int = state.officers.size()
-	return (state.crew.size() - officers) * u.wage_per_crew + officers * u.wage_per_crew * u.officer_wage_mult + stats.upkeep
+	return (state.crew.size() - officers) * u.wage_per_crew + officers * u.wage_per_crew * u.officer_wage_mult + stats.upkeep + Fleet.daily_cost(state)
 
 
 static func upgrade_cost(u: String, type_id: String) -> int:
@@ -121,7 +121,55 @@ static func cannot_install(state: Dictionary, u: String, shipyard: int) -> Strin
 		return "Too heavy for a %s." % Data.table("ships")[state.type].name
 	if up.has("group") and up.group == "cannons" and up.gun_weight == effective(state.type, state.upgrades).gun_weight:
 		return "Already carrying these guns."
+	if up.has("slot") and slots_used(state, up.slot) >= slots(state.type).get(up.slot, 0):
+		return "No free %s slot: take something out first." % up.slot
 	return ""
+
+
+## Fitting slots: a ship has only so much room in the hull, the rigging, the hold and on deck.
+static func slots(type_id: String) -> Dictionary:
+	return Data.table("ships")[type_id].get("slots", {})
+
+
+static func slots_used(state: Dictionary, slot: String) -> int:
+	return state.upgrades.filter(func(x): return Data.table("upgrades")[x].get("slot", "") == slot).size()
+
+
+static func slots_text(state: Dictionary) -> String:
+	var bits := PackedStringArray()
+	for slot in slots(state.type):
+		bits.append("%s %d/%d" % [slot, slots_used(state, slot), slots(state.type)[slot]])
+	return "Slots: " + ", ".join(bits)
+
+
+## Takes an upgrade out (nothing comes back but the room).
+static func remove(state: Dictionary, u: String) -> void:
+	state.upgrades.erase(u)
+
+
+## The ship's chosen looks ({paint, sails, figurehead}) and what each costs and does.
+static func look(state: Dictionary, part: String) -> Dictionary:
+	var L: Dictionary = Data.rules.ship_looks
+	var table: Dictionary = L[{"paint": "paints", "sails": "sails", "figurehead": "figureheads"}[part]]
+	var id: String = state.get("look", {}).get(part, {"paint": "natural", "sails": "white", "figurehead": "none"}[part])
+	return table.get(id, {})
+
+
+static func look_cost(state: Dictionary, part: String, id: String) -> int:
+	var L: Dictionary = Data.rules.ship_looks
+	var st := effective(state.type, state.upgrades)
+	match part:
+		"paint": return int(st.hull * L.paint_cost_per_hull)
+		"sails": return int(st.sails * L.sails_cost_per_sail)
+	return int(L.figureheads[id].cost)
+
+
+## The sum of one effect across paint, sails and figurehead (enemy_morale, superstitious_morale...).
+static func look_effect(state: Dictionary, key: String) -> float:
+	var total := 0.0
+	for part in ["paint", "sails", "figurehead"]:
+		total += float(look(state, part).get(key, 0))
+	return total
 
 
 ## Fits an upgrade, replacing any other in the same group.

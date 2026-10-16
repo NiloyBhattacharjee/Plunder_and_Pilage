@@ -20,7 +20,7 @@ const VERBS := {  # verb: [min args, max args]
 	"flag": [1, 2], "unflag": [1, 1], "abandon": [1, 1],
 	"favour": [2, 2], "secret": [1, 3], "influence": [3, 3], "stir": [1, 1], "scandal": [1, 1], "council_vote": [2, 2], "join_council": [0, 0],
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
-	"reveal_cove": [0, 0], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
+	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
 	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1],
 	"morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
@@ -643,6 +643,13 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 				Bonds.all(s).erase(key)
 				return "Peace with %s" % Bonds.name_of(key)
 			return ""
+		"intel":  # everything about a named captain's ship
+			var who := _who(a[1], ctx, vars)
+			if not People.chars.has(who) or not People.person(who).has("ship"):
+				return ""
+			var c := People.person(who)
+			Encounters.add_intel(s, c.id, ["all"], res.title.to_lower())
+			return "You know the weak points of the %s, %s's ship" % [c.ship, c.name]
 		"reveal_cove":
 			var found := Bases.reveal_random()
 			return "You learn of a hidden anchorage: %s" % Bases.cove(found).name if found != "" else ""

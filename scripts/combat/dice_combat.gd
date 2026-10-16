@@ -1,16 +1,13 @@
 class_name DiceCombat
 extends RefCounted
-## A sea fight as a tabletop battle. Two ships at a range band (Long, Medium, Close, Grappled), one of them
-## holding the weather gauge. Each round every officer on each side takes one action: d20 + skill + situation
-## against a DC or an opposed roll. sides[0] is the player, sides[1] the enemy.
+## A sea fight as a turn-based battle, Octopath style. Two ships at a range band (Long, Medium, Close, Grappled),
+## one of them holding the weather gauge. Every officer on both ships takes a turn, one at a time, in an order
+## rolled each round (shown a round ahead). An action is d20 + skill + situation against a DC or an opposed roll.
+## Each ship has weak points (light timbers, a lofty rig, a shaky crew...) and a number of shields: every hit on
+## a weak point strips shields, and at none she is Broken: she loses her turns this round and next, and takes
+## half again the damage. Officers bank a boost point each round and spend up to three on one action.
+## sides[0] is the player, sides[1] the enemy.
 ## Actions are data (data/combat_actions.json); their effects are implemented here by id.
-
-const PHASE := {  # support first, then manoeuvres, then guns, then the rest
-	"steady": 0, "read_wind": 0, "shoals": 0, "hold": 0, "arm": 0, "keep_order": 0, "push": 0, "hold_rail": 0, "join_boarders": 0,
-	"close": 1, "open": 1, "gauge": 1, "grapple": 1, "flee": 1, "cut_loose": 1,
-	"round": 2, "chain": 2, "grape": 2, "chase": 2,
-	"rally": 3, "intimidate": 3, "demand": 3, "duel": 3, "strike": 3, "plug": 3, "rigging": 3, "tend": 3,
-}
 
 var sides: Array = []
 var band := 0
@@ -20,8 +17,16 @@ var wind_strength := 1.0
 var rng := RandomNumberGenerator.new()
 var entries: Array = []   # this round's log: {side, post, name, action, text, check?}
 var result := ""          # "", enemy_struck, player_struck, enemy_sunk, player_sunk, separated
-var orders: Array = [{}, {}]
-var _mods: Array = []     # per side, this round: {all, boatswain, gunner, melee, guard, shoals}
+var orders: Array = [{}, {}]  # per side, each post's last action (what an opposed manoeuvre reads)
+var queue: Array = []        # turns left this round: {side, post}
+var next_queue: Array = []   # next round's order, rolled ahead so it can be shown
+var round_open := false
+var _mods: Array = []        # per side, active buffs: {all, boatswain, gunner, melee, guard, shoals}
+var _next_mods: Array = []   # buffs carried into next round (a buff lasts the rest of this round and the next)
+var _actor := -1             # who is acting, and how hard they boost
+var _boost := 0
+var _actor_post := ""        # ...which officer, doing what (for perks)
+var _actor_action := ""
 
 
 static func cfg() -> Dictionary:
@@ -56,6 +61,15 @@ static func make_side(data: Dictionary) -> Dictionary:
 	s.xp = {}
 	if not s.has("roles"):
 		s.roles = Data.rules.crew_roles.presets.balanced.duplicate()
+	for post in s.party:
+		s.party[post].bp = int(cfg().boost.start) + (2 if "reserves" in s.party[post].get("perks", []) else 0)
+		s.party[post].boosted = false
+	var hull: float = s.stats.hull
+	s.shields_max = clampi(int(cfg().breaks.shields_base + hull / cfg().breaks.hull_per_shield) + (1 if s.get("kind", "") in ["navy", "hunter"] else 0), 2, int(cfg().breaks.shields_cap))
+	s.shields = s.shields_max
+	s.broken = -1   # the last round she is Broken in, or -1
+	s.weak = []     # filled in setup, once both ships are known
+	s.known = []    # her weak points the other side has found
 	return s
 
 
@@ -66,7 +80,7 @@ static func npc_party(enemy: Dictionary, rng: RandomNumberGenerator) -> Dictiona
 	var party := {}
 	for post in posts:
 		var c: Dictionary = enemy.captain if post == "captain" else People.generate({"mix": Data.rules.people.recruit_mix[enemy.faction]})
-		var m := {"name": c.name, "id": "", "skills": {}, "stats": {}}
+		var m := {"name": c.name, "id": "", "skills": {}, "stats": {}, "char": c}  # char: for a portrait
 		for k in People.SKILLS:
 			m.skills[k] = People.value(c, k)
 		for k in People.STATS:
@@ -88,6 +102,42 @@ func setup(player: Dictionary, enemy: Dictionary, mode: String, wstrength: float
 	wind_strength = wstrength
 	round_no = 0
 	_mods = [_fresh_mods(), _fresh_mods()]
+	_next_mods = [_fresh_mods(), _fresh_mods()]
+	for i in 2:
+		sides[i].weak = weaknesses(i)
+	var intel: Array = player.get("intel", [])  # what you knew of her before the first shot
+	sides[1].known = sides[1].weak.filter(func(w): return "all" in intel or w in intel)
+	next_queue = _roll_order()
+
+
+## Her weak points, from what she is: each is a kind of attack that strips her shields.
+func weaknesses(i: int) -> Array:
+	var s: Dictionary = sides[i]
+	var b: Dictionary = cfg().breaks
+	var out := []
+	if s.stats.hull <= b.light_hull:
+		out.append("round")
+	if s.stats.masts >= b.lofty_masts:
+		out.append("chain")
+	if s.crew >= s.stats.crew_min * b.crowded_crew:
+		out.append("grape")
+	if s.get("behaviour", "") == "merchant" or s.morale < b.shaky_morale:
+		out.append("nerve")
+	if s.get("behaviour", "") == "merchant" or s.roles.marines < b.few_marines:
+		out.append("steel")
+	if _speed(s) < _speed(sides[other(i)]) - b.sluggish_knots:
+		out.append("helm")
+	if out.is_empty():
+		out.append("nerve")  # every crew can be frightened
+	return out.slice(0, int(b.max_weak))
+
+
+static func weak_name(tag: String) -> String:
+	return cfg().breaks.names[tag]
+
+
+func is_broken(i: int) -> bool:
+	return sides[i].broken >= round_no
 
 
 static func value(m: Dictionary, key: String) -> int:
@@ -133,6 +183,25 @@ func _base(i: int, post: String, skill: String) -> Array:
 		parts.append(["Captain holds steady", _mods[i].all])
 	if sides[i].morale < cfg().low_morale:
 		parts.append(["Low morale", cfg().low_morale_penalty])
+	return parts + _turn_parts(i)
+
+
+func _turn_parts(i: int) -> Array:
+	var parts := []
+	if i == _actor and _boost > 0:
+		parts.append(["Boost x%d" % _boost, _boost * int(cfg().boost.per_point)])
+	if i == _actor and sides[i].party.has(_actor_post):
+		for id in sides[i].party[_actor_post].get("perks", []):
+			var r: Dictionary = Data.table("perks")[id].get("rolls", {})
+			if r.is_empty():
+				continue
+			var a: Dictionary = actions()[_actor_post].get(_actor_action, {})
+			var fits: bool = {"always": true, "helm": _actor_post == "boatswain", "duel": _actor_action == "duel",
+				"weak": a.get("ammo", a.get("hits", "")) in sides[other(i)].known}.get(r.when, false)
+			if fits:
+				parts.append([Data.table("perks")[id].name, int(r.bonus)])
+	if is_broken(i):
+		parts.append(["Broken", int(cfg().breaks.reeling)])
 	return parts
 
 
@@ -157,7 +226,7 @@ func _seamanship_parts(i: int) -> Array:
 		parts.append(["Too few hands aloft", -2])
 	if _mods[i].boatswain != 0:
 		parts.append(["Help", _mods[i].boatswain])
-	return parts
+	return parts + _turn_parts(i)
 
 
 func _gunnery_parts(i: int, ammo: String) -> Array:
@@ -191,19 +260,37 @@ func gun_dc(i: int) -> int:
 	return dc
 
 
-## Odds for the action menu: chance of success with the current situation (opposed rolls assume their likely skill).
-func odds(i: int, post: String, id: String) -> float:
+## Odds for the action menu: {chance, parts, dc} or {chance, parts, opp} for an opposed roll
+## (which assumes their likely skill). `boost` previews spending that many points.
+func preview(i: int, post: String, id: String, boost := 0) -> Dictionary:
+	_actor = i
+	_boost = boost
+	_actor_post = post
+	_actor_action = id
 	var a: Dictionary = actions()[post][id]
+	var out := {}
 	if a.has("ammo"):
-		return Dice.chance(Dice.sum_parts(_gunnery_parts(i, a.ammo)), gun_dc(i))
-	if a.get("dc", -1) == 0:
-		return 1.0
-	var parts: Array = _seamanship_parts(i) if post == "boatswain" else _base(i, post, a.skill)
-	if a.has("vs"):
-		var o := other(i)
-		var opp: Array = _seamanship_parts(o) if a.vs == "boatswain" else (_base(o, a.vs, a.vs_skill) if sides[o].party.has(a.vs) else [])
-		return Dice.contest_chance(Dice.sum_parts(parts), Dice.sum_parts(opp))
-	return Dice.chance(Dice.sum_parts(parts), _dc_for(i, id, a))
+		out = {"parts": _gunnery_parts(i, a.ammo), "dc": gun_dc(i)}
+	elif a.get("dc", -1) == 0:
+		out = {"parts": [], "dc": 0, "chance": 1.0}
+	else:
+		out.parts = _seamanship_parts(i) if post == "boatswain" else _base(i, post, a.skill)
+		if a.has("vs"):
+			var o := other(i)
+			out.opp = _seamanship_parts(o) if a.vs == "boatswain" else (_base(o, a.vs, a.vs_skill) if sides[o].party.has(a.vs) else [])
+		else:
+			out.dc = _dc_for(i, id, a)
+	if not out.has("chance"):
+		out.chance = Dice.contest_chance(Dice.sum_parts(out.parts), Dice.sum_parts(out.opp)) if out.has("opp") else Dice.chance(Dice.sum_parts(out.parts), out.dc)
+	_actor = -1
+	_boost = 0
+	_actor_post = ""
+	_actor_action = ""
+	return out
+
+
+func odds(i: int, post: String, id: String, boost := 0) -> float:
+	return preview(i, post, id, boost).chance
 
 
 func _dc_for(i: int, id: String, a: Dictionary) -> int:
@@ -212,45 +299,186 @@ func _dc_for(i: int, id: String, a: Dictionary) -> int:
 		var dc: float = 10.0 + t.morale * cfg().demand_dc_per_morale + t.hull / t.hull_start * 5.0
 		if i == 0:
 			dc -= sides[0].get("fear", 0) * cfg().demand_fear_per_point
+		if is_broken(other(i)):
+			dc += cfg().breaks.demand_dc
 		return int(dc)
 	if id == "close" or id == "open":
 		return cfg().uncontested_dc
 	return int(a.get("dc", 10))
 
 
-# ---- a round -----------------------------------------------------------------
+# ---- turns -------------------------------------------------------------------
 
-## Plays one round with the player's orders ({post: action id}). The enemy chooses its own.
-func play_round(player_orders: Dictionary) -> Array:
-	entries = []
-	round_no += 1
-	_mods = [_fresh_mods(), _fresh_mods()]
-	orders = [player_orders, ai_orders(1)]
-	var init := Dice.contest(rng, "Initiative", _seamanship_parts(0), _seamanship_parts(1))
-	var first := 0 if init.success else 1
-	_note(-1, "", "Round %d: %s %s the initiative." % [round_no, "you" if first == 0 else "they", "win" if first == 0 else "take"], init)
-	for i in [first, other(first)]:
-		var posts: Array = orders[i].keys()
-		posts.sort_custom(func(a, b): return PHASE.get(orders[i][a], 3) < PHASE.get(orders[i][b], 3))
-		for post in posts:
-			if result != "":
-				break
-			_act(i, post, orders[i][post])
-	if band < 3:  # allied ships in company add their broadsides (not into a grappled melee)
-		for a in sides[0].get("allies", []):
-			if result == "":
-				_ally_fires(a)
-	if result == "" and band == 3:
+## Who acts now: {side, post}, or {} once the fight is over. Opens and closes rounds as the queue runs out,
+## and passes over the turns of a Broken ship.
+func turn() -> Dictionary:
+	while result == "":
+		var t := _front()
+		if not t.is_empty() or result != "":
+			return t
+		if round_open:
+			end_round()
+		else:
+			begin_round()
+	return {}
+
+
+## Runs the turns at the front of the queue that aren't an officer's (allies, the melee, fire and leaks) and
+## passes over a Broken ship's turns. Returns the next officer's turn, or {} when the round is done.
+func _front() -> Dictionary:
+	while result == "" and not queue.is_empty():
+		var t: Dictionary = queue[0]
+		if t.post.begins_with("@"):
+			queue.pop_front()
+			if special_applies(t):
+				_run_special(t)
+				_check_end()
+			continue
+		if is_broken(t.side):
+			queue.pop_front()
+			_note(t.side, t.post, "%s is Broken: %s loses the turn." % ["Your ship" if t.side == 0 else "Their ship", sides[t.side].party[t.post].name])
+			continue
+		return t
+	return {}
+
+
+## Turns that aren't an officer's happen only when they mean something: allies fire unless grappled,
+## the melee only while grappled, fire and leaks only on a ship that has them.
+func special_applies(t: Dictionary) -> bool:
+	if t.post.begins_with("@ally"):
+		return band < 3 and int(t.post.trim_prefix("@ally")) < sides[0].get("allies", []).size()
+	if t.post == "@melee":
+		return band == 3
+	return sides[t.side].leak > 0 or sides[t.side].fire > 0
+
+
+func _run_special(t: Dictionary) -> void:
+	if t.post.begins_with("@ally"):
+		_ally_fires(sides[0].allies[int(t.post.trim_prefix("@ally"))])
+	elif t.post == "@melee":
 		_melee()
+	else:
+		_burn(t.side)
+
+
+## The officer whose turn it is takes action `id` (or "" to pass), spending `boost` points.
+func act(id: String, boost := 0) -> void:
+	var t: Dictionary = queue.pop_front()
+	var m: Dictionary = sides[t.side].party[t.post]
+	boost = clampi(boost, 0, mini(int(cfg().boost.max_spend), m.bp))
+	m.bp -= boost
+	m.boosted = boost > 0
+	_actor = t.side
+	_boost = boost
+	_actor_post = t.post
+	_actor_action = id
+	if id == "":
+		_note(t.side, t.post, "%s waits." % m.name)
+	else:
+		orders[t.side][t.post] = id
+		_act(t.side, t.post, id)
+	_actor = -1
+	_boost = 0
+	_actor_post = ""
+	_actor_action = ""
+	_check_end()
+
+
+## The enemy (or the autopilot) takes the current turn.
+func act_ai() -> void:
+	var t: Dictionary = queue[0]
+	var id: String = ai_orders(t.side).get(t.post, "")
+	act(id, ai_boost(t.side, t.post, id))
+
+
+func begin_round() -> void:
+	round_no += 1
+	round_open = true
+	_mods = _next_mods
+	_next_mods = [_fresh_mods(), _fresh_mods()]
 	for i in 2:
-		_burn(i)
+		var s: Dictionary = sides[i]
+		if s.broken >= 0 and s.broken < round_no:
+			s.broken = -1
+			s.shields = s.shields_max
+			_note(i, "", "%s recovers: her shields are back up." % ("Your ship" if i == 0 else "Their ship"))
+		for post in s.party:
+			var m: Dictionary = s.party[post]
+			if not m.boosted or "second_wind" in m.get("perks", []):  # Octopath's rule: no point the round after you boost
+				m.bp = mini(int(cfg().boost.max_points), m.bp + 1)
+			m.boosted = false
+	queue = next_queue
+	next_queue = _roll_order()
+	_note(-1, "", "Round %d." % round_no)
+
+
+func end_round() -> void:
+	round_open = false
 	_morale_checks()
 	_check_end()
+
+
+## Turn order: each officer's experience, the ship's speed and the weather gauge, and a die.
+func _roll_order() -> Array:
+	var rolled := []
+	for i in 2:
+		var s: Dictionary = sides[i]
+		var ship: float = clampf((_speed(s) - _speed(sides[other(i)])) * cfg().speed_mod_per_knot, -2.0, 2.0) + (cfg().gauge_bonus if gauge == i else 0)
+		for post in s.party:
+			var init: int = rng.randi_range(1, int(cfg().initiative_die)) + Dice.mod(value(s.party[post], "experience")) + int(ship) + (3 if _has_perk(i, post, "quick") else 0)
+			rolled.append({"side": i, "post": post, "init": init + (0.5 if i == 0 else 0.0)})  # ties to the player
+		rolled.append({"side": i, "post": "@damage", "init": float(rng.randi_range(1, int(cfg().initiative_die)))})  # fire and leaks
+	var allies: Array = sides[0].get("allies", [])
+	for k in allies.size():
+		rolled.append({"side": 0, "post": "@ally%d" % k, "init": rng.randi_range(1, int(cfg().initiative_die)) + Dice.mod(allies[k].gunnery) + 0.5})
+	rolled.append({"side": -1, "post": "@melee", "init": float(rng.randi_range(1, int(cfg().initiative_die)))})
+	rolled.sort_custom(func(a, b): return a.init > b.init)
+	return rolled.map(func(r): return {"side": r.side, "post": r.post})
+
+
+## A whole round with fixed orders for the player (the enemy picks turn by turn). For tests and quick fights.
+func play_round(player_orders: Dictionary) -> Array:
+	entries = []
+	if not round_open:
+		begin_round()
+	while result == "":
+		var t := _front()
+		if t.is_empty():
+			break
+		if t.side == 0:
+			act(player_orders.get(t.post, ""))
+		else:
+			act_ai()
+	if result == "":
+		end_round()
 	return entries
+
+
+## Strips shields when an attack lands on one of her weak points. At none, she is Broken.
+func _hit_weak(o: int, tag: String) -> void:
+	var t: Dictionary = sides[o]
+	if not tag in t.weak or is_broken(o):
+		return
+	var who := "Your ship" if o == 0 else "Their ship"
+	if not tag in t.known:
+		t.known.append(tag)
+	var n: int = 1 + (_boost if _actor == other(o) else 0) + (1 if _actor == other(o) and _has_perk(_actor, _actor_post, "breaker") else 0)
+	t.shields = maxi(0, t.shields - n)
+	if t.shields > 0:
+		_note(o, "", "A weak point: %s! %s loses %d shield%s (%d left)." % [weak_name(tag).to_lower(), who, n, "" if n == 1 else "s", t.shields])
+		return
+	t.broken = round_no + 1
+	_hit_morale(o, cfg().breaks.morale)
+	_note(o, "", "BREAK! %s reels: %s. She loses her turns this round and next, and takes half again the damage." % [who, weak_name(tag).to_lower()])
 
 
 func _fresh_mods() -> Dictionary:
 	return {"all": 0, "boatswain": 0, "gunner": 0, "melee": 0, "guard": false, "shoals": false}
+
+
+func _buff(i: int, key: String, v: Variant) -> void:
+	for mods in [_mods, _next_mods]:
+		mods[i][key] = v if v is bool else maxi(mods[i][key], v)
 
 
 func _act(i: int, post: String, id: String) -> void:
@@ -270,15 +498,15 @@ func _act(i: int, post: String, id: String) -> void:
 			c = _roll(i, post, a)
 			if c.success:
 				match id:
-					"steady": _mods[i].all = 1
-					"read_wind": _mods[i].boatswain += 3
-					"hold": _mods[i].gunner += 2
+					"steady": _buff(i, "all", 1)
+					"read_wind": _buff(i, "boatswain", 3)
+					"hold": _buff(i, "gunner", 2)
 					"arm": s.armed = true
 					"keep_order":
 						s.morale += cfg().keep_order
-						_mods[i].guard = true
-					"join_boarders": _mods[i].melee += 2
-					"shoals": _mods[i].shoals = true
+						_buff(i, "guard", true)
+					"join_boarders": _buff(i, "melee", 2)
+					"shoals": _buff(i, "shoals", true)
 			_note(i, post, "%s: %s." % [who, a.name], c)
 		"push", "hold_rail":
 			s.stance = a.stance
@@ -291,11 +519,14 @@ func _act(i: int, post: String, id: String) -> void:
 			c = _contest_seamanship(i, a.name) if opposed else _roll(i, post, a)
 			if c.success:
 				band = clampi(band + (1 if id == "close" else -1), 0, 2)
+				if opposed:
+					_hit_weak(o, a.hits)
 			_note(i, post, "%s: %s. %s" % [who, a.name, ("Now at " + cfg().bands[band].to_lower() + ".") if c.success else "No headway."], c)
 		"gauge":
 			c = _contest_seamanship(i, a.name)
 			if c.success:
 				gauge = i
+				_hit_weak(o, a.hits)
 			_note(i, post, "%s: %s. %s" % [who, a.name, "%s hold the weather gauge." % ("You" if gauge == 0 else "They")], c)
 		"grapple":
 			if _mods[o].shoals:
@@ -304,6 +535,7 @@ func _act(i: int, post: String, id: String) -> void:
 			c = _contest_seamanship(i, a.name)
 			if c.success:
 				band = 3
+				_hit_weak(o, a.hits)
 			_note(i, post, "%s: %s. %s" % [who, a.name, "Grapnels bite: the ships are locked together!" if c.success else "She slips away."], c)
 		"flee":
 			var parts := _seamanship_parts(i)
@@ -329,8 +561,10 @@ func _act(i: int, post: String, id: String) -> void:
 		"intimidate":
 			c = _contest(i, post, a)
 			if c.success:
-				_hit_morale(o, c.margin * cfg().intimidate_per_margin + Dice.roll(rng, 1, 6))
+				_hit_morale(o, c.margin * cfg().intimidate_per_margin + Dice.roll(rng, 1, 6) + _boost * 3)
 			_note(i, post, "%s: %s. %s" % [who, a.name, "Their nerve cracks (morale %d)." % t.morale if c.success else "They jeer back."], c)
+			if c.success:
+				_hit_weak(o, a.hits)
 		"demand":
 			c = Dice.check(rng, a.name, _base(i, post, a.skill), _dc_for(i, id, a))
 			_xp(i, post, a.skill, c.success)
@@ -350,12 +584,25 @@ func _act(i: int, post: String, id: String) -> void:
 				s.party.captain.wounded = true
 				s.captain_wounded = true
 			_note(i, post, "%s: %s. %s" % [who, a.name, ("Their captain falls!" if c.success else "%s is wounded and driven back." % who)], c)
+			if c.success:
+				_hit_weak(o, a.hits)
+		"study":
+			c = _roll(i, post, a)
+			var hidden: Array = t.weak.filter(func(w): return not w in t.known)
+			var found := []
+			if c.success:
+				for k in (hidden.size() if c.crit or _boost > 0 or _has_perk(i, post, "eagle_eye") else 1):
+					if k < hidden.size():
+						found.append(hidden[k])
+						t.known.append(hidden[k])
+			var what := "Nothing new: you know her weak points." if hidden.is_empty() else ("Found: %s." % ", ".join(found.map(func(w): return weak_name(w).to_lower())) if not found.is_empty() else "Smoke hides her.")
+			_note(i, post, "%s: %s. %s" % [who, a.name, what], c)
 		"plug":
 			c = _roll(i, post, a)
 			if c.success:
 				s.leak = 0
 				s.fire = 0
-				s.hull = minf(s.stats.hull, s.hull + Dice.roll(rng, 1, cfg().plug_hull[1]) + Dice.mod(value(s.party[post], "carpentry")))
+				s.hull = minf(s.stats.hull, s.hull + (Dice.roll(rng, 1, cfg().plug_hull[1]) + Dice.mod(value(s.party[post], "carpentry"))) * (2 if _has_perk(i, post, "shipwright") else 1))
 			_note(i, post, "%s: %s. Hull %d." % [who, a.name, s.hull], c)
 		"rigging":
 			c = _roll(i, post, a)
@@ -365,7 +612,7 @@ func _act(i: int, post: String, id: String) -> void:
 		"tend":
 			c = _roll(i, post, a)
 			if c.success:
-				var n := clampf(Dice.roll(rng, 1, cfg().tend[1]) + Dice.mod(value(s.party[post], "medicine")), 0.0, s.casualties)
+				var n := clampf((Dice.roll(rng, 1, cfg().tend[1]) + Dice.mod(value(s.party[post], "medicine"))) * (2 if _has_perk(i, post, "sawbones") else 1), 0.0, s.casualties)
 				s.crew += n
 				s.casualties -= n
 				s.morale += 2
@@ -422,11 +669,15 @@ func _broadside(i: int, post: String, id: String, a: Dictionary) -> void:
 	if not c.success:
 		_note(i, post, "%s: %s. The shot falls short." % [who, a.name], c)
 		return
-	var n: int = cfg().chase_dice if id == "chase" else maxi(1, ceili(_manned_guns(s) / float(cfg().guns_per_die)))
+	var n: int = (cfg().chase_dice if id == "chase" else maxi(1, ceili(_manned_guns(s) / float(cfg().guns_per_die)))) + _boost
 	var die := _damage_die(s.stats.gun_weight)
 	var dmg := Dice.roll(rng, n, die) + maxi(0, c.margin) / 2
 	if c.crit:
 		dmg *= 2
+	if is_broken(o):
+		if _has_perk(i, post, "finisher"):
+			dmg += Dice.roll(rng, 2, die)
+		dmg = int(dmg * cfg().breaks.damage_mult)
 	var fx: Dictionary = cfg().ammo[ammo]
 	var crew_before: float = t.crew
 	var hull_before: float = t.hull
@@ -442,6 +693,7 @@ func _broadside(i: int, post: String, id: String, a: Dictionary) -> void:
 	if c.crit:
 		text += " " + _crit(o, ammo)
 	_note(i, post, text, c)
+	_hit_weak(o, ammo)
 
 
 ## An allied ship fires into the enemy, rolled like any broadside.
@@ -450,9 +702,12 @@ func _ally_fires(a: Dictionary) -> void:
 	var c := Dice.check(rng, "%s's broadside" % a.name, [["Their gunnery", Dice.mod(a.gunnery)]], gun_dc(0))
 	if not c.success:
 		_note(-1, "", "Your ally the %s fires and misses." % a.name, c)
+		_return_fire(a)
 		return
 	var n := maxi(1, ceili(a.guns / 2.0 / cfg().guns_per_die))
 	var dmg := Dice.roll(rng, n, _damage_die(a.gun_weight))
+	if is_broken(1):
+		dmg = int(dmg * cfg().breaks.damage_mult)
 	var killed := minf(t.crew, dmg * cfg().ammo.round.crew)
 	var hull_before: float = t.hull
 	t.hull -= dmg
@@ -460,6 +715,17 @@ func _ally_fires(a: Dictionary) -> void:
 	t.casualties += killed
 	_hit_morale(1, killed / maxf(t.crew_start, 1.0) * 100.0 * cfg().morale_per_crew_pct + (hull_before - t.hull) / t.hull_start * 100.0 * cfg().morale_per_hull_pct)
 	_note(-1, "", "Your ally the %s rakes her: %d damage, %d men down." % [a.name, dmg, killed], c)
+	_return_fire(a)
+
+
+## A consort in the line draws fire: the enemy's guns answer her, and the damage is hers to carry home.
+func _return_fire(a: Dictionary) -> void:
+	if not a.has("consort") or is_broken(1) or _manned_guns(sides[1]) <= 0:
+		return
+	var n := maxi(1, ceili(_manned_guns(sides[1]) / float(cfg().guns_per_die) * Data.rules.fleet.return_fire))
+	var dmg := Dice.roll(rng, n, _damage_die(sides[1].stats.gun_weight))
+	a.hull_lost += dmg
+	_note(1, "", "Their guns answer the %s: %d damage." % [a.name, dmg])
 
 
 static func _damage_die(gun_weight: float) -> int:
@@ -541,7 +807,7 @@ func _melee_parts(i: int) -> Array:
 		parts.append(["Pushing forward", 2])
 	elif s.stance == "hold":
 		parts.append(["Holding the rail", -2])
-	return parts
+	return parts + _turn_parts(i)
 
 
 func _melee() -> void:
@@ -564,6 +830,7 @@ func _melee() -> void:
 		_hit_morale(pair[0], (before - side.crew) / maxf(side.crew_start, 1.0) * 100.0 * cfg().morale_per_crew_pct)
 	_note(-1, "", "Hand to hand: %s gain the upper hand. You lose %d men, they lose %d." % [
 		"your boarders" if w == 0 else "their men", lost_w if w == 0 else lost_l, lost_l if w == 0 else lost_w], c)
+	_hit_weak(l, "steel")
 
 
 # ---- morale and the end --------------------------------------------------------
@@ -582,6 +849,8 @@ func _morale_checks() -> void:
 			continue
 		var dc := int(cfg().morale_check_dc + (cfg().morale_check_below - s.morale) / 3.0)
 		var parts: Array = [["Captain's authority", Dice.mod(value(s.party.captain, "authority"))]]
+		if _has_perk(i, "captain", "iron_will"):
+			parts.append(["Iron will", 3])
 		var c := Dice.check(rng, "Morale", parts, dc)
 		if c.success:
 			_note(i, "", "%s crew waver, but hold." % ("Your" if i == 0 else "Their"), c)
@@ -636,7 +905,10 @@ func ai_orders(i: int) -> Dictionary:
 				else:
 					pick = "hold" if can.has("hold") else "open"
 			"master_gunner":
-				if b == "aggressive" and band >= 2 and can.has("grape"):
+				var known: Array = t.known.filter(func(w): return can.has(w))
+				if not known.is_empty() and not is_broken(other(i)):
+					pick = known[0]  # hammer a weak point it has found
+				elif b == "aggressive" and band >= 2 and can.has("grape"):
 					pick = "grape"
 				elif b == "aggressive" and t.sails > t.stats.sails * 0.4 and can.has("chain"):
 					pick = "chain"
@@ -666,6 +938,22 @@ func ai_orders(i: int) -> Dictionary:
 		if pick != "" and can.has(pick):
 			out[post] = pick
 	return out
+
+
+## How many boost points the AI spends: everything into a Broken ship or a known weak point, else bank them.
+func ai_boost(i: int, post: String, id: String) -> int:
+	if id == "" or not sides[i].party.has(post):
+		return 0
+	var bp: int = sides[i].party[post].bp
+	var a: Dictionary = actions()[post][id]
+	var tag: String = a.get("ammo", a.get("hits", ""))
+	if (a.has("ammo") and is_broken(other(i))) or (tag in sides[other(i)].known and bp >= 2):
+		return mini(int(cfg().boost.max_spend), bp)
+	return 1 if bp >= int(cfg().boost.max_points) else 0
+
+
+func _has_perk(i: int, post: String, id: String) -> bool:
+	return id in sides[i].party.get(post, {}).get("perks", [])
 
 
 func _shallower(i: int) -> bool:

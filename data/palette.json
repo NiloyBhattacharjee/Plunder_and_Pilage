@@ -1,20 +1,20 @@
 {
-  "_comment": "The whole look in one place. scripts/style.gd builds the UI theme from this; map, combat and UI read colours by name.",
+  "_comment": "The whole look in one place. scripts/style.gd builds the UI Theme from this. UI colours (Octopath-style navy glass and gold) are the plain names; the sea chart keeps its own ink-and-parchment under chart_*. Map, combat and UI read colours by name.",
   "colors": {
-    "parchment": "#ead9b0",
-    "parchment_light": "#f3e8cc",
-    "parchment_dark": "#d6c08e",
-    "ink": "#3b2a1a",
-    "ink_soft": "#6b5640",
-    "ink_faint": "#3b2a1a30",
-    "header": "#7a2e1c",
-    "dim": "#7d6b55",
-    "good": "#2e6b3a",
-    "bad": "#a3261b",
-    "wax": "#8b2a1f",
-    "wax_light": "#a8402f",
-    "wax_dark": "#5e1a12",
-    "wax_text": "#f3ead2",
+    "parchment": "#0e1224",
+    "parchment_light": "#1d2440",
+    "parchment_dark": "#090b16",
+    "ink": "#ece4cd",
+    "ink_soft": "#b9b1a0",
+    "ink_faint": "#ece4cd30",
+    "header": "#e2c27a",
+    "dim": "#8e94ac",
+    "good": "#86d690",
+    "bad": "#f07c64",
+    "wax": "#1d2440",
+    "wax_light": "#2b3560",
+    "wax_dark": "#121830",
+    "wax_text": "#ece4cd",
     "sea": "#cdd5bd",
     "deep": "#b6c4ae",
     "shallow": "#e2e3c8",
@@ -23,13 +23,23 @@
     "player_ship": "#6b3d1a",
     "smoke": "#4a3d33",
     "flash": "#f2c94c",
-    "splash": "#f3f0e6"
+    "splash": "#f3f0e6",
+    "chart_paper": "#ead9b0",
+    "chart_paper_light": "#f3e8cc",
+    "chart_ink": "#3b2a1a"
   },
   "fonts": {
     "body": "res://assets/ui/fonts/IMFellEnglish-Regular.ttf",
     "italic": "res://assets/ui/fonts/IMFellEnglish-Italic.ttf",
-    "title": "res://assets/ui/fonts/PirataOne-Regular.ttf"
+    "title": "res://assets/ui/fonts/PixelifySans.ttf",
+    "pixel": "res://assets/ui/fonts/PixelifySans.ttf"
   },
-  "font_sizes": {"body": 18, "header": 19, "title": 32},
-  "panel_texture": "res://assets/ui/panel.png"
+  "font_sizes": {
+    "body": 18,
+    "header": 19,
+    "title": 30
+  },
+  "panel_texture": "res://assets/ui/pixel/panel.png",
+  "pixel_ui": "res://assets/ui/pixel/",
+  "map_pixel": 2
 }

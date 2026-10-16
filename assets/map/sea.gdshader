@@ -19,7 +19,16 @@ float noise(vec2 p) {
 
 void fragment() {
 	vec2 px = UV * map_size;
-	float depth = min(texture(mask_soft, UV).r, 0.5) * 2.0;    // 0 deep .. 1 shallow (land and reefs count as shallow)
+	// The mask is one texel per terrain cell: a small tent blur rounds the stair-steps into smooth banks.
+	vec2 tx = 1.0 / vec2(textureSize(mask_soft, 0));
+	float soft = 0.0;
+	for (int i = -2; i <= 2; i++) {
+		for (int j = -2; j <= 2; j++) {
+			float wgt = float(3 - abs(i)) * float(3 - abs(j));
+			soft += min(texture(mask_soft, UV + vec2(float(i), float(j)) * tx * 0.6).r, 0.5) * wgt;
+		}
+	}
+	float depth = soft / 81.0 * 2.0;    // 0 deep .. 1 shallow (land and reefs count as shallow)
 	// a crisp edge along the middle of the soft mask follows the bank smoothly, with a faint gradient either side
 	vec4 col = mix(deep_color, shallow_color, smoothstep(0.42, 0.58, depth) * 0.85 + depth * 0.15);
 	float edge = 1.0 - smoothstep(0.0, fwidth(depth) * 1.5, abs(depth - 0.5));

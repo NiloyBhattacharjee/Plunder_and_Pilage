@@ -27,4 +27,4 @@ func _rain(s: Dictionary, c: Color) -> void:
 	for i in int(s.radius / 2.5):
 		var a := rng.randf() * TAU
 		var p: Vector2 = s.pos + Vector2(cos(a), sin(a)) * sqrt(rng.randf()) * s.radius
-		draw_line(p, p + Vector2(-3, 9), Color(Style.c("ink"), 0.25), 1.0)
+		draw_line(p, p + Vector2(-3, 9), Color(Style.c("chart_ink"), 0.25), 1.0)

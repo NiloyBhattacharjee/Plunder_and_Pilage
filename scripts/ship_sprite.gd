@@ -17,6 +17,12 @@ func setup(type_id: String, flag_id: String) -> void:
 	_key = ""
 
 
+## Paint and sail colour tint the art (white leaves it as drawn).
+func set_look(state: Dictionary) -> void:
+	$Hull.modulate = Color(ShipStats.look(state, "paint").get("color", "#ffffff"))
+	$Sails.modulate = Color(ShipStats.look(state, "sails").get("color", "#ffffff"))
+
+
 ## Flags are gameplay (nations, the black flag, false colours), so they're their own layer.
 func set_flag(flag_id: String) -> void:
 	$Flag.visible = flag_id != ""
@@ -26,6 +32,7 @@ func set_flag(flag_id: String) -> void:
 		$Flag.position = Vector2(0, length * 0.42)  # at the stern, streaming aft
 		$Flag.rotation = PI / 2.0
 		$Flag.offset = Vector2($Flag.texture.get_width() / 2.0, 0)
+		$Flag.scale = Vector2.ONE * 0.35  # the pixel ships are small; so is their ensign
 
 
 ## Hull damaged below half strength; sails follow the sail setting (0-2) and tear when badly hit.

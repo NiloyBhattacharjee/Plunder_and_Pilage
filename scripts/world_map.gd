@@ -18,6 +18,8 @@ var chase_id := ""        # the NPC ship you're chasing
 var _chase_timer := 0.0
 var _in_event := false
 var _attacked := false
+@onready var port_layer: Node2D = $PortLayer
+var _overlays: Array = []  # the pixelation and label layers, hidden with the world
 var at_base := ""         # the cove you're anchored at, if any (a cove isn't a port: you count as at sea)
 var cove_anchors := {}    # cove id -> navigable anchorage
 var _raid_base := ""      # the base you're fighting for   # you opened fire in the last battle (it matters to named captains)   # an event's "time" outcome runs days; don't start another inside it
@@ -36,13 +38,14 @@ static var start_config := {}
 
 
 func _ready() -> void:
+	_pixel_layers()
 	rng.randomize()
 	terrain = TerrainGrid.new(load("res://data/map/terrain.png").get_image(), int(Data.map.cell_px))
 	for id in Data.table("ports"):
 		var p: Dictionary = Data.table("ports")[id]
 		port_positions[id] = Geo.latlon_to_px(p.lat, p.lon)
 		anchorages[id] = terrain.nearest_sea(port_positions[id])
-	$PortLayer.port_positions = port_positions
+	port_layer.port_positions = port_positions
 	for id in Data.table("coves"):
 		if not id.begins_with("_"):
 			cove_anchors[id] = terrain.nearest_sea(Bases.cove_pos(id))
@@ -69,12 +72,12 @@ func _ready() -> void:
 	hud.save_pressed.connect(_save)
 	hud.load_pressed.connect(_load)
 	hud.map_mode_changed.connect(func(good):
-		$PortLayer.ship_state = ship.state
-		$PortLayer.trade_good = good)
+		port_layer.ship_state = ship.state
+		port_layer.trade_good = good)
 	port_screen.message.connect(hud.show_message)
-	port_screen.closed.connect($PortLayer.queue_redraw)
-	Clock.day_passed.connect(func(_d): if $PortLayer.trade_good != "": $PortLayer.queue_redraw())
-	hud.crew_pressed.connect(func(): crew_screen.open(ship))
+	port_screen.closed.connect(port_layer.queue_redraw)
+	Clock.day_passed.connect(func(_d): if port_layer.trade_good != "": port_layer.queue_redraw())
+	hud.crew_pressed.connect(_open_crew)
 	crew_screen.message.connect(hud.show_message)
 	shipping.setup(terrain, self)
 	Contracts.shipping = shipping
@@ -82,8 +85,8 @@ func _ready() -> void:
 	Bonds.news.connect(hud.show_message)
 	Bases.news.connect(hud.show_message)
 	$BaseScreen.message.connect(hud.show_message)
-	$BaseScreen.closed.connect($PortLayer.queue_redraw)
-	Contracts.changed.connect($PortLayer.queue_redraw)
+	$BaseScreen.closed.connect(port_layer.queue_redraw)
+	Contracts.changed.connect(port_layer.queue_redraw)
 	shipping.contact.connect(_on_contact)
 	shipping.news.connect(hud.show_message)
 	shipping.alert.connect(func(text):
@@ -129,16 +132,18 @@ func _daily() -> void:
 		hud.show_message(m)
 	Politics.prune_secrets(s)
 	Bonds.ensure_on_map(shipping)
+	for m in Fleet.daily(s, rng):
+		hud.show_message(m)
 	if ship.anchored_at == "" and not ship.route.is_empty():
 		var found := Bases.look_for_coves(s, ship.position)
 		if found != "":
 			hud.show_message(found)
-			$PortLayer.queue_redraw()
+			port_layer.queue_redraw()
 	var base_day := Bases.daily(s, at_base)
 	for m in base_day.messages:
 		hud.show_message(m)
 	if base_day.messages.size() > 0:
-		$PortLayer.queue_redraw()
+		port_layer.queue_redraw()
 	if base_day.battle != "" and not busy():
 		defend_base(base_day.battle)
 		return
@@ -178,7 +183,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_2: Clock.set_speed(2)
 			KEY_3: Clock.set_speed(3)
 			KEY_F: follow_ship = true
-			KEY_C: crew_screen.open(ship)
+			KEY_C: _open_crew()
 			KEY_F5: _save()
 			KEY_F9: _load()
 
@@ -250,7 +255,7 @@ func _at_cove(id: String) -> void:
 		{"text": "Not now"}])
 	if pick == 0:
 		hud.show_message(Bases.claim(ship.state, id))
-		$PortLayer.queue_redraw()
+		port_layer.queue_redraw()
 		$BaseScreen.open(id, ship)
 		return
 	UIKit.resume_clock()
@@ -284,7 +289,7 @@ func _zoom(factor: float) -> void:
 	var fit := get_viewport_rect().size / Vector2(Data.map.size[0], Data.map.size[1])
 	var z := clampf(camera.zoom.x * factor, maxf(fit.x, fit.y), ZOOM_MAX)
 	camera.zoom = Vector2(z, z)
-	$PortLayer.zoom = z
+	port_layer.zoom = z
 
 
 func _on_arrived(id: String) -> void:
@@ -452,7 +457,7 @@ func _load() -> void:
 		if screen.visible:
 			screen.close()
 	var err := SaveGame.load_game(self)
-	$PortLayer.queue_redraw()
+	port_layer.queue_redraw()
 	match err:
 		OK: hud.show_message("Game loaded (paused).")
 		ERR_INVALID_DATA: hud.show_message("That save is from an older version of the game and can't be loaded. Started a new game instead.")
@@ -536,6 +541,35 @@ This is the %s you were hired to find." % enemy.name
 			UIKit.resume_clock()
 
 
+## The pixel look: a layer that pixelates the chart and everything on it, with the port names and markers
+## lifted onto a layer above it (following the camera) so they stay sharp. The HUD sits above both.
+func _pixel_layers() -> void:
+	var pix := CanvasLayer.new()
+	pix.layer = 1
+	var rect := ColorRect.new()
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://assets/map/pixelate.gdshader")
+	mat.set_shader_parameter("pixel", float(Data.table("palette").get("map_pixel", 3)))
+	rect.material = mat
+	pix.add_child(rect)
+	add_child(pix)
+	_overlays = [pix]
+	var labels := CanvasLayer.new()
+	labels.layer = 2
+	labels.follow_viewport_enabled = true
+	add_child(labels)
+	_overlays.append(labels)
+	port_layer.reparent.call_deferred(labels)
+	hud.layer = 5
+
+
+func _open_crew() -> void:
+	crew_screen.docked = ship.anchored_at != "" or at_base != ""
+	crew_screen.open(ship)
+
+
 func start_combat(enemy: Dictionary, mode: String) -> void:
 	UIKit.pause_clock()
 	var s: Dictionary = ship.state
@@ -546,31 +580,39 @@ func start_combat(enemy: Dictionary, mode: String) -> void:
 		s.reputation.fear += int(fx.fear)
 		s.reputation.honour += int(fx.honour)
 		hud.show_message("You run up the %s. Her crew blanch." % Data.table("flags")[flag].name.to_lower())
-	elif mode == "attack" and Career.false_colours(s):
-		s.reputation.honour += int(Data.rules.flags.false_colours_honour)
-		mode = "ambush"
+	var dread := ShipStats.look_effect(s, "enemy_morale")  # black sails, a snarling figurehead
+	if dread != 0.0:
+		enemy.morale += dread
+	if mode == "attack" and not Data.rules.flags.has(flag) and Career.false_colours(s):
+		if ShipStats.look_effect(s, "no_false_colours") > 0.0:
+			hud.show_message("Nobody believes false colours over black sails.")
+		else:
+			s.reputation.honour += int(Data.rules.flags.false_colours_honour)
+			mode = "ambush"
 	combat = load("res://scenes/combat.tscn").instantiate()
 	_show_world(false)
 	get_tree().root.add_child(combat)
 	var w := Weather.wind_at(ship.position)
 	var side := Encounters.player_side(s)
-	side.allies = Bonds.battle_allies(s, ship.position, shipping).filter(func(a): return a.id == "" or a.id != enemy.get("captain_id", ""))
+	side.intel = Encounters.intel_on(s, enemy)
+	side.allies = Fleet.allies(s) + Bonds.battle_allies(s, ship.position, shipping).filter(func(a): return a.id == "" or a.id != enemy.get("captain_id", ""))
 	if _raid_base != "" and Bases.bases.has(_raid_base):  # the shore guns join in
 		for bid in ["battery", "fort"]:
 			if Bases.has(Bases.bases[_raid_base], bid):
 				side.allies.append({"name": Bases.building(bid).name.to_lower() + " at " + Bases.bases[_raid_base].name, "guns": Bases.building(bid).guns * 2,
-					"gun_weight": 12, "gunnery": 10, "id": ""})
+					"gun_weight": 12, "gunnery": 10, "id": "", "shore": true})
 	_attacked = mode in ["attack", "ambush"]
 	if not side.allies.is_empty():
 		hud.show_message("Your allies close in to fight beside you: " + ", ".join(side.allies.map(func(a): return "the " + a.name)) + ".")
 	combat.start(side, enemy, mode, w.dir, w.strength)
-	combat.get_node("Camera2D").make_current()
 	combat.finished.connect(_on_combat_finished)
 
 
 func _show_world(on: bool) -> void:
 	visible = on
 	hud.visible = on
+	for layer in _overlays:
+		layer.visible = on
 	process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 
 
@@ -582,7 +624,10 @@ func _on_combat_finished(result: Dictionary) -> void:
 	var s: Dictionary = ship.state
 	for m in Encounters.apply_battle(s, result.player, rng):
 		hud.show_message(m)
+	for m in Fleet.after_battle(s, result.player.get("allies", [])):
+		hud.show_message(m)
 	var e: Dictionary = result.enemy_data
+	Encounters.remember(s, e, result.enemy.known)
 	for m in Contracts.on_battle(s, e, result.outcome, ship.position):
 		hud.show_message(m)
 	for m in Bonds.on_battle(s, e, result.outcome, _attacked):
@@ -590,7 +635,7 @@ func _on_combat_finished(result: Dictionary) -> void:
 	if _raid_base != "" and Bases.bases.has(_raid_base):
 		var won: bool = result.outcome in ["enemy_struck", "enemy_sunk"]
 		hud.show_message(Bases.resolve_raid(s, _raid_base, 4 if won else -3))
-		$PortLayer.queue_redraw()
+		port_layer.queue_redraw()
 	_raid_base = ""
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
 		shipping.remove(current_npc)

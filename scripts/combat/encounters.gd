@@ -78,6 +78,7 @@ static func player_side(s: Dictionary) -> Dictionary:
 		"morale": morale, "swivels": ShipStats.effective(s.type, s.upgrades).swivels, "behaviour": "player",
 		"roles": {"sailors": preset.sailors, "gunners": preset.gunners, "marines": preset.marines},
 		"flag": s.get("flag", "white"),
+		"look": s.get("look", {}),
 		"fear": s.reputation.fear,
 		"party": party(s),
 	}
@@ -94,12 +95,43 @@ static func party(s: Dictionary) -> Dictionary:
 
 static func _member(id: String) -> Dictionary:
 	var c := People.person(id)
-	var m := {"name": c.name, "id": id, "skills": {}, "stats": {}}
+	var m := {"name": c.name, "id": id, "skills": {}, "stats": {}, "perks": c.get("perks", []).duplicate()}
 	for k in People.SKILLS:
 		m.skills[k] = People.value(c, k)
 	for k in People.STATS:
 		m.stats[k] = People.value(c, k)
 	return m
+
+
+## What you know of a ship's weak points before the first shot: from fighting her captain before, from
+## intelligence (papers, deserters), and from knowing her class. Weak-point ids, or "all".
+static func intel_on(s: Dictionary, enemy: Dictionary) -> Array:
+	var intel: Dictionary = s.get("intel", {})
+	var out: Array = intel.get(enemy.get("captain_id", "-"), {}).get("tags", []).duplicate()
+	out.append_array(intel.get("@" + enemy.type, {}).get("tags", []))
+	if enemy.type == s.type:
+		out.append_array(["round", "chain"])  # you know the faults of your own ship's class
+	return out
+
+
+## Keyed by a captain's id (their ship), or "@" + ship type for a whole class.
+static func add_intel(s: Dictionary, key: String, tags: Array, source: String) -> void:
+	s.intel = s.get("intel", {})
+	var cur: Dictionary = s.intel.get(key, {"tags": []})
+	for t in tags:
+		if not t in cur.tags:
+			cur.tags.append(t)
+	cur.source = source
+	s.intel[key] = cur
+
+
+## After a fight, keep what you found: about her captain's ship, and her class's hull and rig.
+static func remember(s: Dictionary, enemy: Dictionary, known: Array) -> void:
+	if enemy.has("captain_id"):
+		add_intel(s, enemy.captain_id, known, "you fought her")
+	var cls := known.filter(func(t): return t in ["round", "chain"])
+	if not cls.is_empty():
+		add_intel(s, "@" + enemy.type, cls, "you've fought her class")
 
 
 ## Writes battle damage back to the ship and buries the dead. Returns messages.
@@ -185,16 +217,16 @@ static func take_cargo(s: Dictionary, enemy: Dictionary, good: String, qty: int,
 
 ## Puts a prize crew aboard and keeps the ship. Returns "" or why not.
 static func take_prize(s: Dictionary, enemy: Dictionary, prize_crew: int) -> String:
-	if s.prizes.size() >= Data.rules.prizes.max:
-		return "You can't manage more than %d prizes." % Data.rules.prizes.max
+	if s.prizes.size() >= Fleet.max_ships():
+		return "You can't manage more than %d prizes." % Fleet.max_ships()
 	if prize_crew < 3 or prize_crew > s.crew.size() - s.officers.size():
 		return "Not enough spare hands for a prize crew."
 	var officers: Array = s.officers.values()
 	var movers: Array = s.crew.filter(func(id): return not id in officers).slice(0, prize_crew)
 	for id in movers:
 		s.crew.erase(id)
-	s.prizes.append({"type": enemy.type, "name": enemy.name, "faction": enemy.faction, "hull": maxf(1.0, enemy.hull),
-		"sails": enemy.sails, "crew": movers, "cargo": enemy.cargo.duplicate()})
+	s.prizes.append(Fleet.ensure({"type": enemy.type, "name": enemy.name, "faction": enemy.faction, "hull": maxf(1.0, enemy.hull),
+		"sails": enemy.sails, "crew": movers, "cargo": enemy.cargo.duplicate(), "upgrades": enemy.get("upgrades", []).duplicate()}))
 	return ""
 
 

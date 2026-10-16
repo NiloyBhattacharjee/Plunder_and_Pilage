@@ -39,6 +39,7 @@ func setup(new_state: Dictionary) -> void:
 func refresh_stats() -> void:
 	stats = ShipStats.effective(state.type, state.upgrades)
 	$Hull.setup(state.type, state.get("flag", "white"))
+	$Hull.set_look(state)
 	state.hull = minf(state.hull, stats.hull)
 	state.sails = minf(state.sails, stats.sails)
 	stats_changed.emit()
@@ -75,8 +76,9 @@ func _on_tick(dd: float) -> void:
 	speed_text = "Top speed %.1f kn\nPoint of sail: x%.2f\nWind strength: x%.2f\n%s" % [
 		stats.speed_knots, sail_info.factor, wind.strength, cond.text]
 	for prize in state.get("prizes", []):  # a squadron sails at the pace of its slowest ship
-		var pst := ShipStats.effective(prize.type, [])
-		var pk: float = pst.speed_knots * Sailing.best_course(pst.polar, off_wind).factor * wind.strength
+		var pst := Fleet.stats(prize)
+		var short: float = clampf(Fleet.hands(prize) / maxf(1.0, pst.crew_min), 0.4, 1.0)  # a short-handed ship is slow
+		var pk: float = pst.speed_knots * Sailing.best_course(pst.polar, off_wind).factor * wind.strength * short
 		if pk < speed_knots:
 			speed_knots = pk
 			speed_text += "\nHeld back by the prize %s: %.1f kn" % [prize.name, pk]

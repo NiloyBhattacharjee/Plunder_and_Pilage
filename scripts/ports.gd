@@ -182,7 +182,7 @@ func sell_prize(id: String, index: int, s: Dictionary) -> Dictionary:
 	var prize: Dictionary = s.prizes[index]
 	var value := prize_value(id, prize)
 	s.gold += value
-	s.crew.append_array(prize.crew)
+	Fleet.return_people(s, prize)
 	s.prizes.remove_at(index)
 	return {"ok": true, "text": ("Sold the prize %s for %d. " % [prize.name, value] + Crew.plunder(s, value)).strip_edges()}
 
@@ -203,10 +203,11 @@ func prize_to_flagship(index: int, s: Dictionary) -> Dictionary:
 	if Market.cargo_used(s.cargo) > new_stats.cargo:
 		return {"ok": false, "text": "Your cargo won't fit in her hold."}
 	s.gold += old_value
-	s.crew.append_array(prize.crew)
+	Fleet.return_people(s, prize)
 	s.type = prize.type
 	s.name = prize.name
-	s.upgrades = []
+	s.upgrades = prize.get("upgrades", [])
+	s.look = prize.get("look", {})
 	s.hull = minf(prize.hull, new_stats.hull)
 	s.sails = minf(prize.sails, new_stats.sails)
 	s.fouling = 0.0

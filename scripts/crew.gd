@@ -88,6 +88,14 @@ static func morale(s: Dictionary, stats: Dictionary) -> Dictionary:
 	for m in s.morale_mods:
 		parts.append([m.name, float(m.value)])
 	parts.append_array(Bonds.morale_parts(s))
+	for pair in [["superstitious", "superstitious_morale"], ["devout", "devout_morale"]]:  # the figurehead
+		var v := ShipStats.look_effect(s, pair[1])
+		var part_share: float = crew.filter(func(p): return pair[0] in tags(p)).size() / maxf(1.0, crew.size())
+		if absf(v * part_share) >= 0.5:
+			parts.append(["%s, to the %s" % [ShipStats.look(s, "figurehead").name, pair[0]], v * part_share])
+	for id in [s.captain] + s.officers.values():
+		if People.chars.has(id) and Growth.has_perk(People.person(id), "beloved"):
+			parts.append(["%s is beloved" % People.person(id).name, 3.0])
 	var total := 0.0
 	var lines := PackedStringArray()
 	for p in parts:
@@ -162,6 +170,9 @@ static func daily(s: Dictionary, stats: Dictionary, port: String, rng: RandomNum
 	s.morale_mods = s.morale_mods.filter(func(m): return m.until > Clock.day)
 	if s.cargo.get("rum", 0.0) > 0.0:
 		Ports.remove_cargo(s, "rum", ShipStats.headcount(s) * cfg().rum_per_crew)
+	for id in s.crew:  # hands who've levelled up improve on their own; you choose for officers
+		if not id in s.officers.values():
+			Growth.auto_spend(People.person(id))
 	var msgs := disease_day(s, port, rng)
 	msgs.append_array(social_day(s, rng))
 	msgs.append_array(unrest_day(s, stats, rng))

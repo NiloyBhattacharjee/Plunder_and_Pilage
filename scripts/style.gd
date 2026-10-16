@@ -1,6 +1,7 @@
 extends Node
 ## Autoload "Style": the one place the look comes from. Builds the UI Theme from data/palette.json
-## (colours, fonts, paper panel texture) and applies it to the whole game. Restyle by editing that file.
+## (colours, fonts, pixel window frames) and applies it to the whole game. Restyle by editing that file.
+## The windows are Octopath-style: navy glass with gold trim, drawn as 9-slice pixel art (assets/ui/pixel/).
 ## Labels use theme variations "Title" and "Header"; code asks Style.c("ink") for named colours.
 
 
@@ -30,14 +31,10 @@ func build_theme() -> Theme:
 	t.default_font = font("body")
 	t.default_font_size = int(p.font_sizes.body)
 
-	var paper := StyleBoxTexture.new()  # parchment panels with an inked border baked into the texture
-	paper.texture = load(p.panel_texture)
-	paper.set_texture_margin_all(10)
-	paper.set_content_margin_all(14)
-	paper.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
-	paper.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
-	for type in ["PanelContainer", "Panel", "TooltipPanel", "PopupMenu", "TabContainer"]:
+	var paper := _frame(p.panel_texture, 18, 18)  # windows: the gold trim is baked into the texture
+	for type in ["PanelContainer", "Panel", "PopupMenu", "TabContainer"]:
 		t.set_stylebox("panel", type, paper)
+	t.set_stylebox("panel", "TooltipPanel", _frame(p.pixel_ui + "tooltip.png", 4, 8))
 
 	for type in ["Label", "CheckBox", "TooltipLabel", "LineEdit", "PopupMenu"]:
 		t.set_color("font_color", type, c("ink"))
@@ -46,34 +43,44 @@ func build_theme() -> Theme:
 	t.set_color("font_hover_color", "CheckBox", c("header"))
 	t.set_color("font_pressed_color", "CheckBox", c("ink"))
 
-	# Wax-seal buttons: dark red, rounded, light lettering.
+	# Pixel buttons: navy with a gold edge that brightens under the mouse.
 	for type in ["Button", "OptionButton"]:
-		t.set_stylebox("normal", type, _wax(c("wax")))
-		t.set_stylebox("hover", type, _wax(c("wax_light")))
-		t.set_stylebox("pressed", type, _wax(c("wax_dark")))
+		t.set_stylebox("normal", type, _button(p.pixel_ui + "button.png"))
+		t.set_stylebox("hover", type, _button(p.pixel_ui + "button_hover.png"))
+		t.set_stylebox("pressed", type, _button(p.pixel_ui + "button_pressed.png"))
+		t.set_stylebox("hover_pressed", type, _button(p.pixel_ui + "button_pressed.png"))
 		t.set_stylebox("focus", type, StyleBoxEmpty.new())
-		var off := _wax(c("wax"))
-		off.bg_color.a = 0.35
-		t.set_stylebox("disabled", type, off)
+		t.set_stylebox("disabled", type, _button(p.pixel_ui + "button_disabled.png"))
 		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			t.set_color(state, type, c("wax_text"))
 		t.set_color("font_disabled_color", type, Color(c("wax_text"), 0.6))
 
-	var field := StyleBoxFlat.new()
-	field.bg_color = c("parchment_light")
-	field.border_color = c("ink_soft")
-	field.set_border_width_all(1)
-	field.set_content_margin_all(6)
+	var field := _button(p.pixel_ui + "field.png")
 	t.set_stylebox("normal", "LineEdit", field)
 	t.set_stylebox("focus", "LineEdit", field)
+	t.set_color("caret_color", "LineEdit", c("header"))
+	t.set_color("selection_color", "LineEdit", Color(c("header"), 0.35))
 
-	var tab := _wax(c("parchment_dark"))
-	var tab_on := _wax(c("parchment_light"))
+	var tab := _button(p.pixel_ui + "tab.png")
+	var tab_on := _button(p.pixel_ui + "tab_on.png")
 	t.set_stylebox("tab_unselected", "TabContainer", tab)
 	t.set_stylebox("tab_hovered", "TabContainer", tab_on)
 	t.set_stylebox("tab_selected", "TabContainer", tab_on)
-	for state in ["font_selected_color", "font_unselected_color", "font_hovered_color"]:
-		t.set_color(state, "TabContainer", c("ink"))
+	for state in ["font_unselected_color", "font_hovered_color"]:
+		t.set_color(state, "TabContainer", c("ink_soft"))
+	t.set_color("font_selected_color", "TabContainer", c("header"))
+	t.set_font("font", "TabContainer", font("pixel"))
+	var scroll := StyleBoxFlat.new()  # thin gold scrollbars
+	scroll.bg_color = c("header").darkened(0.3)
+	scroll.set_content_margin_all(3)
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(c("parchment_dark"), 0.6)
+	track.set_content_margin_all(3)
+	for type in ["VScrollBar", "HScrollBar"]:
+		t.set_stylebox("grabber", type, scroll)
+		t.set_stylebox("grabber_highlight", type, scroll)
+		t.set_stylebox("grabber_pressed", type, scroll)
+		t.set_stylebox("scroll", type, track)
 
 	t.add_type("Title")
 	t.set_type_variation("Title", "Label")
@@ -82,20 +89,25 @@ func build_theme() -> Theme:
 	t.set_color("font_color", "Title", c("ink"))
 	t.add_type("Header")
 	t.set_type_variation("Header", "Label")
-	t.set_font("font", "Header", font("italic"))
+	t.set_font("font", "Header", font("pixel"))
 	t.set_font_size("font_size", "Header", int(p.font_sizes.header))
 	t.set_color("font_color", "Header", c("header"))
 	return t
 
 
-static func _wax(col: Color) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = col
-	s.set_corner_radius_all(6)
-	s.border_color = col.darkened(0.35)
-	s.set_border_width_all(1)
+## A 9-slice pixel frame: the corners stay crisp, the edges and middle stretch.
+static func _frame(path: String, margin: int, content: int) -> StyleBoxTexture:
+	var s := StyleBoxTexture.new()
+	s.texture = load(path)
+	s.set_texture_margin_all(margin)
+	s.set_content_margin_all(content)
+	s.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE  # repeat at 1:1, never smear the pixels
+	s.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	return s
+
+
+static func _button(path: String) -> StyleBoxTexture:
+	var s := _frame(path, 6, 4)
 	s.content_margin_left = 10
 	s.content_margin_right = 10
-	s.content_margin_top = 4
-	s.content_margin_bottom = 4
 	return s

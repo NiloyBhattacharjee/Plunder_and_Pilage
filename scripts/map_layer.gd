@@ -8,7 +8,7 @@ const GRID_DEGREES := 5
 
 
 func _draw() -> void:
-	var ink := Style.c("ink")
+	var ink := Style.c("chart_ink")
 	var size := Vector2(Data.map.size[0], Data.map.size[1])
 	var land_polys: Array[PackedVector2Array] = []
 	for flat in Data.map.land:
@@ -20,7 +20,7 @@ func _draw() -> void:
 			for ring in Geometry2D.offset_polygon(pts, WATERLINES[i]):
 				_ring(ring, Color(ink, a), 1.0)
 	for pts in land_polys:
-		draw_colored_polygon(pts, Style.c("land"))
+		draw_colored_polygon(pts, Style.c("chart_paper"))
 	for pts in land_polys:
 		_ring(pts, ink, 1.6)
 	for flat in Data.map.get("reefs", []):
@@ -64,11 +64,11 @@ func _labels() -> void:
 		var font := Style.font("italic" if l.italic else "title")
 		var pos := Geo.latlon_to_px(l.lat, l.lon)
 		var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size)).x
-		draw_string(font, pos - Vector2(w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size), Color(Style.c("ink"), 0.45))
+		draw_string(font, pos - Vector2(w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size), Color(Style.c("chart_ink"), 0.45))
 
 
 func _compass(c: Vector2, r: float, ink: Color) -> void:
-	var paper := Style.c("parchment_light")
+	var paper := Style.c("chart_paper_light")
 	draw_circle(c, r * 1.08, Color(ink, 0.5), false, 1.0)
 	draw_circle(c, r * 0.98, Color(ink, 0.5), false, 1.0)
 	for i in 32:  # rhumb lines radiating across the chart, as on a portolan

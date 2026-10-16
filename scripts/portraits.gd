@@ -2,6 +2,10 @@ class_name Portraits
 ## Layered character portraits built from data/portraits.json. Each character keeps a portrait seed, so the
 ## same face rebuilds after loading. Faces follow the story: wounds add an eyepatch, scar or hook; age greys
 ## the hair and adds wrinkles; role and background pick the clothing (a navy coat, a pirate's, a governor's wig).
+## A character's chosen looks (c.portrait.pick: {layer: part id, or "" for none}, c.portrait.skin, .hair) override
+## the dice, but never the story: an eyepatch earned in battle stays.
+
+const EDITABLE := ["background", "head", "eyes", "nose", "mouth", "hair", "facial_hair", "body", "hat", "accessory", "tattoo"]
 
 
 ## Tags that steer clothing and hats for this character in this role ("crew", "officer", "captain", "official"...).
@@ -24,8 +28,14 @@ static func layers(c: Dictionary, tags: Array) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(c.get("portrait", {}).get("seed", hash(c.name)))
 	var nat: String = c.get("nationality", "english")
+	var look: Dictionary = c.get("portrait", {})
+	var chosen: Dictionary = look.get("pick", {})
 	var skin := Color(_pick(rng, d.skin_tones.get(nat, d.skin_tones.default)))
 	var hair := Color(_pick(rng, d.hair_colors.get(nat, d.hair_colors.default)))
+	if look.has("skin"):
+		skin = Color(look.skin)
+	if look.has("hair"):
+		hair = Color(look.hair)
 	var age: int = c.get("age", 30)
 	hair = hair.lerp(Color(d.grey), clampf(float(age - d.grey_from_age) / (d.grey_full_age - d.grey_from_age), 0.0, 1.0))
 	var out := []
@@ -40,9 +50,15 @@ static func layers(c: Dictionary, tags: Array) -> Array:
 		elif story != "":
 			if not story in c.traits:
 				continue
+		elif chosen.has(layer):
+			if chosen[layer] == "":
+				continue
 		elif roll_none < d.none_chance.get(layer, 0.0):
 			continue
 		var parts: Array = d.parts[layer]
+		var mine := parts.filter(func(p): return p.id == chosen.get(layer, ""))
+		if story == "" and not mine.is_empty():
+			parts = mine
 		# prefer the parts that fit the most tags: a navy captain gets the navy coat, not just any captain's coat
 		var best := 0
 		for p in parts:

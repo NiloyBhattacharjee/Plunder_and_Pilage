@@ -134,6 +134,13 @@
     "master_gunner": {"name": "Master Gunner", "skill": "gunnery",    "effect": "Runs the guns in battle (milestone 4)."},
     "surgeon":       {"name": "Surgeon",       "skill": "medicine",   "effect": "Treats the wounded and sick (milestones 4 and 8)."}
   },
+  "growth": {
+    "xp_per_level": 20, "max_level": 20, "perk_every": 3, "max_skill": 20,
+    "build": {"stat_base": 7, "skill_base": 3, "stat_points": 8, "skill_points": 12, "max_start": 15,
+              "extra_traits": 1, "flaw_points": 3, "flaws": ["cowardly", "drunkard", "seasick", "hated", "green", "gambler", "hot_headed"]},
+    "looks_need_port": true
+  },
+
   "people": {
     "stat_mean": 6, "stat_spread": 2.5,
     "skill_mean": 3, "skill_spread": 2.5, "seamanship_bonus": 3, "specialty_bonus": 4,
@@ -163,7 +170,10 @@
     "raid_per_visibility": 0.0005, "raid_rival_bonus": 0.006, "raid_wanted_bonus": 0.003,
     "raiders": {"pirate": {"men": 35, "strength": 2}, "hunter": {"men": 70, "strength": 4}, "navy": {"men": 120, "strength": 6}},
     "loyalty_start": 60, "loyalty_unpaid": -2, "loyalty_hungry": -3, "loyalty_drift": 0.1, "desert_below": 25, "rebel_below": 15,
-    "shore_leave_days": 20, "manager_build_per_point": 0.04, "manager_trade_per_point": 0.03, "lost_margin": 5
+    "shore_leave_days": 20, "manager_build_per_point": 0.04, "manager_trade_per_point": 0.03, "lost_margin": 5,
+    "_shipbuilding": "With a shipyard you can lay down a new hull. needs: further buildings for bigger ships. Cost is the ship's price times cost_mult; days are hull times days_per_hull (a good carpenter as manager is faster).",
+    "shipbuilding": {"cost_mult": 0.7, "days_per_hull": 0.25,
+                     "types": {"sloop": [], "schooner": [], "brigantine": [], "fluyt": ["warehouse"], "brig": ["warehouse"], "frigate": ["warehouse", "fort"]}}
   },
   "crew": {
     "morale_base": 50, "wages_paid": 5, "unpaid_per_day": 2.0, "unpaid_max": 30, "no_prey_grace": 25, "no_prey_per_day": 0.6,
@@ -203,7 +213,27 @@
     "risk_labels": [[0.6, "Low"], [1.0, "Moderate"], [1.6, "High"], [99, "Deadly"]]
   },
   "combat": {"crew_per_gun": 4, "surgeon_saves_per_point": 0.03},
-  "prizes": {"max": 2, "crew_fraction": 0.4, "sale_mult": 0.6, "max_speed_share": 1.0},
+  "ship_looks": {
+    "_comment": "Paint, sails and figurehead: chosen at a shipyard (or your base's). Colours tint the ship's art. enemy_morale: off the enemy's morale when a fight starts; superstitious_morale/devout_morale: morale from crew with those traits (scaled by their share of the crew); no_false_colours: you can't pass as someone else.",
+    "paints": {"natural": {"name": "Natural timber", "color": "#ffffff"}, "black": {"name": "Black and yellow", "color": "#7a7468"},
+               "red": {"name": "Ox-blood red", "color": "#e0a898"}, "blue": {"name": "Royal blue", "color": "#b4c2e4"},
+               "green": {"name": "Sea green", "color": "#b8d4b4"}},
+    "paint_cost_per_hull": 0.4,
+    "sails": {"white": {"name": "White canvas", "color": "#ffffff"}, "tan": {"name": "Tanned brown", "color": "#e8cc98"},
+              "red": {"name": "Red", "color": "#e8a090"},
+              "black": {"name": "Black", "color": "#5a5a5a", "enemy_morale": -5, "no_false_colours": true,
+                        "description": "Every crew in the Caribbean knows what black sails mean: -5 to their morale when the fight starts. But nobody will believe your false colours."}},
+    "sails_cost_per_sail": 1.5,
+    "figureheads": {"none": {"name": "None", "cost": 0, "description": "A plain stem."},
+                    "mermaid": {"name": "A mermaid", "cost": 80, "superstitious_morale": 8, "description": "The superstitious swear she keeps the ship lucky."},
+                    "saint": {"name": "A saint", "cost": 80, "devout_morale": 8, "description": "A comfort to the devout among the crew."},
+                    "lion": {"name": "A rampant lion", "cost": 150, "enemy_morale": -2, "description": "Snarling gilt: -2 to the enemy's morale when the fight starts."},
+                    "skull": {"name": "A grinning skull", "cost": 120, "enemy_morale": -4, "superstitious_morale": -6,
+                              "description": "-4 to the enemy's morale when the fight starts. Your own superstitious hands hate it."}}
+  },
+  "fleet": {"max_consorts": 4, "fight_crew_fraction": 0.5, "consort_upkeep_mult": 1.0, "desert_opinion": -25,
+            "desert_chance_per_day": 0.004, "return_fire": 0.5},
+  "prizes": {"crew_fraction": 0.4, "sale_mult": 0.6, "max_speed_share": 1.0},
   "prisoners": {
     "fates": {
       "adrift": {"name": "Set them adrift in the boats", "honour": 2, "fear": 0, "relation": 2, "tags": {"hates_mercy": -3, "hates_cruelty": 1},
@@ -331,6 +361,17 @@
     },
     "post_skills": {"captain": "authority", "quartermaster": "swordplay", "navigator": "navigation", "boatswain": "seamanship",
                     "master_gunner": "gunnery", "carpenter": "carpentry", "surgeon": "medicine"},
-    "order": ["boatswain", "navigator", "master_gunner", "captain", "quartermaster", "carpenter", "surgeon"]
+    "order": ["boatswain", "navigator", "master_gunner", "captain", "quartermaster", "carpenter", "surgeon"],
+    "initiative_die": 8,
+    "boost": {"start": 1, "max_points": 5, "max_spend": 3, "per_point": 2},
+    "breaks": {
+      "shields_base": 2, "hull_per_shield": 200, "shields_cap": 6,
+      "light_hull": 160, "lofty_masts": 3, "crowded_crew": 2.0, "shaky_morale": 45, "few_marines": 0.15, "sluggish_knots": 0.5,
+      "max_weak": 3, "reeling": -4, "papers_intel_chance": 0.25, "damage_mult": 1.5, "morale": 8, "demand_dc": -5,
+      "names": {"round": "Light timbers", "chain": "Lofty rig", "grape": "Crowded decks", "nerve": "Shaky nerve",
+                "steel": "Few fighting men", "helm": "Sluggish helm"},
+      "tips": {"round": "Round shot", "chain": "Chain shot", "grape": "Grape shot", "nerve": "Threats (Show them no mercy)",
+               "steel": "Steel: a duel, or winning the melee", "helm": "Outsailing her: closing, the gauge, grappling"}
+    }
   }
 }

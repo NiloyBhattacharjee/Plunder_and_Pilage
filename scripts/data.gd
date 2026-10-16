@@ -24,6 +24,7 @@ const SCHEMA := {
 		"refs": {"ship": "ships", "traits": "traits"}},
 	"coves": {"required": ["name", "lat", "lon", "shelter", "soil", "water", "description"]},
 	"buildings": {"required": ["name", "cost", "days", "upkeep", "needs", "visibility", "description"], "refs": {"needs": "buildings"}},
+	"perks": {"required": ["name", "needs", "description"]},
 	"contracts": {"required": ["name", "description", "employer", "needs", "objective", "days", "tiers", "success", "lie_chance", "trap_chance"]},
 }
 

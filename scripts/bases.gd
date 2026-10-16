@@ -252,6 +252,35 @@ func sell(s: Dictionary, id: String, good: String, qty: float) -> String:
 
 ## Building, production, wages and food, loyalty, visibility, ransoms and raids. Returns
 ## {messages, battle: base id if a raid is falling on a base where you are, else ""}.
+## Why this ship can't be laid down at this base, or "".
+func keel_problem(s: Dictionary, id: String, type: String) -> String:
+	var b: Dictionary = bases[id]
+	var sb: Dictionary = cfg().shipbuilding
+	if not has(b, "shipyard"):
+		return "Build a shipyard first."
+	if b.has("keel"):
+		return "The %s is already on the slip." % b.keel.name
+	var missing: Array = sb.types[type].filter(func(x): return not has(b, x))
+	if not missing.is_empty():
+		return "A %s needs: %s." % [Data.table("ships")[type].name.to_lower(), ", ".join(missing.map(func(x): return building(x).name.to_lower()))]
+	if keel_cost(type) > s.gold:
+		return "You can't afford her."
+	return ""
+
+
+func keel_cost(type: String) -> int:
+	return int(Data.table("ships")[type].price * cfg().shipbuilding.cost_mult)
+
+
+func lay_keel(s: Dictionary, id: String, type: String, ship_name: String) -> String:
+	var why := keel_problem(s, id, type)
+	if why != "":
+		return why
+	s.gold -= keel_cost(type)
+	bases[id].keel = {"type": type, "name": ship_name, "left": Data.table("ships")[type].hull * cfg().shipbuilding.days_per_hull}
+	return "The keel of the %s is laid at %s." % [ship_name, bases[id].name]
+
+
 func daily(s: Dictionary, here: String) -> Dictionary:
 	var c := cfg()
 	var msgs := []
@@ -266,6 +295,14 @@ func daily(s: Dictionary, here: String) -> Dictionary:
 				b.buildings.append(b.building.id)
 				msgs.append("The %s at %s is finished." % [building(b.building.id).name.to_lower(), b.name])
 				b.building = {}
+		# a hull on the slip
+		if b.has("keel"):
+			b.keel.left -= 1.0 + (People.value(man, "carpentry") * c.manager_build_per_point if not man.is_empty() else 0.0)
+			if b.keel.left <= 0:
+				var st := ShipStats.effective(b.keel.type, [])
+				b.prizes.append(Fleet.ensure({"type": b.keel.type, "name": b.keel.name, "faction": "", "hull": float(st.hull), "sails": float(st.sails)}))
+				msgs.append("The %s is launched at %s. She's waiting at the dock for a crew." % [b.keel.name, b.name])
+				b.erase("keel")
 		# production
 		var crewed: bool = b.garrison >= 5
 		for bid in b.buildings:

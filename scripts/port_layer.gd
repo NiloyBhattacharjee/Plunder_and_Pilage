@@ -22,16 +22,16 @@ func _draw() -> void:
 	for id in Bases.discovered:  # coves you've found: an anchor, or your own flag
 		var cp := Bases.cove_pos(id)
 		var mine := Bases.bases.has(id)
-		var col: Color = Style.c("wax") if mine else Style.c("ink")
-		draw_circle(cp, 5.0 * s, Style.c("parchment_light"))
+		var col: Color = Style.c("wax") if mine else Style.c("chart_ink")
+		draw_circle(cp, 5.0 * s, Style.c("chart_paper_light"))
 		draw_arc(cp, 5.0 * s, 0.0, TAU, 16, col, 1.5 * s)
 		draw_line(cp + Vector2(0, -3.5) * s, cp + Vector2(0, 3.5) * s, col, 1.5 * s)  # an anchor, roughly
 		draw_line(cp + Vector2(-2.5, -1.5) * s, cp + Vector2(2.5, -1.5) * s, col, 1.5 * s)
 		var label: String = Bases.cove(id).name + (" (your base)" if mine else "")
 		if mine and not Bases.bases[id].raid.is_empty() and Bases.bases[id].raid.warned:
 			label += " - RAID COMING"
-		draw_string_outline(Style.font("italic"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), int(4 * s), Style.c("parchment_light"))
-		draw_string(Style.font("italic"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), col)
+		draw_string_outline(Style.font("pixel"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), int(4 * s), Style.c("chart_paper_light"))
+		draw_string(Style.font("pixel"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), col)
 	for h in Contracts.hints():  # where your contracts send you, inked on the chart
 		var at: Vector2
 		if h.has("radius"):
@@ -55,8 +55,8 @@ func _draw() -> void:
 			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd%s)" % [
 				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]
 		draw_circle(pos, 6.0 * s, Color(Data.table("factions")[port.faction].color))
-		draw_circle(pos, 6.0 * s, Style.c("ink"), false, 1.5 * s)
-		draw_string_outline(ThemeDB.fallback_font, text_pos, label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("parchment_light"))
-		draw_string(ThemeDB.fallback_font, text_pos, label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), Style.c("ink"))
+		draw_circle(pos, 6.0 * s, Style.c("chart_ink"), false, 1.5 * s)
+		draw_string_outline(Style.font("pixel"), text_pos, label,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("chart_paper_light"))
+		draw_string(Style.font("pixel"), text_pos, label,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), Style.c("chart_ink"))

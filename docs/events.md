@@ -83,6 +83,7 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `influence PORT GROUP +5`, `stir 4`, `council_vote TOPIC yes/no`, `join_council` | Shift a port's interest groups; someone pays your crew to plot; the Nassau council votes (with your voice) |
 | `bond {r} +1`, `rivalry {r} 2`, `strain {r}`, `betray {r}`, `peace {r}` | Alliances and rivalries (scripts/bonds.gd): raise or lower an alliance, start or worsen a rivalry, strain a bond (two strains and it drops a level), an ally turns on you, a rivalry ends |
 | `reveal_cove`, `base_gold {b} -15%`, `base_loyalty {b} -10`, `base_visibility {b} +10`, `base_garrison {b} +4`, `base_store {b} sugar +30`, `base_damage {b}`, `base_lost {b}` | Bases (scripts/bases.gd): learn of a hidden cove; change a base you own; destroy a building; lose the base |
+| `intel {captain}` | Learn every weak point of a named captain's ship: shown in battle before the first shot |
 | `abandon TEMPLATE` | Fails your active contract of that template (a double-cross, a bribe taken) |
 | `event ID [delay] [window]` | Chain: queue another event, with the same roles, after `delay` days; it waits up to `window` days for its conditions |
 | `fight KIND [faction] [mode]` | A battle: `merchant`, `pirate`, `navy`, `hunter`; mode `defend` (default), `attack`, `ambush`, `flee` |

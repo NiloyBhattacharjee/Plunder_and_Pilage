@@ -12,8 +12,21 @@ Design rule: deep, not wide. Every feature must create a decision for the player
 
 **Controls:** left-click the sea or a port to set a course (the route goes around land). Wheel zooms, right/middle-drag pans, F follows the ship. Space pauses, 1/2/3 set the speed to 1x/2x/4x. F5 quick-saves, F9 quick-loads. C opens the crew and ship screen.
 Other ships sail the map: merchants carrying cargo between ports, navy patrols, pirates and pirate hunters. Click a ship to give chase;
-hostile ones chase you. Battles are played like a tabletop game: each round you give every officer an order
-(the menu shows the odds), then Space or Enter rolls. Every roll is logged as d20 + modifiers against a DC or the enemy's roll.
+hostile ones chase you. Battles are turn-based, Octopath style: every officer on both ships acts once a round, one at a time,
+in the order shown across the top (next round's too). On your officer's turn pick an action (the menu shows the odds; 1-9 picks).
+Every roll is logged as d20 + modifiers against a DC or the enemy's roll. Each ship has weak points (light timbers, a lofty rig,
+crowded decks, a shaky crew, few fighting men, a sluggish helm) and shields: hitting a weak point strips a shield, and at none
+she is Broken and loses her turns this round and next. Officers bank a boost point a round and spend up to 3 (Q/E) on one action.
+R repeats an officer's last order; A carries on for the rest of the round. Allies, the boarding melee, and fire and leaks take turns too.
+Intelligence (captured logs, a deserter's tale, spying on a rival, ships you've fought before) reveals weak points before the first shot.
+The battle is an HD-2D diorama: pixel ships in a lit 3D sea, lit by their own cannon fire, at the clock's time of day.
+**Your people:** the second new-game page builds your captain (looks, points into stats and skills, an extra trait, an optional flaw for more points).
+Experience raises levels: each brings a point to spend, every third a perk (`data/perks.json`). Spend them for the captain and officers from the crew
+screen (Level buttons); in port or at your base you can also rename them and change their looks. Ordinary hands improve on their own.
+**Your squadron:** prizes become a fleet of up to 4 more ships (crew screen, Fleet tab). Give one hands and a captain and she fights beside you, drawing fire;
+shift your flag between ships, move cargo between holds. A captain who hates you may sail off with her. Upgrades take limited fitting slots
+(hull, rigging, hold, deck); shipyards also sell paint, sail colours (black sails frighten, but kill false colours) and figureheads.
+With a shipyard at your base you can lay down new hulls.
 The ships fight at a range band (long, medium, close, grappled); the weather gauge gives +2.
 The game starts on the new-game screen (captain name, nationality, background, ship name); Continue loads the quicksave.
 Arriving at a port opens the port screen (market, shipyard, tavern, governor, contracts); time stops while it's open. Hover over a price to see why it is what it is. The map-mode dropdown shows the last prices you know for a good at every port.
@@ -99,7 +112,7 @@ Everything is swappable: code only knows art through paths in `data/`.
 
 | What | Where | Referenced from |
 |---|---|---|
-| Colours, fonts, paper panel | `data/palette.json` | `scripts/style.gd` builds the UI theme from it at startup; code asks `Style.c("ink")` |
+| Colours, fonts, pixel window frames | `data/palette.json` | `scripts/style.gd` builds the UI theme from it at startup; code asks `Style.c("ink")` |
 | Ship layers (hull, damaged hull, sails furled/half/full/torn) | `assets/ships/<type>/` | `ships.json` `art` |
 | Flags (nations, black, red, white) | `assets/flags/` | `flags.json`, `factions.json` `flag`, ship `state.flag` |
 | Portrait parts, by layer | `assets/portraits/<layer>/` | `data/portraits.json` (tags pick clothing by role; seeds keep faces stable; wounds and age change them) |

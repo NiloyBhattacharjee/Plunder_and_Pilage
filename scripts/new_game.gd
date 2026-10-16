@@ -4,6 +4,22 @@ class_name NewGame
 
 
 ## cfg: {name, nationality, background, ship_name}. Returns {state, start_port}.
+## Point-buy for a new captain: a base, the background's bonuses, and the points spent ({stats: {k: n}, skills: {k: n}}).
+static func build_value(bg: Dictionary, b: Dictionary, key: String) -> int:
+	var g: Dictionary = Data.rules.growth.build
+	if key in People.STATS:
+		return int(g.stat_base) + 1 + int(bg.stats.get(key, 0)) + int(b.get("stats", {}).get(key, 0))
+	return int(g.skill_base) + int(bg.skills.get(key, 0)) + int(b.get("skills", {}).get(key, 0))
+
+
+## Points left to spend: {stats, skills}. A flaw buys more skill points.
+static func build_points(b: Dictionary) -> Dictionary:
+	var g: Dictionary = Data.rules.growth.build
+	var spent := func(d: Dictionary) -> int: return d.values().reduce(func(a, x): return a + int(x), 0)
+	return {"stats": int(g.stat_points) - spent.call(b.get("stats", {})),
+		"skills": int(g.skill_points) + (int(g.flaw_points) if b.get("flaw", "") != "" else 0) - spent.call(b.get("skills", {}))}
+
+
 static func build(cfg: Dictionary) -> Dictionary:
 	People.reset()
 	Ports.reset()
@@ -22,12 +38,26 @@ static func build(cfg: Dictionary) -> Dictionary:
 	cap.background = cfg.background
 	if cfg.get("name", "") != "":
 		cap.name = cfg.name
-	for s in People.STATS:  # captains are a cut above the average hand
-		cap.stats[s] = clampi(cap.stats[s] + 1 + bg.stats.get(s, 0), 0, 20)
-	for s in People.SKILLS:
-		cap.skills[s] = clampi(cap.skills[s] + bg.skills.get(s, 0), 0, 20)
-	var extra: Array = cap.traits.filter(func(t): return not t in bg.traits and not People._conflicts(bg.traits, t))
-	cap.traits = bg.traits.duplicate() + extra.slice(0, 1)
+	if cfg.has("build"):  # you built your captain point by point
+		var b: Dictionary = cfg.build
+		for k in People.STATS + People.SKILLS:
+			var v := build_value(bg, b, k)
+			if k in People.STATS:
+				cap.stats[k] = v
+			else:
+				cap.skills[k] = v
+		cap.traits = bg.traits.duplicate() + b.get("traits", []).filter(func(x): return not x in bg.traits)
+		if b.get("flaw", "") != "":
+			cap.traits.append(b.flaw)
+		if b.has("portrait"):
+			cap.portrait = b.portrait.duplicate(true)
+	else:
+		for s in People.STATS:  # captains are a cut above the average hand
+			cap.stats[s] = clampi(cap.stats[s] + 1 + bg.stats.get(s, 0), 0, 20)
+		for s in People.SKILLS:
+			cap.skills[s] = clampi(cap.skills[s] + bg.skills.get(s, 0), 0, 20)
+		var extra: Array = cap.traits.filter(func(t): return not t in bg.traits and not People._conflicts(bg.traits, t))
+		cap.traits = bg.traits.duplicate() + extra.slice(0, 1)
 	cap.hidden = []  # you know yourself
 	cap.history.append("Took command, %s." % Clock.date_string())
 	var cap_id := People.add(cap)

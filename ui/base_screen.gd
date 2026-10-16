@@ -231,8 +231,32 @@ func _build_yard(b: Dictionary, s: Dictionary) -> void:
 		r.disabled = cost <= 0 or cost > s.gold
 	else:
 		UIKit.label(box, "Build a shipyard for cheap repairs.", "", Style.c("dim"))
+	if Bases.has(b, "shipyard"):
+		UIKit.label(box, "")
+		UIKit.label(box, "On the slip", "Lay down a new hull. She's launched at the dock here, and needs a crew (and a captain, to fight) before she can sail with you.", Style.c("header"))
+		if b.has("keel"):
+			UIKit.label(box, "The %s (%s): about %d days to launch." % [b.keel.name, Data.table("ships")[b.keel.type].name, ceili(b.keel.left)])
+		else:
+			var row := UIKit.row(box)
+			UIKit.label(row, "Name her: ")
+			var name_edit := LineEdit.new()
+			name_edit.text = Data.rules.ship_names[randi() % Data.rules.ship_names.size()]
+			name_edit.custom_minimum_size.x = 240
+			row.add_child(name_edit)
+			var g := UIKit.grid(box, 3)
+			for type in Data.rules.bases.shipbuilding.types:
+				var why := Bases.keel_problem(s, base_id, type)
+				var t: Dictionary = Data.table("ships")[type]
+				UIKit.label(g, t.name, t.description)
+				UIKit.label(g, "%d gold, about %d days" % [Bases.keel_cost(type), ceili(t.hull * Data.rules.bases.shipbuilding.days_per_hull)])
+				UIKit.button(g, "Lay her down", func(): _act(func(): return Bases.lay_keel(s, base_id, type, name_edit.text.strip_edges())),
+					why if why != "" else "Paid from your own purse.").disabled = why != ""
+		UIKit.label(box, "")
+		ShipLooksUI.build(box, s, s, func(text):
+			ship.refresh_stats()
+			_act(func(): return text))
 	UIKit.label(box, "")
-	UIKit.label(box, "Prizes", "Leave prizes at the dock and they stop slowing you down. Take them again when you want to sell them.", Style.c("header"))
+	UIKit.label(box, "Ships at the dock", "Leave ships at the dock and they stop slowing you down. Take them again when you want them: they need hands to sail.", Style.c("header"))
 	if not Bases.has(b, "dock"):
 		UIKit.label(box, "Build a dock to keep prizes here.", "", Style.c("dim"))
 		return
@@ -240,15 +264,14 @@ func _build_yard(b: Dictionary, s: Dictionary) -> void:
 		var p: Dictionary = s.prizes[i]
 		UIKit.button(box, "Leave the %s here" % p.name, func(): _act(func():
 			s.prizes.remove_at(i)
-			s.crew.append_array(p.crew)
-			p.crew = []
+			Fleet.return_people(s, p)
 			b.prizes.append(p)
 			return "The %s is moored at %s. Her prize crew rejoins you." % [p.name, b.name]))
 	for i in b.prizes.size():
 		var p: Dictionary = b.prizes[i]
 		var need := Encounters.prize_crew_needed({"type": p.type})
 		UIKit.button(box, "Take the %s with you (needs %d hands)" % [p.name, need], func(): _act(func():
-			if s.prizes.size() >= Data.rules.prizes.max:
+			if s.prizes.size() >= Fleet.max_ships():
 				return "You can't manage more prizes at sea."
 			var movers: Array = s.crew.filter(func(c): return not c in s.officers.values()).slice(0, need)
 			if movers.size() < need:

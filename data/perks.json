@@ -1,0 +1,20 @@
+{
+  "_comment": "Perks: chosen every few levels (rules.json growth.perk_every). needs: minimum skills/stats. rolls: a bonus to this character's battle rolls, when = weak (the action hits a weak point you know), helm (a manoeuvre), duel, always. The other effects are implemented by id: eagle_eye in the study action, finisher and breaker in dice_combat, quick in the turn order, reserves and second_wind in boost points, iron_will in morale checks, sawbones and shipwright in their actions, beloved in Crew.morale, quick_study in People.gain_xp.",
+  "steady_hand": {"name": "Steady hand", "needs": {"gunnery": 10}, "rolls": {"bonus": 2, "when": "weak"},
+                  "description": "+2 to the roll for any action that hits a weak point you know."},
+  "finisher":    {"name": "Finisher", "needs": {"gunnery": 12}, "description": "Two more damage dice for a broadside into a Broken ship."},
+  "breaker":     {"name": "Shield breaker", "needs": {"experience": 10}, "description": "Every weak point this character hits strips one more shield."},
+  "eagle_eye":   {"name": "Eagle eye", "needs": {"navigation": 10}, "description": "Studying a ship through the glass finds all her weak points at once."},
+  "weather_eye": {"name": "Weather eye", "needs": {"seamanship": 10}, "rolls": {"bonus": 2, "when": "helm"},
+                  "description": "+2 to manoeuvres: closing and opening, the gauge, grappling, running."},
+  "duellist":    {"name": "Duellist", "needs": {"swordplay": 12}, "rolls": {"bonus": 3, "when": "duel"},
+                  "description": "+3 when seeking out their captain blade to blade."},
+  "quick":       {"name": "Quick to act", "needs": {"experience": 8}, "description": "+3 to initiative: acts earlier in the turn order."},
+  "reserves":    {"name": "Cool head", "needs": {"authority": 8}, "description": "Starts every battle with 2 more boost points."},
+  "second_wind": {"name": "Second wind", "needs": {"experience": 12}, "description": "Banks a boost point every round, even the round after boosting."},
+  "iron_will":   {"name": "Iron will", "needs": {"authority": 12}, "description": "As captain: +3 to the crew's morale checks in battle."},
+  "sawbones":    {"name": "Sawbones", "needs": {"medicine": 10}, "description": "Tending the wounded sends twice as many back to their stations."},
+  "shipwright":  {"name": "Shipwright", "needs": {"carpentry": 10}, "description": "Plugging the shot holes patches twice as much hull."},
+  "beloved":     {"name": "Beloved", "needs": {"charisma": 10}, "description": "While captain or an officer: +3 to the crew's morale."},
+  "quick_study": {"name": "Quick study", "needs": {}, "description": "Learns half as fast again: +50% experience in every skill."}
+}

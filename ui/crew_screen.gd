@@ -6,6 +6,7 @@ signal message(text: String)
 signal closed
 
 var ship: Node2D
+var docked := false  # in port or at your own base: the barber and tailor are open
 
 
 func _ready() -> void:
@@ -38,6 +39,7 @@ func refresh() -> void:
 	_build_officers()
 	_build_crew()
 	_build_people()
+	_build_fleet()
 
 
 func _build_captain(cap: Dictionary) -> void:
@@ -52,6 +54,7 @@ func _build_captain(cap: Dictionary) -> void:
 		bg.get("description", ""))
 	box = who
 	UIKit.label(box, "The captain is a crew member like any other. If they fall, someone else takes over.", "", Style.c("dim"))
+	_growth_button(box, cap, "captain")
 	_character_sheet(box, cap)
 	UIKit.label(box, "")
 	var s: Dictionary = ship.state
@@ -155,7 +158,7 @@ func _build_officers() -> void:
 	UIKit.clear(box)
 	var s: Dictionary = ship.state
 	UIKit.label(box, "Officers are drawn from your crew. An empty post is covered by the captain at half skill.", "", Style.c("dim"))
-	var g := UIKit.grid(box, 4)
+	var g := UIKit.grid(box, 5)
 	for role in Data.rules.officer_roles:
 		var r: Dictionary = Data.rules.officer_roles[role]
 		var holder: String = s.officers.get(role, "")
@@ -183,9 +186,25 @@ func _build_officers() -> void:
 		var current: String = s.officers.get(role, "")
 		UIKit.label(g, "%s %d" % [People.SKILL_NAMES[r.skill], ShipStats.officer_skill(s, role)],
 			People.describe(People.person(current)) if current != "" else "Captain covering at half skill.")
+		if current != "":
+			_growth_button(g, People.person(current), "officer")
+		else:
+			UIKit.label(g, "")
 	UIKit.button(box, "Appoint the best available to empty posts", func():
 		NewGame.auto_appoint(s, 0)
 		refresh())
+
+
+## "Level 3" (with a mark if there's a point or perk to spend), opening the character panel.
+func _growth_button(parent: Node, c: Dictionary, role: String) -> void:
+	var ready: bool = int(c.get("points", 0)) > 0 or (int(c.get("perk_picks", 0)) > 0 and not Growth.perks_open(c).is_empty())
+	var b := UIKit.button(parent, "Level %d%s" % [Growth.level(c), "  (level up!)" if ready else ""], func():
+		var p := CharacterPanel.open_for(self, c, role, docked)
+		p.closed.connect(refresh), Growth.summary(c) + "
+Spend points, choose perks%s." % (", rename and change looks" if docked else ""))
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if ready:
+		b.add_theme_color_override("font_color", Style.c("flash"))
 
 
 func _post_of(id: String) -> String:
@@ -425,3 +444,80 @@ Costs: " + Bonds.cfg().costs[kind][lvl - 1] if lvl > 0 else Bonds.cfg().rivalry[
 		var where: String = Ports.port(sec.port).name if sec.port != "" else "nowhere now"
 		var stale := " Worthless in %d days." % int(sec.expires - Clock.day) if sec.expires >= 0 else ""
 		UIKit.label(box, "%s (%s)%s%s%s" % [Politics.describe(sec), where, " It may be forged." if sec.doubt else "", " You're blackmailing them." if sec.leverage else "", stale])
+
+
+# ---- the squadron -------------------------------------------------------------------
+
+func _build_fleet() -> void:
+	var box: VBoxContainer = %FleetBox
+	UIKit.clear(box)
+	var s: Dictionary = ship.state
+	UIKit.label(box, "Your squadron: the %s and up to %d more ships." % [s.name, Fleet.max_ships()],
+		"Take prizes, buy or build ships. Each needs hands to sail; give one a captain from your crew and enough hands and she fights beside you, drawing the enemy's fire. The squadron sails at the pace of its slowest ship.", Style.c("header"))
+	UIKit.label(box, "Flagship: the %s (%s), %d hands, hull %d / %d. %s" % [s.name, Data.table("ships")[s.type].name, s.crew.size() + 1, s.hull, ship.stats.hull, ShipStats.slots_text(s)])
+	if s.prizes.is_empty():
+		UIKit.label(box, "No other ships yet.", "", Style.c("dim"))
+	for i in s.prizes.size():
+		var p: Dictionary = Fleet.ensure(s.prizes[i])
+		var st := Fleet.stats(p)
+		UIKit.label(box, "")
+		var head := UIKit.row(box)
+		UIKit.label(head, "The %s (%s)" % [p.name, Data.table("ships")[p.type].name], Data.table("ships")[p.type].description, Style.c("header"))
+		var role := "consort, fights beside you" if Fleet.is_consort(p) and p.fights else ("consort, keeps out of fights" if Fleet.is_consort(p) else "prize: no captain or too few hands to fight")
+		UIKit.label(head, "   " + role, "", Style.c("good") if Fleet.is_consort(p) else Style.c("dim"))
+		UIKit.label(box, "Hull %d / %d, sails %d / %d, guns %d. Hands %d (sails with %d, fights with %d, berths %d). Hold %d / %d." % [
+			p.hull, st.hull, p.sails, st.sails, st.guns, Fleet.hands(p), st.crew_min, Fleet.fight_need(p), st.crew_max, Market.cargo_used(p.cargo), st.cargo])
+		var row := UIKit.row(box)
+		for n in [-10, -1, 1, 10]:
+			UIKit.button(row, "%+d hands" % n, func(): _fleet_act(Fleet.transfer(s, i, n)))
+		UIKit.label(row, "   Captain: ")
+		var pick := OptionButton.new()
+		pick.add_item("(none)")
+		pick.set_item_metadata(0, "")
+		if p.captain != "":
+			var c := People.person(p.captain)
+			pick.add_item("%s (gunnery %d, thinks of you %+d)" % [c.name, People.value(c, "gunnery"), c.relations.get(s.captain, 0)])
+			pick.set_item_metadata(1, p.captain)
+			pick.select(1)
+		var spare: Array = s.crew.filter(func(id): return not id in s.officers.values())
+		spare.sort_custom(func(a, b): return People.value(People.person(a), "authority") > People.value(People.person(b), "authority"))
+		for id in spare.slice(0, 12):
+			var c := People.person(id)
+			pick.add_item("%s (authority %d, gunnery %d, thinks of you %+d)" % [c.name, People.value(c, "authority"), People.value(c, "gunnery"), c.relations.get(s.captain, 0)])
+			pick.set_item_metadata(pick.item_count - 1, id)
+			pick.set_item_tooltip(pick.item_count - 1, People.describe(c))
+		pick.item_selected.connect(func(k): _fleet_act(Fleet.appoint(s, i, pick.get_item_metadata(k))))
+		pick.tooltip_text = "Her gunnery is her captain's. A captain who comes to hate you (opinion %d or worse) may sail off with her." % Data.rules.fleet.desert_opinion
+		row.add_child(pick)
+		var row2 := UIKit.row(box)
+		var fights := CheckBox.new()
+		fights.text = "Joins your fights"
+		fights.button_pressed = p.fights
+		fights.toggled.connect(func(on):
+			p.fights = on
+			refresh())
+		fights.tooltip_text = "In battle she fires her broadsides on her own turn, and the enemy fires back at her. If she's sunk, everyone aboard is lost."
+		row2.add_child(fights)
+		UIKit.button(row2, "Shift your flag to her", func():
+			var text := Fleet.shift_flag(s, i)
+			ship.refresh_stats()
+			_fleet_act(text), "You, your officers and crew go aboard her (with your cargo); her people take your old ship.")
+		if p.captain != "":
+			UIKit.button(row2, "Captain's sheet", func():
+				var cp := CharacterPanel.open_for(self, People.person(p.captain), "captain", docked)
+				cp.closed.connect(refresh))
+		if not p.cargo.is_empty() or not s.cargo.is_empty():
+			var cargo := UIKit.row(box)
+			UIKit.label(cargo, "Her hold: " + (", ".join(p.cargo.keys().map(func(g): return "%d %s" % [p.cargo[g], Data.table("goods")[g].name.to_lower()])) if not p.cargo.is_empty() else "empty") + "   ")
+			for g in p.cargo:
+				UIKit.button(cargo, "Take the %s" % Data.table("goods")[g].name.to_lower(), func(): _fleet_act(Fleet.move_cargo(s, i, g, 100000.0, false, ship.capacity())))
+			for g in s.cargo:
+				if g != "food" and g != "water" and s.cargo[g] >= 1.0:
+					UIKit.button(cargo, "Load %s" % Data.table("goods")[g].name.to_lower(), func(): _fleet_act(Fleet.move_cargo(s, i, g, 100000.0, true, ship.capacity())),
+						"Move all of it into her hold, as far as it fits.")
+
+
+func _fleet_act(text: String) -> void:
+	%Status.text = text
+	message.emit(text)
+	refresh()

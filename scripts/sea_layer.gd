@@ -6,6 +6,7 @@ extends Sprite2D
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR  # the terrain mask is coarse: blend it, let the pixel pass do the pixels
 	var mask: Texture2D = load("res://data/map/terrain.png")
 	texture = mask
 	centered = false
@@ -15,6 +16,8 @@ func _ready() -> void:
 	mat.set_shader_parameter("map_size", Vector2(Data.map.size[0], Data.map.size[1]))
 	mat.set_shader_parameter("mask_soft", mask)
 	mat.set_shader_parameter("mask_near", mask)
-	for key in ["deep", "shallow", "reef", "ink", "parchment"]:
-		mat.set_shader_parameter(key + "_color" if key in ["deep", "shallow", "reef"] else key, Style.c(key))
+	for key in ["deep", "shallow", "reef"]:
+		mat.set_shader_parameter(key + "_color", Style.c(key))
+	mat.set_shader_parameter("ink", Style.c("chart_ink"))
+	mat.set_shader_parameter("parchment", Style.c("chart_paper"))
 	material = mat

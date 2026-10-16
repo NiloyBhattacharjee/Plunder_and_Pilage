@@ -517,16 +517,13 @@ def make_topbar():
 
 if __name__ == "__main__":
     import sys
-    if "--hud" in sys.argv:  # just the top bar and its icons
-        make_hud_icons()
-        make_topbar()
-        raise SystemExit
-    make_ships()
+    # The top bar, its icons and the window frames are pixel art now: tools/make_pixel_art.py makes them.
+    # make_hud_icons(), make_topbar() and make_panel() are kept for the old engraved look, but not run.
+    # make_ships() drew the engraved map ships; tools/make_pixel_art.py draws the pixel ones at the same paths.
     flags = make_flags()
     (ROOT / "data" / "flags.json").write_text("{\n" + ",\n".join(f'  "{k}": ' + json.dumps(v, ensure_ascii=False) for k, v in flags.items()) + "\n}\n", encoding="utf-8")
     make_portraits()
     make_icons()
     make_fx()
-    make_panel()
     n = sum(1 for _ in A.rglob("*.png"))
     print(f"wrote {n} png files")

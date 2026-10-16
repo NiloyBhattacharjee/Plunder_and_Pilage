@@ -145,14 +145,15 @@ func _build_shipyard() -> void:
 		for i in s.prizes.size():
 			var prize: Dictionary = s.prizes[i]
 			var value := Ports.prize_value(port_id, prize)
-			UIKit.label(pg, "%s (%s), hull %d, %d prize crew" % [prize.name, Data.table("ships")[prize.type].name, prize.hull, prize.crew.size()])
+			UIKit.label(pg, "%s (%s), hull %d, %d hands%s" % [prize.name, Data.table("ships")[prize.type].name, prize.hull, Fleet.hands(prize),
+				", Captain " + People.person(prize.captain).name if Fleet.ensure(prize).captain != "" else ""])
 			UIKit.label(pg, "worth %d" % value, "Hull condition and any cargo left aboard (stolen goods at fence rates).")
-			UIKit.button(pg, "Sell", _act.bind(func(): return Ports.sell_prize(port_id, i, s)), "The prize crew rejoins you.")
+			UIKit.button(pg, "Sell", _act.bind(func(): return Ports.sell_prize(port_id, i, s)), "Everyone aboard her rejoins you.")
 			UIKit.button(pg, "Make her your flagship", _act.bind(func():
 				var res := Ports.prize_to_flagship(i, s)
 				if res.ok:
 					ship.refresh_stats()
-				return res), "Your current ship is sold to the yard at trade-in value. Upgrades are lost.")
+				return res), "Your current ship is sold to the yard at trade-in value. (To keep her, shift your flag from the Fleet tab instead.)")
 
 	UIKit.label(box, "")
 	var trade_in := ShipStats.trade_in_value(s)
@@ -177,8 +178,8 @@ func _build_shipyard() -> void:
 		b.disabled = why != ""
 
 	UIKit.label(box, "")
-	UIKit.label(box, "Upgrades", "", Style.c("header"))
-	var ug := UIKit.grid(box, 4)
+	UIKit.label(box, "Upgrades  (%s)" % ShipStats.slots_text(s), "Every ship has only so much room in her hull, rigging, hold and on deck. Cannons don't take a slot.", Style.c("header"))
+	var ug := UIKit.grid(box, 5)
 	for u in Data.table("upgrades"):
 		var up: Dictionary = Data.table("upgrades")[u]
 		var reason := ShipStats.cannot_install(s, u, level)
@@ -189,6 +190,17 @@ func _build_shipyard() -> void:
 		UIKit.label(ug, reason, "", Style.c("dim"))
 		var b := UIKit.button(ug, "Fit", _install.bind(u, cost), "Replaces other guns." if up.get("group", "") == "cannons" else "")
 		b.disabled = reason != "" or cost > s.gold
+		if u in s.upgrades and up.has("slot"):
+			UIKit.button(ug, "Take out", _act.bind(func():
+				ShipStats.remove(s, u)
+				ship.refresh_stats()
+				return {"ok": true, "text": "Took out the %s. Nothing comes back but the room." % up.name.to_lower()}), "Frees the %s slot. No refund." % up.slot)
+		else:
+			UIKit.label(ug, "")
+	UIKit.label(box, "")
+	ShipLooksUI.build(box, s, s, func(text):
+		ship.refresh_stats()
+		_act(func(): return {"ok": true, "text": text}))
 
 
 func _compare(type_id: String) -> String:

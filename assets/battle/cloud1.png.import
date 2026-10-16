@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d2cpt7v0qp2l0"
-path="res://.godot/imported/topbar.png-519e6e10227145b13d427aefec642035.ctex"
+uid="uid://cx1puv43i05l7"
+path="res://.godot/imported/cloud1.png-876b904acae12e927d1d7f6c4f04bffa.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/topbar.png"
-dest_files=["res://.godot/imported/topbar.png-519e6e10227145b13d427aefec642035.ctex"]
+source_file="res://assets/battle/cloud1.png"
+dest_files=["res://.godot/imported/cloud1.png-876b904acae12e927d1d7f6c4f04bffa.ctex"]
 
 [params]
 

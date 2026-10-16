@@ -1,21 +1,38 @@
 extends Node2D
-## The battle screen, tabletop style. Choose an action for each officer, roll, and read the dice in the log.
-## The ships are drawn side by side, broadside to broadside, as far apart as the range band;
-## whoever holds the weather gauge sits upwind (left). Space or Enter rolls.
+## The battle screen, turn by turn in the manner of Octopath Traveler. The ships fight on a BattleStage, an
+## HD-2D diorama; this script runs the turns and the windows over it. The turn order runs across the top (this
+## round, then the next, already rolled); each ship has a card with her hull, sails, crew and morale, her shields,
+## and the weak points found so far. When one of your officers is up, pick an action and how many boost points to
+## spend; the enemy's officers take their own turns in between. Allied ships, the boarding melee, and fire and leaks
+## take turns in the order too. Keys: 1-9 pick an action, Q and E set the boost, R repeats this officer's last order,
+## A carries on for the rest of the round (everyone repeats their last order).
+## The UI is built in code (like the top bar) because it's rebuilt every turn anyway.
 
 signal finished(result: Dictionary)
 
-const PUFF := preload("res://assets/fx/puff.png")
-const BAND_GAP := [620.0, 420.0, 230.0, 90.0]
+const ICONS := "res://assets/icons/hud/"
+const SIDE_COL := [Color("#6fa8ff"), Color("#ff7a5c")]
+const AI_PAUSE := 0.7     # seconds an enemy officer "thinks" before acting
+const LINE_PAUSE := 0.3   # between log lines
 
 var battle := DiceCombat.new()
 var enemy_data: Dictionary
-var sprites: Array = []
-var pickers := {}          # post -> OptionButton
+var stage: BattleStage
 var busy := false
+var boost := 0
+var _cards: Array = []    # per side, the card's contents
+var _order: HBoxContainer
+var _info: Label
+var _officer: HBoxContainer
+var _boost_row: HBoxContainer
+var _actions: GridContainer
+var _log_box: RichTextLabel
+var _dice: Label
+var _choices: Array = []  # action ids in button order, for the number keys
+var _carry_on := 0        # the round in which your officers repeat their orders without asking
 
-@onready var camera: Camera2D = $Camera2D
 @onready var dialog = $ChoiceDialog
+@onready var hud: CanvasLayer = $HUD
 
 
 func start(player_data: Dictionary, enemy: Dictionary, mode: String, _wind_dir: float, wind_strength: float) -> void:
@@ -25,239 +42,511 @@ func start(player_data: Dictionary, enemy: Dictionary, mode: String, _wind_dir: 
 	foe.party = DiceCombat.npc_party(enemy, battle.rng)
 	battle.setup(DiceCombat.make_side(player_data), DiceCombat.make_side(foe), mode, wind_strength)
 	var flags := [player_data.get("flag", "white"), Data.table("factions")[enemy.faction].flag]
-	for i in 2:
-		var sp: Node2D = load("res://scenes/ship_sprite.tscn").instantiate()
-		add_child(sp)
-		sp.setup(battle.sides[i].type, flags[i])
-		sp.scale = Vector2.ONE * 0.8
-		sprites.append(sp)
-	camera.position = Vector2(0, 40)
-	%Roll.pressed.connect(_roll)
-	_log("[i]The %s %s. Your officers await your orders.[/i]" % [enemy.label, enemy.name])
-	_refresh()
+	stage = BattleStage.new()
+	add_child(stage)
+	stage.setup(battle, flags, [player_data.get("look", {}), enemy.get("look", {})], wind_strength)
+	_build_ui()
+	_log("[i]The %s %s. Find her weak points, break her, and make her strike.[/i]" % [enemy.label, enemy.name])
+	if not battle.sides[1].known.is_empty():
+		_log("What you know of her: %s." % ", ".join(battle.sides[1].known.map(func(w): return DiceCombat.weak_name(w).to_lower())))
+	_advance()
 
 
 func _process(_delta: float) -> void:
-	_place_ships()
-	queue_redraw()
+	if stage:
+		stage.sync(battle)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_SPACE, KEY_ENTER] and not busy and not dialog.visible:
-		_roll()
+	if not (event is InputEventKey and event.pressed and not event.echo) or busy or dialog.visible:
+		return
+	var k: int = event.keycode - KEY_1
+	if k >= 0 and k < mini(9, _choices.size()):
+		_choose(_choices[k])
+	elif event.keycode == KEY_Q:
+		_set_boost(boost - 1)
+	elif event.keycode == KEY_E:
+		_set_boost(boost + 1)
+	elif event.keycode == KEY_R:
+		_repeat()
+	elif event.keycode == KEY_A:
+		_carry_on_round()
 
 
-# ---- orders ---------------------------------------------------------------
+# ---- the flow of turns --------------------------------------------------------
+
+## Plays enemy turns (and round ends) until one of your officers is up, or the fight is over.
+func _advance() -> void:
+	busy = true
+	while true:
+		battle.entries = []
+		var t := battle.turn()
+		await _play_entries()
+		if t.is_empty():
+			_end()
+			return
+		boost = 0
+		_show_turn(t)
+		if t.side == 0 and _carry_on == battle.round_no:
+			await get_tree().create_timer(LINE_PAUSE).timeout
+			battle.entries = []
+			battle.act(_repeat_pick(t.post))
+			await _play_entries()
+			if battle.result != "":
+				_end()
+				return
+			continue
+		if t.side == 0:
+			break
+		await get_tree().create_timer(AI_PAUSE).timeout
+		battle.entries = []
+		battle.act_ai()
+		await _play_entries()
+		if battle.result != "":
+			_end()
+			return
+	busy = false
+
+
+func _choose(id: String) -> void:
+	if busy or battle.result != "":
+		return
+	busy = true
+	if id == "strike" and await dialog.ask("Strike your colours?", "Surrender to the %s. They'll strip your hold and take half your gold." % enemy_data.name,
+			[{"text": "Strike"}, {"text": "Fight on"}]) != 0:
+		busy = false
+		return
+	battle.entries = []
+	battle.act(id, 0 if id in ["", "strike"] else boost)
+	await _play_entries()
+	if battle.result != "":
+		_end()
+		return
+	_advance()
+
+
+## This officer's last order if it's still possible, else what a sensible officer would do.
+func _repeat_pick(post: String) -> String:
+	var last: String = battle.orders[0].get(post, "")
+	if last != "" and last != "strike" and battle.available(0, post).has(last):
+		return last
+	return battle.ai_orders(0).get(post, "")
+
+
+func _repeat() -> void:
+	if not busy and not battle.queue.is_empty() and battle.queue[0].side == 0:
+		_choose(_repeat_pick(battle.queue[0].post))
+
+
+func _carry_on_round() -> void:
+	if busy or battle.queue.is_empty() or battle.queue[0].side != 0:
+		return
+	_carry_on = battle.round_no
+	_choose(_repeat_pick(battle.queue[0].post))
+
+
+func _set_boost(k: int) -> void:
+	if busy or battle.queue.is_empty() or battle.queue[0].side != 0:
+		return
+	var m: Dictionary = battle.sides[0].party[battle.queue[0].post]
+	boost = clampi(k, 0, mini(int(DiceCombat.cfg().boost.max_spend), m.bp))
+	_show_turn(battle.queue[0])
+
+
+func _play_entries() -> void:
+	var list := battle.entries.duplicate()
+	battle.entries = []
+	for e in list:
+		_show_entry(e)
+		await get_tree().create_timer(LINE_PAUSE).timeout
+	_refresh()
+
+
+# ---- building the screen --------------------------------------------------------
+
+func _build_ui() -> void:
+	var top := PanelContainer.new()  # the turn order
+	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	top.offset_left = 10
+	top.offset_right = -10
+	top.offset_top = 8
+	hud.add_child(top)
+	_order = HBoxContainer.new()
+	_order.add_theme_constant_override("separation", 5)
+	top.add_child(_order)
+
+	for i in 2:  # the ships' cards: yours on the left, hers on the right
+		var card := PanelContainer.new()
+		card.anchor_left = float(i)
+		card.anchor_right = float(i)
+		card.offset_left = 10.0 if i == 0 else -530.0
+		card.offset_right = card.offset_left + 520.0
+		card.offset_top = 92
+		hud.add_child(card)
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 2)
+		card.add_child(box)
+		_cards.append(box)
+
+	_info = Label.new()  # the range and the gauge, between the cards
+	_info.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_info.offset_top = 100
+	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_info.theme_type_variation = &"Header"
+	_info.add_theme_constant_override("outline_size", 8)
+	_info.add_theme_color_override("font_outline_color", Style.c("parchment_dark"))
+	hud.add_child(_info)
+
+	var bottom := PanelContainer.new()  # the officer whose turn it is, their orders, and the log
+	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bottom.offset_left = 10
+	bottom.offset_right = -10
+	bottom.offset_top = -300
+	bottom.offset_bottom = -10
+	hud.add_child(bottom)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	bottom.add_child(row)
+	var left := VBoxContainer.new()
+	left.custom_minimum_size = Vector2(300, 0)
+	row.add_child(left)
+	_officer = HBoxContainer.new()
+	_officer.add_theme_constant_override("separation", 10)
+	left.add_child(_officer)
+	_boost_row = HBoxContainer.new()
+	left.add_child(_boost_row)
+	_dice = UIKit.label(left, "d20", "The last die rolled.")
+	_dice.theme_type_variation = &"Title"
+	_dice.add_theme_font_size_override("font_size", 54)
+	_dice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_dice.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var mid := ScrollContainer.new()
+	mid.custom_minimum_size = Vector2(660, 0)
+	mid.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	row.add_child(mid)
+	_actions = GridContainer.new()
+	_actions.columns = 2
+	_actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mid.add_child(_actions)
+	_log_box = RichTextLabel.new()
+	_log_box.bbcode_enabled = true
+	_log_box.scroll_following = true
+	_log_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_log_box.add_theme_color_override("default_color", Style.c("ink"))
+	var bold := FontVariation.new()
+	bold.base_font = Style.font("body")
+	bold.variation_embolden = 0.7
+	_log_box.add_theme_font_override("normal_font", Style.font("body"))
+	_log_box.add_theme_font_override("italics_font", Style.font("italic"))
+	_log_box.add_theme_font_override("bold_font", bold)
+	row.add_child(_log_box)
+	_refresh()
+
 
 func _refresh() -> void:
-	%Mine.text = _status(battle.sides[0], true)
-	%Theirs.text = _status(battle.sides[1], false)
-	var bands: Array = DiceCombat.cfg().bands
+	_build_order()
+	for i in 2:
+		_build_card(i)
 	var track := PackedStringArray()
+	var bands: Array = DiceCombat.cfg().bands
 	for b in bands.size():
 		track.append("[ %s ]" % bands[b].to_upper() if b == battle.band else bands[b])
-	%Info.text = "  —  ".join(track) + "        %s the weather gauge." % ("You hold" if battle.gauge == 0 else "They hold")
-	_build_party()
+	_info.text = "  —  ".join(track) + "\n%s the weather gauge" % ("You hold" if battle.gauge == 0 else "They hold")
 
 
-func _build_party() -> void:
-	var box: GridContainer = %Party
-	var keep := {}
-	for post in pickers:  # remember choices between rounds
-		if is_instance_valid(pickers[post]) and pickers[post].selected >= 0:
-			keep[post] = pickers[post].get_selected_metadata()
+func _build_order() -> void:
+	UIKit.clear(_order)
+	var r := UIKit.label(_order, "Round %d " % maxi(battle.round_no, 1), "Every officer on both ships acts once a round, fastest first: experience, the faster ship and the weather gauge, and a die.", Style.c("header"))
+	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for k in battle.queue.size():
+		_chip(battle.queue[k], 52 if k == 0 else 40)
+	var n := UIKit.label(_order, "   Next round:", "Next round's order is already rolled.", Style.c("dim"))
+	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for q in battle.next_queue:
+		_chip(q, 30)
+
+
+func _chip(q: Dictionary, px: int) -> void:
+	if q.post.begins_with("@"):
+		_special_chip(q, px)
+		return
+	var m: Dictionary = battle.sides[q.side].party[q.post]
+	var box := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = SIDE_COL[q.side]
+	sb.set_corner_radius_all(3)
+	sb.set_content_margin_all(5 if px >= 52 else (4 if px >= 40 else 3))
+	box.add_theme_stylebox_override("panel", sb)
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var tip := "%s %s: %s" % ["Your" if q.side == 0 else "Their", _post_name(q.post).to_lower(), m.name]
+	if battle.is_broken(q.side):
+		tip += "\nBroken: loses the turn."
+		box.modulate.a = 0.35
+	var c := _char_of(m)
+	if c.is_empty():
+		var l := UIKit.label(box, m.name.get_slice(" ", 0).left(2), tip, Style.c("wax_text"))
+		l.custom_minimum_size = Vector2(px, px)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	else:
+		var p := Portrait.make(c, "captain" if q.post == "captain" else "officer", px)
+		p.tooltip_text = tip
+		box.add_child(p)
+	_order.add_child(box)
+
+
+## Allies, the melee, and fire and leaks: shown in the order only when they'll happen.
+func _special_chip(q: Dictionary, px: int) -> void:
+	if not battle.special_applies(q):
+		return
+	var text := ""
+	var tip := ""
+	var col: Color
+	if q.post.begins_with("@ally"):
+		var a: Dictionary = battle.sides[0].allies[int(q.post.trim_prefix("@ally"))]
+		text = "Ally"
+		tip = "Your ally the %s fires a broadside." % a.name
+		col = SIDE_COL[0].lightened(0.25)
+	elif q.post == "@melee":
+		text = "Melee"
+		tip = "The boarders fight hand to hand: one roll, both sides take losses."
+		col = Style.c("ink")
+	else:
+		text = "Fire" if battle.sides[q.side].fire > 0 else "Leaks"
+		tip = "%s takes damage from fire and leaks." % ("Your ship" if q.side == 0 else "Their ship")
+		col = Color("#c0661c")
+	var box := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = col
+	sb.set_corner_radius_all(3)
+	sb.set_content_margin_all(2)
+	box.add_theme_stylebox_override("panel", sb)
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var l := UIKit.label(box, text, tip, Style.c("wax_text"))
+	l.custom_minimum_size = Vector2(px + 8, px)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", 14 if px < 40 else 16)
+	_order.add_child(box)
+
+
+func _build_card(i: int) -> void:
+	var box: VBoxContainer = _cards[i]
 	UIKit.clear(box)
-	pickers = {}
-	var me: Dictionary = battle.sides[0]
-	var posts: Array = ["captain"] + DiceCombat.cfg().order.filter(func(p): return p != "captain")
-	for post in posts:
-		var m: Dictionary = me.party.get(post, {})
-		if m.is_empty():
-			UIKit.icon(box, "", 36)
-			UIKit.label(box, "%s: (vacant)" % _post_name(post), "Nobody holds this post, so it takes no action. Appoint officers in the crew screen.", Style.c("dim"))
-			UIKit.label(box, "")
-			UIKit.label(box, "")
-			continue
-		if m.id != "" and People.chars.has(m.id):
-			box.add_child(Portrait.make(People.person(m.id), "captain" if post == "captain" else "officer", 36))
+	var s: Dictionary = battle.sides[i]
+	var title := UIKit.label(box, "%s  (%s)%s" % [s.name, Data.table("ships")[s.type].name, "  — struck" if s.struck else ""])
+	title.theme_type_variation = &"Header"
+	title.add_theme_color_override("font_color", SIDE_COL[i])
+	_bar(box, "hull", "Hull", s.hull, s.stats.hull, Color("#6b3d1a"), "%d / %d" % [s.hull, s.stats.hull])
+	_bar(box, "sails", "Sails", s.sails, s.stats.sails, Color("#9a8650"), "%d / %d, masts %d" % [s.sails, s.stats.sails, s.masts])
+	_bar(box, "crew", "Crew", s.crew, s.crew_start, SIDE_COL[0].lerp(Style.c("ink"), 0.3),
+		("%d, guns %d" if i == 0 else "about %d, guns %d") % [s.crew if i == 0 else int(s.crew / 5.0) * 5, s.guns_working])
+	_bar(box, "morale", "Morale", s.morale, 100.0, Style.c("good") if s.morale >= DiceCombat.cfg().morale_check_below else Style.c("bad"), "%d" % s.morale)
+
+	var row := UIKit.row(box)
+	var tip := "Hit a weak point to strip shields (one, plus one for every boost point spent). At none she is Broken: she loses her turns this round and next, her rolls are at %d, and she takes half again the damage." % DiceCombat.cfg().breaks.reeling
+	UIKit.label(row, "Shields  ", tip)
+	if battle.is_broken(i):
+		UIKit.label(row, "BROKEN — reeling until round %d is done" % s.broken, tip, Style.c("bad"))
+	else:
+		for k in s.shields_max:
+			_pip(row, k < s.shields, SIDE_COL[i], 16, tip)
+
+	var weak := HFlowContainer.new()  # wraps when she has many weak points
+	box.add_child(weak)
+	UIKit.label(weak, "Weak points:  ", "What strips her shields." if i == 1 else "What strips your shields. Ones marked * the enemy has found.")
+	var tips: Dictionary = DiceCombat.cfg().breaks.tips
+	for w in s.weak:
+		var found: bool = w in s.known
+		if i == 1 and not found:
+			UIKit.label(weak, "[ ? ]  ", "A weak point you haven't found. Your navigator can study her through the glass, or you may find it by hitting it.", Style.c("dim"))
 		else:
-			UIKit.icon(box, "", 36)
-		var skill: String = DiceCombat.cfg().post_skills[post]
-		UIKit.label(box, "%s: %s%s" % [_post_name(post), m.name, " (wounded)" if m.get("wounded", false) else ""],
-			"%s %d (%+d)" % [People.SKILL_NAMES.get(skill, skill), DiceCombat.value(m, skill), Dice.mod(DiceCombat.value(m, skill))])
-		var pick := OptionButton.new()
-		pick.custom_minimum_size = Vector2(330, 0)
-		var can := battle.available(0, post)
-		pick.add_item("(no action)")
-		pick.set_item_metadata(0, "")
-		for id in can:
-			var chance := battle.odds(0, post, id)
-			pick.add_item("%s  (%d%%)" % [can[id].name, int(round(chance * 100))])
-			pick.set_item_metadata(pick.item_count - 1, id)
-			pick.set_item_tooltip(pick.item_count - 1, can[id].description)
-			if keep.get(post, "") == id:
-				pick.select(pick.item_count - 1)
-		if pick.selected <= 0 and pick.item_count > 1 and keep.get(post, "?") != "":  # keep a deliberate "(no action)"; replace picks the new band ruled out
-			pick.select(_default_pick(post, pick))
-		box.add_child(pick)
-		pickers[post] = pick
-		var desc := UIKit.label(box, "")
-		pick.item_selected.connect(func(i): desc.text = _hint(post, pick.get_item_metadata(i)))
-		desc.text = _hint(post, pick.get_selected_metadata())
+			UIKit.label(weak, "[ %s%s ]  " % [DiceCombat.weak_name(w), "*" if i == 0 and found else ""], "Struck by: %s." % tips[w], Style.c("header"))
 
-
-func _default_pick(post: String, pick: OptionButton) -> int:
-	var prefer := {"captain": "steady", "boatswain": "close", "master_gunner": "round", "navigator": "read_wind",
-		"quartermaster": "arm", "carpenter": "plug", "surgeon": "tend"}
-	for i in pick.item_count:
-		if pick.get_item_metadata(i) == prefer.get(post, ""):
-			return i
-	return 1
-
-
-func _hint(post: String, id: String) -> String:
-	if id == "":
-		return ""
-	var a: Dictionary = DiceCombat.actions()[post][id]
-	if a.has("ammo"):
-		return "DC %d" % battle.gun_dc(0)
-	if a.has("vs"):
-		return "vs their %s" % _post_name(a.vs).to_lower()
-	return "DC %d" % battle._dc_for(0, id, a) if a.get("dc", 0) > 0 or id in ["close", "open", "demand"] else ""
-
-
-static func _post_name(post: String) -> String:
-	return "Captain" if post == "captain" else Data.rules.officer_roles[post].name
-
-
-func _status(s: Dictionary, mine: bool) -> String:
-	var crew := "%d" % s.crew if mine else "about %d" % (int(s.crew / 5.0) * 5)
-	var lines := PackedStringArray([
-		"%s (%s)" % [s.name, Data.table("ships")[s.type].name],
-		"Hull %d / %d   Sails %d / %d   Masts %d / %d" % [s.hull, s.stats.hull, s.sails, s.stats.sails, s.masts, s.stats.masts],
-		"Crew %s   Guns %d   Morale %d" % [crew, s.guns_working, s.morale],
-	])
 	var trouble := PackedStringArray()
 	if s.leak > 0: trouble.append("LEAKING")
 	if s.fire > 0: trouble.append("ON FIRE")
 	if s.rudder > 0: trouble.append("rudder damaged")
 	if s.armed: trouble.append("boarders armed")
 	if not trouble.is_empty():
-		lines.append(", ".join(trouble))
-	return "\n".join(lines)
+		UIKit.label(box, ", ".join(trouble), "", Style.c("bad"))
 
 
-# ---- a round ----------------------------------------------------------------
+func _bar(parent: Node, icon: String, name: String, v: float, most: float, col: Color, text: String) -> void:
+	var row := UIKit.row(parent)
+	UIKit.icon(row, ICONS + icon + ".png", 20)
+	UIKit.label(row, name).custom_minimum_size.x = 62
+	var pb := ProgressBar.new()
+	pb.show_percentage = false
+	pb.max_value = maxf(most, 1.0)
+	pb.value = clampf(v, 0.0, pb.max_value)
+	pb.custom_minimum_size = Vector2(240, 14)
+	pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = col
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(Style.c("ink"), 0.12)
+	bg.border_color = Color(Style.c("ink"), 0.6)
+	bg.set_border_width_all(1)
+	pb.add_theme_stylebox_override("fill", fill)
+	pb.add_theme_stylebox_override("background", bg)
+	row.add_child(pb)
+	UIKit.label(row, "  " + text)
 
-func _roll() -> void:
-	if busy or battle.result != "":
+
+## A pip: shields (diamonds) and boost points (squares).
+func _pip(parent: Node, full: bool, col: Color, px: int, tip: String, diamond := true) -> void:
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(px + 8, px + 8)
+	holder.tooltip_text = tip
+	var p := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = col if full else Color(col, 0.1)
+	sb.border_color = col
+	sb.set_border_width_all(2)
+	p.add_theme_stylebox_override("panel", sb)
+	p.size = Vector2(px, px)
+	p.position = Vector2(4, 4)
+	p.pivot_offset = Vector2(px, px) / 2.0
+	p.rotation = PI / 4.0 if diamond else 0.0
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(p)
+	parent.add_child(holder)
+
+
+func _show_turn(t: Dictionary) -> void:
+	UIKit.clear(_officer)
+	UIKit.clear(_boost_row)
+	UIKit.clear(_actions)
+	_choices = []
+	var s: Dictionary = battle.sides[t.side]
+	var m: Dictionary = s.party[t.post]
+	var c := _char_of(m)
+	if not c.is_empty():
+		_officer.add_child(Portrait.make(c, "captain" if t.post == "captain" else "officer", 80))
+	var who := VBoxContainer.new()
+	_officer.add_child(who)
+	UIKit.label(who, "%s %s" % ["Your" if t.side == 0 else "Their", _post_name(t.post).to_lower()], "", SIDE_COL[t.side]).theme_type_variation = &"Header"
+	UIKit.label(who, m.name + (" (wounded)" if m.get("wounded", false) else ""))
+	var skill: String = DiceCombat.cfg().post_skills[t.post]
+	UIKit.label(who, "%s %d (%+d)" % [People.SKILL_NAMES.get(skill, skill), DiceCombat.value(m, skill), Dice.mod(DiceCombat.value(m, skill))], "", Style.c("dim"))
+
+	var b: Dictionary = DiceCombat.cfg().boost
+	var tip := "Boost points: one banked each round (not the round after you boost), up to %d. Spend up to %d on an action: +%d to the roll per point, an extra die of damage for a broadside, and an extra shield stripped from a weak point. Q and E to change." % [b.max_points, b.max_spend, b.per_point]
+	UIKit.label(_boost_row, "Boost ", tip)
+	for k in int(b.max_points):
+		_pip(_boost_row, k < m.bp, Style.c("flash").darkened(0.25), 12, tip, false)
+	if t.side == 1:
+		UIKit.label(_actions, "Their %s is giving orders..." % _post_name(t.post).to_lower(), "", Style.c("dim"))
 		return
-	busy = true
-	%Roll.disabled = true
-	var orders := {}
-	for post in pickers:
-		var id: String = pickers[post].get_selected_metadata()
-		if id != "":
-			orders[post] = id
-	var entries := battle.play_round(orders)
-	for e in entries:
-		_show_entry(e)
-		await get_tree().create_timer(0.35).timeout
-	_refresh()
-	busy = false
-	%Roll.disabled = false
-	if battle.result != "":
-		_end()
+	UIKit.label(_boost_row, "  spend:")
+	for k in int(b.max_spend) + 1:
+		var bb := UIKit.button(_boost_row, " %d " % k, _set_boost.bind(k), tip)
+		bb.toggle_mode = true
+		bb.button_pressed = k == boost
+		bb.disabled = k > m.bp
 
+	var can := battle.available(0, t.post)
+	var n := 0
+	for id in can:
+		n += 1
+		var a: Dictionary = can[id]
+		var pv := battle.preview(0, t.post, id, 0 if id == "strike" else boost)
+		var tag: String = a.get("ammo", a.get("hits", ""))
+		var weak: bool = tag != "" and tag in battle.sides[1].known and not battle.is_broken(1)
+		var text := "%d   %s   %d%%%s" % [n, a.name, int(round(pv.chance * 100)), "   WEAK POINT!" if weak else ""]
+		var help: String = a.description + "\n\n" + _explain(pv)
+		if weak:
+			help += "\n\nHits her weak point (%s): strips %d shield%s." % [DiceCombat.weak_name(tag).to_lower(), 1 + boost, "" if boost == 0 else "s"]
+		var btn := UIKit.button(_actions, text, _choose.bind(id), help)
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.custom_minimum_size = Vector2(320, 0)
+		if weak:
+			btn.add_theme_color_override("font_color", Style.c("flash"))
+		_choices.append(id)
+	var wait := UIKit.button(_actions, "%d   Wait" % (n + 1), _choose.bind(""), "Do nothing this turn. Unspent boost points stay banked.")
+	wait.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_choices.append("")
+	var again := _repeat_pick(t.post)
+	if again != "":
+		var r := UIKit.button(_actions, "R   Same again: %s" % can[again].name, _repeat, "Repeat this officer's last order (or the sensible one), without boost.")
+		r.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var all := UIKit.button(_actions, "A   Carry on this round", _carry_on_round, "Every officer of yours repeats their last order for the rest of this round. You take the helm again next round.")
+	all.alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+
+## The roll an action needs, for its tooltip.
+func _explain(pv: Dictionary) -> String:
+	if pv.parts.is_empty() and pv.get("dc", 0) == 0 and not pv.has("opp"):
+		return "No roll needed."
+	var out := "d20" + _parts_text(pv.parts)
+	if pv.has("opp"):
+		out += "\nagainst their d20" + _parts_text(pv.opp)
+	else:
+		out += "\nagainst DC %d" % pv.dc
+	return out + "\nChance: %d%%" % int(round(pv.chance * 100))
+
+
+static func _parts_text(parts: Array) -> String:
+	var bits := PackedStringArray()
+	for p in parts:
+		bits.append("%s %+d" % [p[0], p[1]])
+	return "" if bits.is_empty() else ": " + ", ".join(bits)
+
+
+func _char_of(m: Dictionary) -> Dictionary:
+	if m.get("id", "") != "" and People.chars.has(m.id):
+		return People.person(m.id)
+	return m.get("char", {})
+
+
+static func _post_name(post: String) -> String:
+	return "Captain" if post == "captain" else Data.rules.officer_roles[post].name
+
+
+# ---- the log ------------------------------------------------------------------
 
 func _show_entry(e: Dictionary) -> void:
-	var who := "" if e.side < 0 else ("[color=#2b4a7a]You[/color] - " if e.side == 0 else "[color=#7a2e1c]Them[/color] - ")
+	var who := "" if e.side < 0 or e.post == "" else ("[color=#6fa8ff]You[/color] - " if e.side == 0 else "[color=#ff7a5c]Them[/color] - ")
 	var text: String = who + e.text
+	if e.text.begins_with("BREAK"):
+		text = "[b][color=#ff5a3c]%s[/color][/b]" % e.text
+		_shake()
+	elif e.text.begins_with("Round "):
+		text = "[b]%s[/b]" % e.text
+	elif e.text.begins_with("A weak point"):
+		text = "[color=#ff7a5c]%s[/color]" % e.text
 	if not e.check.is_empty():
 		text += "\n      " + Dice.describe(e.check)
-		%DiceFace.text = str(e.check.roll)
-		%DiceFace.add_theme_color_override("font_color", Style.c("good") if e.check.success else Style.c("bad"))
+		_dice.text = str(e.check.roll)
+		_dice.add_theme_color_override("font_color", Style.c("good") if e.check.success else Style.c("bad"))
 	_log(text)
 	if e.post == "master_gunner" and e.side >= 0 and not e.check.is_empty():
-		_gun_smoke(e.side, e.check.success)
+		stage.broadside(e.side, e.check.success)
+	elif e.text.begins_with("Your ally the "):
+		stage.broadside(0, not e.text.contains("misses"), _ally_named(e.text))
 
 
 func _log(text: String) -> void:
-	%Log.append_text(text + "\n")
+	_log_box.append_text(text + "\n")
 
 
-# ---- drawing ---------------------------------------------------------------
-
-func _place_ships() -> void:
-	if sprites.is_empty():
-		return
-	var gap: float = BAND_GAP[battle.band]
-	sprites[battle.gauge].position = sprites[battle.gauge].position.lerp(Vector2(-gap / 2.0, 0), 0.08)
-	sprites[1 - battle.gauge].position = sprites[1 - battle.gauge].position.lerp(Vector2(gap / 2.0, 0), 0.08)
-	for i in 2:
-		var s: Dictionary = battle.sides[i]
-		sprites[i].set_state(s.hull / s.stats.hull, s.sails / s.stats.sails, 1, s.struck)
+func _shake() -> void:
+	stage.shake(0.6)
 
 
-func _draw() -> void:
-	var view := Rect2(camera.position - get_viewport_rect().size, get_viewport_rect().size * 2.0)
-	draw_rect(view, Style.c("sea"))
-	for x in range(-1200, 1300, 100):
-		draw_line(Vector2(x, -800), Vector2(x, 800), Style.c("ink_faint"), 1.0)
-	var font := Style.font("italic")
-	var ink := Color(Style.c("ink"), 0.6)
-	draw_string(font, Vector2(-80, -150), "wind", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, ink)
-	draw_line(Vector2(-90, -138), Vector2(10, -138), ink, 2.0)
-	draw_colored_polygon(PackedVector2Array([Vector2(20, -138), Vector2(5, -145), Vector2(5, -131)]), ink)
-	for i in sprites.size():
-		var s: Dictionary = battle.sides[i]
-		draw_string(font, sprites[i].position + Vector2(-100, -100), s.name + (" (struck)" if s.struck else ""),
-			HORIZONTAL_ALIGNMENT_CENTER, 200, 18, Style.c("ink"))
-
-
-func _gun_smoke(i: int, hit: bool) -> void:
-	var from: Vector2 = sprites[i].position
-	var to: Vector2 = sprites[1 - i].position
-	var dir := (to - from).normalized()
-	for k in 5:
-		var p := from + Vector2(0, -40 + k * 20) + dir * 20.0
-		_burst(p, dir, Color(Style.c("smoke"), 0.55), 5, 30.0, Vector2(20, 45), 1.6, Vector2(0.6, 1.4))
-		_burst(p, dir, Style.c("flash"), 3, 20.0, Vector2(60, 110), 0.15, Vector2(0.2, 0.4))
-	if hit:
-		_burst(to, -dir, Color("#7a5230"), 20, 120.0, Vector2(60, 140), 0.6, Vector2(0.15, 0.3))
-	else:
-		_burst(to - dir * 60.0, Vector2.UP, Style.c("splash"), 16, 180.0, Vector2(30, 80), 0.6, Vector2(0.2, 0.45))
-
-
-func _burst(pos: Vector2, dir: Vector2, color: Color, amount: int, spread: float, speed: Vector2, life: float, size: Vector2) -> void:
-	var p := CPUParticles2D.new()
-	p.texture = PUFF
-	p.position = pos
-	p.one_shot = true
-	p.explosiveness = 0.9
-	p.amount = maxi(amount, 1)
-	p.lifetime = life
-	p.direction = dir
-	p.spread = spread
-	p.gravity = Vector2.ZERO
-	p.initial_velocity_min = speed.x
-	p.initial_velocity_max = speed.y
-	p.damping_min = speed.x * 0.5
-	p.damping_max = speed.y * 0.5
-	p.scale_amount_min = size.x
-	p.scale_amount_max = size.y
-	var ramp := Gradient.new()
-	ramp.set_color(0, color)
-	ramp.set_color(1, Color(color, 0.0))
-	p.color_ramp = ramp
-	add_child(p)
-	p.emitting = true
-	get_tree().create_timer(life + 0.3).timeout.connect(p.queue_free)
+func _ally_named(text: String) -> String:
+	for a in battle.sides[0].get("allies", []):
+		if text.begins_with("Your ally the %s " % a.name):
+			return a.name
+	return ""
 
 
 # ---- the end -----------------------------------------------------------------
 
 func _end() -> void:
+	busy = true
+	UIKit.clear(_actions)
 	var titles := {"enemy_struck": "She strikes her colours!", "player_struck": "You strike your colours",
 		"enemy_sunk": "She goes down", "player_sunk": "Your ship is lost", "separated": "The ships part"}
 	var texts := {
@@ -269,12 +558,7 @@ func _end() -> void:
 	}
 	var me: Dictionary = battle.sides[0]
 	if battle.result.ends_with("sunk"):
-		var who := 1 if battle.result == "enemy_sunk" else 0
-		_burst(sprites[who].position, Vector2.UP, Style.c("splash"), 40, 180.0, Vector2(20, 90), 1.2, Vector2(0.3, 0.7))
-		var tw := create_tween().set_parallel()
-		tw.tween_property(sprites[who], "modulate:a", 0.0, 1.8)
-		tw.tween_property(sprites[who], "scale", sprites[who].scale * 0.7, 1.8)
-		await tw.finished
+		await stage.sink(1 if battle.result == "enemy_sunk" else 0).finished
 	var text: String = texts[battle.result] + "\n\nRounds fought: %d.  Your casualties: %d.  Hull %d, sails %d." % [battle.round_no, me.casualties, me.hull, me.sails]
 	if me.captain_wounded:
 		text += "\nYour captain was wounded."

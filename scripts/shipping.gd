@@ -323,7 +323,7 @@ func _update_sprites(player_pos: Vector2) -> void:
 			var sp: Node2D = SPRITE.instantiate()
 			add_child(sp)
 			sp.setup(n.enemy.type, n.flag)
-			sp.scale = Vector2.ONE * 0.26
+			sp.scale = Vector2.ONE * 0.74
 			_sprites[n.id] = sp
 		elif not visible and _sprites.has(n.id):
 			_sprites[n.id].queue_free()
@@ -340,7 +340,7 @@ func _draw() -> void:
 	var font := Style.font("italic")
 	for n in npcs:
 		if _sprites.has(n.id):
-			draw_string(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 13, Color(Style.c("ink"), 0.8))
+			draw_string(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 13, Color(Style.c("chart_ink"), 0.8))
 
 
 # ---- saving ----------------------------------------------------------------

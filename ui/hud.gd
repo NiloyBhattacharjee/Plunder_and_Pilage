@@ -37,8 +37,8 @@ func _ready() -> void:
 	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	bar.offset_bottom = BAR_HEIGHT
 	var sb := StyleBoxTexture.new()
-	sb.texture = load("res://assets/ui/topbar.png")
-	sb.texture_margin_bottom = 8
+	sb.texture = load(Data.table("palette").pixel_ui + "topbar.png")
+	sb.texture_margin_bottom = 12
 	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
 	sb.content_margin_left = 10
 	sb.content_margin_right = 10

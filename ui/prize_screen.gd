@@ -39,6 +39,11 @@ func open(player_ship: Node2D, result: Dictionary) -> void:
 			Ports.state.keys().filter(func(id): return Ports.port(id).faction == enemy.faction).pick_random())
 		if found != "":
 			messages.append("Among the captain's papers: " + found.trim_prefix("You hold a secret: "))
+	var consorts := Bonds.roster().filter(func(id): return id != enemy.get("captain_id", "") and People.person(id).get("alive", true))
+	if not consorts.is_empty() and randf() < Data.rules.dice_combat.breaks.papers_intel_chance:  # her orders name another ship
+		var c := People.person(consorts.pick_random())
+		Encounters.add_intel(ship.state, c.id, ["all"], "a captured log")
+		messages.append("Her log describes the %s, %s's ship, down to the last weakness in her timbers. You'll know where to hit her." % [c.ship, c.name])
 	%Title.text = "The %s is yours" % enemy.name
 	%Status.text = ""
 	_build()
@@ -76,7 +81,7 @@ func _build() -> void:
 	var spare: int = s.crew.size() - s.officers.size()
 	_ship_fate.add_item("Take her as a prize (%d of your hands to sail her)" % need)
 	_ship_fate.set_item_tooltip(0, "Sell her at a shipyard (about %d gold, plus any cargo left aboard) or make her your flagship.\nShe sails with you and you go at her pace." % int(Data.table("ships")[enemy.type].price * Data.rules.prizes.sale_mult * clampf(enemy.hull / ShipStats.effective(enemy.type, []).hull, 0.2, 1.0)))
-	_ship_fate.set_item_disabled(0, s.prizes.size() >= Data.rules.prizes.max or need > spare)
+	_ship_fate.set_item_disabled(0, s.prizes.size() >= Fleet.max_ships() or need > spare)
 	_ship_fate.add_item("Scuttle her")
 	_ship_fate.set_item_tooltip(1, "Burn her to the waterline. Nothing left to trace back to you.")
 	_ship_fate.add_item("Let her go, crew and all")
