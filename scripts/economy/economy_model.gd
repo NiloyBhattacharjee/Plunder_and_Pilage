@@ -102,6 +102,12 @@ func unit_price(id: String, g: String, s: float, buying: bool, spread_mult := 1.
 	return mid * (1.0 + half if buying else 1.0 - half) * (1.0 + duty if buying else 1.0 - duty)
 
 
+## A price for a given multiplier rather than today's stock: for prices remembered or heard of.
+func price_at_mult(id: String, g: String, mult: float, buying: bool, spread_mult := 1.0, duty := 0.0) -> float:
+	var half: float = cfg.spread[ports[id].size] * spread_mult / 2.0
+	return goods[g].base_price * mult * (1.0 + half if buying else 1.0 - half) * (1.0 + duty if buying else 1.0 - duty)
+
+
 func price(id: String, g: String, buying: bool, spread_mult := 1.0, duty := 0.0) -> float:
 	return unit_price(id, g, stock[id].get(g, 1.0), buying, spread_mult, duty)
 

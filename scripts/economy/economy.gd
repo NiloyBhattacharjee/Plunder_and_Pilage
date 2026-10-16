@@ -7,6 +7,7 @@ signal fleet_event(ev: Dictionary)  # a fleet arrived, sailed, or didn't come th
 
 var model := EconomyModel.new()
 var _warm := {}  # starting month -> the warmed-up model's state
+var news: Array = []  # [{text, port, day}]: things that happened, travelling toward the player at sailing speed
 
 
 func _ready() -> void:
@@ -133,6 +134,38 @@ func fleet_text(id: String) -> String:
 		"August", "September", "October", "November", "December"][int(cfg().fleets[f.id].month) - 1]]
 
 
+func price_at(id: String, good: String, mult: float, buying: bool, spread_mult := 1.0) -> float:
+	return model.price_at_mult(id, good, mult, buying, spread_mult, duty(id, good))
+
+
+## A day in the model's count as a game day (the model ran a warm-up before the game began).
+func to_game_day(model_day: int) -> int:
+	return int(Clock.day) - (model.day - model_day)
+
+
+func voyage(id: String) -> Dictionary:
+	for v in model.traffic.voyages:
+		if v.id == id:
+			return v
+	return {}
+
+
+## Something happened at a port; the player hears of it when a ship could have brought word.
+func add_news(text: String, port: String) -> void:
+	news.append({"text": text, "port": port, "day": int(Clock.day)})
+
+
+## The news that has reached `near` (the port nearest the player) by today, removed from the queue.
+func news_reaching(near: String) -> Array:
+	var out := []
+	for n in news.duplicate():
+		var delay := 0.0 if n.port == near or near == "" else model.traffic.days(n.port, near)
+		if Clock.day >= n.day + delay:
+			news.erase(n)
+			out.append(n)
+	return out
+
+
 func voyages() -> Array:
 	return model.traffic.voyages
 
@@ -148,8 +181,11 @@ func progress(v: Dictionary) -> float:
 
 
 func save_state() -> Dictionary:
-	return model.save_state()
+	var d := model.save_state()
+	d.news = news
+	return d
 
 
 func load_state(d: Dictionary) -> void:
 	model.load_state(d)
+	news = d.get("news", [])

@@ -137,6 +137,7 @@ func _daily() -> void:
 	Bonds.ensure_on_map(shipping)
 	for m in Fleet.daily(s, rng):
 		hud.show_message(m)
+	_deliver_news()
 	if ship.anchored_at == "" and not ship.route.is_empty():
 		var found := Bases.look_for_coves(s, ship.position)
 		if found != "":
@@ -605,17 +606,31 @@ func _update_daylight() -> void:
 func _on_fleet_event(ev: Dictionary) -> void:
 	var f: Dictionary = Economy.cfg().fleets[ev.fleet]
 	var where: String = " and ".join(ev.ports.map(func(p): return Ports.port(p).name))
+	var at: String = ev.ports[0]  # news of it travels from there at the speed of a ship
 	match ev.kind:
 		"arrived":
-			hud.show_message("%s has reached %s. %s" % [f.name.capitalize(), where, "The fair has begun." if f.get("brings", {}).size() > 0 else "It's loading for home."])
+			Economy.add_news("%s has reached %s. %s" % [f.name.capitalize(), where, "The fair has begun." if f.get("brings", {}).size() > 0 else "It's loading for home."], at)
 		"skipped":
-			hud.show_message("No %s this year: the merchants of %s wait in vain." % [f.name, where])
+			Economy.add_news("No %s this year: the merchants of %s wait in vain." % [f.name, where], at)
 		"sailed":
-			hud.show_message("%s has sailed for home from %s." % [f.name.capitalize(), where])
+			Economy.add_news("%s has sailed for home from %s." % [f.name.capitalize(), where], at)
 			if f.get("treasure", false) and ev.treasure > 0.0:
 				var g: Dictionary = shipping.spawn_treasure(ev.ports[-1], ev.treasure)
 				if not g.is_empty():
-					hud.show_message("A treasure galleon, the %s, leaves %s for Havana with the year's silver." % [g.enemy.name, Ports.port(ev.ports[-1]).name])
+					Economy.add_news("A treasure galleon, the %s, has left %s for Havana with the year's silver." % [g.enemy.name, Ports.port(ev.ports[-1]).name], ev.ports[-1])
+
+
+## News that has reached the waters you're in: told when a ship could have brought it from where it happened.
+func _deliver_news() -> void:
+	var near := ""
+	var best := INF
+	for id in port_positions:
+		var d: float = ship.position.distance_squared_to(port_positions[id])
+		if d < best:
+			best = d
+			near = id
+	for n in Economy.news_reaching(near):
+		hud.show_message("News from %s: %s" % [Ports.port(n.port).name, n.text] if n.port != near else n.text)
 
 
 func _open_crew() -> void:
@@ -692,6 +707,11 @@ func _on_combat_finished(result: Dictionary) -> void:
 	_raid_base = ""
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
 		if current_npc.has("voyage"):  # her cargo never reaches port, and the route remembers
+			var v := Economy.voyage(current_npc.voyage)
+			if not v.is_empty():  # her papers: what her home port knew of prices when she sailed
+				var n := Ports.learn_news(v.news, "papers")
+				if n > 0:
+					hud.show_message("Her papers give prices at %d port%s, as they stood when she sailed from %s." % [n, "" if n == 1 else "s", Ports.port(v.origin).name])
 			Economy.lose_voyage(current_npc.voyage, "player")
 		shipping.remove(current_npc)
 	current_npc = {}

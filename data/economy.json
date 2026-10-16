@@ -96,6 +96,14 @@
                       "takes": {"sugar": 0.5, "indigo": 0.5, "cocoa": 0.4}}
   },
 
+  "information": {
+    "_comment": "What the player knows (scripts/ports.gd). Prices you saw yourself, heard on the quay (each port's news is only as fresh as the last ship in from where it's about), found in a captured ship's papers, or picked up as tavern rumour (sometimes false). Your best trader (captain or officer) estimates today's price from old news: the older the news, the more it leans on what the port usually fetches, and the error shrinks with trade skill and allies.",
+    "estimate_tau_days": 35,
+    "estimate_error": 0.35,
+    "network_per_ally": 0.1,
+    "network_max": 0.4
+  },
+
   "sailing": [1.0, 1.0, 1.0, 1.0, 1.0, 0.9, 0.75, 0.6, 0.55, 0.65, 0.85, 1.0],
   "_sailing": "Outside trade by month: fewer ships sail in the hurricane season (June to November).",
 

@@ -2,7 +2,8 @@ extends Node
 ## Autoload "Ports": the living state of every port, and what the player knows about prices elsewhere.
 ## Stock and prices live in the Economy; this is the port's side of a trade: laws, customs, the ledger.
 ##   state[id] = {sailors, laws, notables}
-##   known[id][good] = {buy, sell, day}: the last prices the player saw or heard for that port.
+##   known[id][good] = {buy, sell, m (price multiplier), day, source: seen/news/papers/rumour}: the latest the player
+##   saw or heard for that port. News comes by ship, so it's old; estimate() guesses what it is now.
 ## Laws start from ports.json but live here, so interest groups (milestone 8b) can rewrite them.
 ## Trade functions take the player's state dict `s` (gold, cargo, cargo_cost, crew) and return {ok, text}.
 
@@ -63,21 +64,82 @@ func start_market_event(id: String, ev: Dictionary) -> void:
 	var good: String = goods[rng.randi() % goods.size()]
 	Economy.shock(id, {"good": good, "stock": ev.get("stock", 1.0), "make": ev.get("make", 1.0), "use": ev.get("use", 1.0),
 		"days": rng.randi_range(ev.days[0], ev.days[1]), "reason": ev.name, "rumour": ev.rumour})
+	Economy.add_news(ev.rumour.format({"good": _name(good), "port": port(id).name}), id)
 
 
 func record_prices(id: String, day: int, goods: Array = []) -> void:
 	if not known.has(id):
 		known[id] = {}
 	for good in (goods if not goods.is_empty() else Data.table("goods").keys()):
-		known[id][good] = {"buy": price(id, good, true), "sell": price(id, good, false), "day": day}
+		known[id][good] = {"buy": price(id, good, true), "sell": price(id, good, false), "m": Economy.mult(id, good), "day": day, "source": "seen"}
 
 
-## Best known selling price for `good` in any other port: {port, sell, day}, or {} if none known.
-func best_known_sale(good: String, exclude: String) -> Dictionary:
+## Learns a port's prices from news (a price multiplier per good, as of `day`), where it's newer than what's known.
+func learn(id: String, mults: Dictionary, day: int, source: String) -> bool:
+	if not known.has(id):
+		known[id] = {}
+	var learned := false
+	for good in mults:
+		var k: Dictionary = known[id].get(good, {})
+		if k.is_empty() or day > int(k.day):
+			known[id][good] = {"buy": Economy.price_at(id, good, mults[good], true), "sell": Economy.price_at(id, good, mults[good], false),
+				"m": mults[good], "day": day, "source": source}
+			learned = true
+	return learned
+
+
+## News on the quay: what this port has heard of the others, from the ships that came in. Returns how many ports.
+func learn_board(here: String) -> int:
+	return learn_news(Economy.model.traffic.board.get(here, {}), "news", here)
+
+
+## A packet of news ({port: {day, m}}, a port's board or a captured ship's papers). Returns how many ports were news.
+func learn_news(board: Dictionary, source: String, skip := "") -> int:
+	var n := 0
+	for id in board:
+		if id != skip and state.has(id) and not board[id].m.is_empty():
+			if learn(id, board[id].m, Economy.to_game_day(int(board[id].day)), source):
+				n += 1
+	return n
+
+
+## What your best trader reckons a good fetches in a port today, from the latest news of it:
+## {m, sell, buy, age, err, heard, who}, or {} if you've heard nothing. Old news leans on what the port usually
+## fetches; the guess is off by a fixed amount (so it doesn't change every time you look) that shrinks with skill.
+func estimate(id: String, good: String, s: Dictionary) -> Dictionary:
+	var k: Dictionary = known.get(id, {}).get(good, {})
+	if k.is_empty():
+		return {}
+	var info: Dictionary = Economy.cfg().information
+	var age := maxf(0.0, Clock.day - float(k.day))
+	var w := exp(-age / float(info.estimate_tau_days))
+	var hist := Economy.history(id, good)
+	var typical: float = hist.reduce(func(a, x): return a + x, 0.0) / hist.size() if not hist.is_empty() else 1.0
+	var est: float = float(k.get("m", 1.0)) * w + typical * (1.0 - w)
+	var who := ShipStats.captain(s)
+	for post in s.get("officers", {}):
+		var o := People.person(s.officers[post])
+		if People.value(o, "trade") > People.value(who, "trade"):
+			who = o
+	var net: float = minf(info.network_max, Bonds.allies(s).size() * info.network_per_ally)
+	var err: float = info.estimate_error * (1.0 - People.value(who, "trade") / 20.0) * (1.0 - net) * (1.0 - w)
+	var noise := float(abs(hash(id + good + str(int(k.day)))) % 2001) / 1000.0 - 1.0
+	est = maxf(0.1, est * (1.0 + err * noise))
+	return {"m": est, "sell": Economy.price_at(id, good, est, false), "buy": Economy.price_at(id, good, est, true),
+		"age": int(age), "err": err, "heard": k, "who": who.name}
+
+
+## Best place you know of to sell `good` (other than here), by your trader's estimate of today's price:
+## {port, sell (estimated), day, est}, or {} if none known.
+func best_known_sale(good: String, exclude: String, s := {}) -> Dictionary:
 	var best := {}
 	for id in known:
-		if id != exclude and known[id].has(good) and (best.is_empty() or known[id][good].sell > best.sell):
-			best = {"port": id, "sell": known[id][good].sell, "day": known[id][good].day}
+		if id == exclude or not known[id].has(good):
+			continue
+		var est := estimate(id, good, s) if not s.is_empty() else {}
+		var sell: float = est.sell if not est.is_empty() else known[id][good].sell
+		if best.is_empty() or sell > best.sell:
+			best = {"port": id, "sell": sell, "day": known[id][good].day, "est": est}
 	return best
 
 
@@ -395,32 +457,36 @@ func rumour(here: String, day: int, false_chance := 0.0) -> String:
 	var id: String
 	var good: String
 	var text: String
-	var price_tip := false
-	if not with_news.is_empty() and rng.randf() < 0.6:
+	if not with_news.is_empty() and rng.randf() < 0.6:  # word of a shortage or a glut
 		id = with_news[rng.randi() % with_news.size()]
 		var m: Dictionary = Economy.mods(id)[rng.randi() % Economy.mods(id).size()]
 		good = m.good
 		text = m.rumour.format({"good": _name(good), "port": port(id).name})
-	else:
-		price_tip = true
+		record_prices(id, day - rng.randi_range(1, 6), [good])
+		known[id][good].source = "rumour"
+	else:  # a price, as a captain in from there would know it: this port's own news, as old as the last ship in
 		id = others[rng.randi() % others.size()]
 		var goods: Array = Economy.produces(id) + Economy.wants(id)
 		if goods.is_empty():
 			goods = Economy.model.traded()
 		good = goods[rng.randi() % goods.size()]
-		text = "A captain fresh from %s says %s buys at %s and sells at %s there." % [
-			port(id).name, _name(good), Market.fmt(price(id, good, true)), Market.fmt(price(id, good, false))]
-	var heard := day - rng.randi_range(1, 6)  # rumours are a few days old
-	record_prices(id, heard, [good])
-	known[id][good].source = "rumour"
+		var b: Dictionary = Economy.model.traffic.board.get(here, {}).get(id, {})
+		var mult: float = b.get("m", {}).get(good, Economy.mult(id, good))
+		var heard: int = Economy.to_game_day(int(b.day)) if not b.is_empty() else day
+		if not known.has(id):
+			known[id] = {}
+		known[id][good] = {"buy": Economy.price_at(id, good, mult, true), "sell": Economy.price_at(id, good, mult, false), "m": mult,
+			"day": heard, "source": "rumour"}
+		text = "A captain in from %s %s says %s buys at %s and sells at %s there." % [port(id).name,
+			"this week" if day - heard < 7 else "%d days ago" % (day - heard), _name(good), "%s", "%s"]
 	if rng.randf() < false_chance:  # a tall tale: the numbers you heard are off
 		var off := rng.randf_range(1.4, 1.9) if rng.randf() < 0.5 else rng.randf_range(0.4, 0.7)
 		known[id][good].buy *= off
 		known[id][good].sell *= off
+		known[id][good].m = float(known[id][good].get("m", 1.0)) * off
 		known[id][good].fake = true
-		if price_tip:
-			text = text.replace(Market.fmt(price(id, good, true)), Market.fmt(known[id][good].buy)).replace(
-				Market.fmt(price(id, good, false)), Market.fmt(known[id][good].sell))
+	if text.contains("%s"):
+		text = text % [Market.fmt(known[id][good].buy), Market.fmt(known[id][good].sell)]
 	return text
 
 

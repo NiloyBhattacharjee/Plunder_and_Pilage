@@ -30,6 +30,9 @@ func open(id: String, player_ship: Node2D, in_disguise := false) -> void:
 	%Status.text = ""
 	UIKit.pause_clock()
 	Ports.record_prices(port_id, int(Clock.day))
+	var heard := Ports.learn_board(port_id)
+	if heard > 0:
+		%Status.text = "Ships in harbour bring news of prices at %d other port%s." % [heard, "" if heard == 1 else "s"]
 	refresh()
 	show()
 
@@ -122,12 +125,22 @@ func _build_market() -> void:
 		else:
 			UIKit.label(grid, "")
 
-		var best := Ports.best_known_sale(good, port_id)
+		var best := Ports.best_known_sale(good, port_id, s)
 		if best.is_empty():
-			UIKit.label(grid, "-")
+			UIKit.label(grid, "-", "You've heard nothing of its price anywhere else. Ships in harbour, tavern talk and captured papers bring news.")
 		else:
-			UIKit.label(grid, "%s %s %dd" % [Market.fmt(best.sell), Ports.port(best.port).name, int(Clock.day) - int(best.day)],
-				"The best price you know of for selling it elsewhere: %s at %s, %d days ago." % [Market.fmt(best.sell), Ports.port(best.port).name, int(Clock.day) - int(best.day)],
+			var est: Dictionary = best.est
+			var age := int(Clock.day) - int(best.day)
+			var sale_tip := "Best place you know of to sell it: %s." % Ports.port(best.port).name
+			if not est.is_empty():
+				var how: String = {"seen": "you saw it there", "news": "news on the quay", "papers": "a captured ship's papers", "rumour": "tavern talk"}.get(est.heard.get("source", "seen"), "")
+				sale_tip += "\nHeard %d days ago (%s): it sold at %s." % [age, how, Market.fmt(est.heard.sell)]
+				if age > 0:
+					sale_tip += "\n%s reckons it's about %s now, give or take %d%%. Old news leans on what the port usually pays; trade skill and allies make the guess better." % [
+						est.who, Market.fmt(est.sell), int(round(est.err * 100))]
+				if est.heard.get("source", "") == "rumour":
+					sale_tip += "\nRumours can be wrong."
+			UIKit.label(grid, "%s%s %s %dd" % ["~" if age > 0 else "", Market.fmt(best.sell), Ports.port(best.port).name, age], sale_tip,
 				Style.c("good") if best.sell > sell * 1.15 else Style.c("dim"))
 
 		var lot := 10 if Market.weight(good) <= 0.2 else 1  # provisions and water trade in larger lots
