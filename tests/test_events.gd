@@ -96,6 +96,8 @@ func test_every_choice_of_every_event_resolves():
 					continue
 				for i in ev.choices.size():
 					rich_state(kind)
+					if port != "" and PortLife.captain_here(port) == "":  # a named captain in the tavern, for the events about them
+						PortLife.start(port, "captains_drinking", Events.rng)
 					var c := ctx(port)
 					var vars := {}
 					var ok := true

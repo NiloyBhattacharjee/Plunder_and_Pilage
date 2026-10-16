@@ -19,7 +19,7 @@
     "title": "The press gang",
     "text": "A navy press gang is sweeping the waterfront of {port}, taking any seaman they can catch.",
     "where": "port",
-    "conditions": ["port_faction != pirates", "crew >= 12"],
+    "conditions": ["port_faction != pirates", "crew >= 12", "life.press_gang"], "weight": 40,
     "choices": [
       {"text": "Keep the men aboard", "outcomes": ["opinion crew -2"], "result": "No shore leave. The men grumble, but they're safe."},
       {"text": "Bribe the lieutenant", "conditions": ["gold >= 60"], "outcomes": ["gold -60"], "result": "He finds other ships more interesting."},
@@ -81,8 +81,8 @@
     "title": "Quarantine",
     "text": "There's fever in {port}. The authorities want every ship to wait in the outer roads for a week.",
     "where": "port",
-    "conditions": ["port_faction != pirates"],
-    "weight": 5,
+    "conditions": ["port_faction != pirates", "life.fever"],
+    "weight": 20,
     "choices": [
       {"text": "Wait out the quarantine", "outcomes": ["time 7"], "result": "A week of staring at the shore."},
       {"text": "Come in anyway, and risk the fever", "check": {"who": "post.surgeon", "skill": "medicine", "dc": 12},
@@ -105,7 +105,7 @@
   "festival": {
     "title": "Feast day",
     "text": "{port} is celebrating a saint's day: processions, music, cheap wine, and every tavern open all night.",
-    "where": "port", "weight": 5,
+    "where": "port", "weight": 20, "conditions": ["life.festival"],
     "choices": [
       {"text": "Give the crew a night ashore", "outcomes": ["opinion crew +4", "gold -20", "crew -1"], "result": "A grand night. One man is never seen again."},
       {"text": "Keep them aboard", "outcomes": ["opinion crew -3"], "result": "They watch the fireworks from the rail."}

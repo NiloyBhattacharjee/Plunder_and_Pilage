@@ -58,6 +58,8 @@ Numbers: `gold`, `crew` (headcount), `hull`, `sails` (percent), `notoriety`, `ho
 
 Faction words: `relation.X`, `war.X.Y`, `port_is.X` and the candidate key `at_war.X` also accept `port` (the port you're in), `home` and `marque`.
 
+The town you're in (scripts/port_life.gd): `town.wealth`, `town.prosperity`, `town.hunger`, `town.order`, `town.piety` (0-100), and yes/no `town.war`, `town.lawless`, `town.fleet`. What's going on there: `life.festival`, `life.press_gang`, `life.bread_riot`... (the happenings in data/port_life.json). Candidate key `in_town`: a character drinking in this port's tavern.
+
 Yes/no: `at_base` (anchored at one of your coves), `neutral` (no alliances or rivalries), `council_member`, `council_leader`, `unrest_known`, `shares` (no prey, no pay), `port_is.FACTION`, `at_sea`, `in_port`, `storm`, `pirate`, `privateer`, `honest`, `wanted`, `pardoned`, `pardon_open.FACTION`, `war.A.B`, `flag.NAME`,
 `contract.TEMPLATE`, `captain_trait.TRAIT`, `has_officer.POST`, `port_fence`, `true`.
 

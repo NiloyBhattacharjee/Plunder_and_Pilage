@@ -38,10 +38,13 @@ func price(id: String, good: String, buying: bool, spread_mult := 1.0) -> float:
 
 
 func daily() -> void:
+	for n in PortLife.daily(rng, EconomyEffects.player):  # feast days, press gangs, riots: news of them travels
+		Economy.add_news(n.text, n.port)
 	for id in state:
 		var p := port(id)
 		var ps: Dictionary = state[id]
-		ps.sailors = minf(p.sailors, ps.sailors + p.sailors * Data.rules.tavern.regen_per_day)
+		var pool: float = p.sailors * PortLife.mult(id, "sailors")  # press gangs empty the waterfront; riots fill it
+		ps.sailors = move_toward(ps.sailors, pool, p.sailors * Data.rules.tavern.regen_per_day)
 		ps.fence_cash = minf(_fence_cash_max(id), ps.get("fence_cash", 0.0) + _fence_cash_max(id) * Data.rules.fence.cash_regen)
 		# customs forget slowly: vigilance drifts back to the port's normal level
 		var base: float = p.laws.vigilance
@@ -414,7 +417,7 @@ func interview(id: String, index: int, s: Dictionary) -> Dictionary:
 ## Signs on n new hands, each a generated character shaped by the port they come from.
 func hire(id: String, n: int, s: Dictionary, crew_max: int) -> Dictionary:
 	var ps: Dictionary = state[id]
-	var cost_each: float = Data.rules.tavern.hire_cost
+	var cost_each: float = hire_cost(id)
 	n = mini(n, mini(int(ps.sailors), crew_max - ShipStats.headcount(s)))
 	n = mini(n, int(s.gold / cost_each))
 	if n <= 0:
@@ -424,6 +427,11 @@ func hire(id: String, n: int, s: Dictionary, crew_max: int) -> Dictionary:
 	ps.sailors -= n
 	s.gold -= n * cost_each
 	return {"ok": true, "text": "Signed on %d sailors for %d." % [n, n * cost_each]}
+
+
+## A sailor's signing bounty here: dearer when the press gangs are out, cheaper when the poor are starving.
+func hire_cost(id: String) -> float:
+	return roundf(Data.rules.tavern.hire_cost * PortLife.mult(id, "hire_cost"))
 
 
 ## Pays off the n least useful hands (never officers). They go back to the port's pool.

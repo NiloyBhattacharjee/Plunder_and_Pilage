@@ -1,15 +1,18 @@
 extends CanvasLayer
-## Port screen: market, shipyard and tavern. Time is paused while it's open;
+## Port screen: the town (what it's like and what's going on: see scripts/port_life.gd), market, shipyard and tavern. Time is paused while it's open;
 ## only actions that take time (repairs, careening, refits) move the clock.
 ## Hover over prices and stats for a breakdown of why they are what they are.
 
 signal message(text: String)
 signal closed
+signal life_event(event_id: String)  # a happening's event: the world map runs it, then brings you back here
 
 var port_id := ""
 var ship: Node2D
 var rumours_left := 0
 var disguised := false  # came in under false colours or by bribe: keep your head down
+var _town: VBoxContainer
+var _done := {}         # happenings you've already taken part in this visit
 
 
 func _ready() -> void:
@@ -19,13 +22,24 @@ func _ready() -> void:
 	%Dismiss10.pressed.connect(_act.bind(func(): return Ports.dismiss(port_id, 10, ship.state)))
 	%PayWages.pressed.connect(_pay_wages)
 	%Rumour.pressed.connect(_rumour)
+	var scroll := ScrollContainer.new()  # the town comes first: it's what you see stepping ashore
+	scroll.name = "Town"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	%Tabs.add_child(scroll)
+	%Tabs.move_child(scroll, 0)
+	_town = VBoxContainer.new()
+	_town.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_town.add_theme_constant_override("separation", 6)
+	scroll.add_child(_town)
 
 
 func open(id: String, player_ship: Node2D, in_disguise := false) -> void:
 	port_id = id
 	ship = player_ship
 	disguised = in_disguise
-	rumours_left = Data.rules.tavern.rumours_per_visit
+	rumours_left = Data.rules.tavern.rumours_per_visit + PortLife.bonus(id, "rumours")
+	_done = {}
+	%Tabs.current_tab = 0
 	%Rumours.text = ""
 	%Status.text = ""
 	UIKit.pause_clock()
@@ -33,6 +47,13 @@ func open(id: String, player_ship: Node2D, in_disguise := false) -> void:
 	var heard := Ports.learn_board(port_id)
 	if heard > 0:
 		%Status.text = "Ships in harbour bring news of prices at %d other port%s." % [heard, "" if heard == 1 else "s"]
+	refresh()
+	show()
+
+
+## Back from a happening's event: the same visit, picked up where you left it.
+func reopen() -> void:
+	UIKit.pause_clock()
 	refresh()
 	show()
 
@@ -67,6 +88,7 @@ func refresh() -> void:
 " + fleet
 	%Info.text = "%s\n%s\n%s\nGold %d   Hold %d / %d tons" % ["Governor: " + People.person(gov).name if gov != "" else "Ruled by the council of captains",
 		p.description, law_text, ship.state.gold, Market.cargo_used(ship.state.cargo), ship.capacity()]
+	_build_town()
 	_build_market()
 	_build_shipyard()
 	_refresh_tavern()
@@ -585,7 +607,7 @@ func _refresh_tavern() -> void:
 	var ps: Dictionary = Ports.state[port_id]
 	var t: Dictionary = Data.rules.tavern
 	%TavernInfo.text = "Sailors looking for a berth: %d. Signing bounty %d each.\nCrew %d (needs %d, berths %d). Each hand eats, drinks and draws %s a day in wages.\nNew hands may hide their true nature until they've been at sea a while." % [
-		ps.sailors, t.hire_cost, ShipStats.headcount(ship.state), ShipStats.crew_needed(ship.state, ship.stats),
+		ps.sailors, Ports.hire_cost(port_id), ShipStats.headcount(ship.state), ShipStats.crew_needed(ship.state, ship.stats),
 		ship.stats.crew_max, Market.fmt(Data.rules.upkeep.wage_per_crew)]
 	%PayWages.text = "Pay wages owed (%d)" % ship.state.wages_owed
 	%PayWages.disabled = ship.state.wages_owed <= 0 or ship.state.gold <= 0
@@ -613,6 +635,73 @@ func _refresh_tavern() -> void:
 		if h.faction == Ports.port(port_id).faction:
 			UIKit.button(%Hostages, "Ransom %s for %d gold" % [People.person(h.id).name, h.ransom],
 				_act.bind(func(): return Ports.ransom(port_id, s, i)))
+
+
+## The town: what it's like (and why, in the tooltips), how it sees you, and what's going on.
+func _build_town() -> void:
+	UIKit.clear(_town)
+	var t := PortLife.situation(port_id)
+	var head := UIKit.label(_town, "%s is %s." % [Ports.port(port_id).name, PortLife.describe(port_id)], PortLife.explain(port_id), Style.c("header"))
+	head.theme_type_variation = &"Header"
+	var g := UIKit.grid(_town, 10)
+	var tips := {
+		"Wealth": "How rich the town is: its size, and how its trade is doing. Rich towns give balls; poor ones breed fever and beggars.",
+		"Prosperity": "What its goods fetch against what it must buy. Prosperous towns hold feast days and pay for errands.",
+		"Hunger": "The price of food against its usual price. Hungry towns riot, and hungry men sign on cheap.",
+		"Order": "Soldiers and priests against the hungry poor, and war. Orderly towns hang pirates; restless ones riot and set curfews.",
+		"Piety": "The church's say in the town."}
+	for k in tips:
+		var v: float = t[k.to_lower()]
+		UIKit.label(g, k, tips[k])
+		var l := UIKit.label(g, "%d" % v, PortLife.explain(port_id))
+		var bad: bool = (k == "Hunger" and v >= 40.0) or (k != "Hunger" and k != "Piety" and v < 30.0)
+		l.add_theme_color_override("font_color", Style.c("bad") if bad else Style.c("ink"))
+	var s: Dictionary = ship.state
+	var rel: int = s.relations.get(Ports.port(port_id).faction, 0)
+	var seen := "a stranger"
+	if Career.wanted(s):
+		seen = "a wanted pirate (keep your head down)"
+	elif rel >= 30:
+		seen = "a friend of the town"
+	elif rel >= 10:
+		seen = "a respected captain"
+	elif rel <= -20:
+		seen = "unwelcome"
+	if s.reputation.notoriety >= 40 and not Career.wanted(s):
+		seen += ", and everyone knows your name"
+	UIKit.label(_town, "Here you are %s. (Standing %+d, honour %+d, notoriety %d.)" % [seen, rel, s.reputation.honour, s.reputation.notoriety],
+		"How the town sees you decides what you're invited to, and what's said behind your back.", Style.c("dim"))
+	UIKit.label(_town, "What's going on", "", Style.c("header"))
+	var on := PortLife.active(port_id)
+	if on.is_empty():
+		UIKit.label(_town, "Nothing out of the ordinary. (Feast days come to prosperous towns, bread riots to hungry ones, press gangs to ports at war, balls to rich and orderly capitals, fever to poor towns in the wet season.)", "", Style.c("dim")).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for h in on:
+		var box := VBoxContainer.new()
+		_town.add_child(box)
+		var days := ceili(h.until - Clock.day)
+		UIKit.label(box, "%s  (%d more day%s)" % [PortLife.name_of(port_id, h.id), days, "" if days == 1 else "s"], "", Style.c("header"))
+		var txt := UIKit.label(box, PortLife.text_of(port_id, h), "")
+		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		txt.custom_minimum_size.x = 1000
+		var fx: Dictionary = PortLife.table()[h.id].get("effects", {})
+		var lines := PackedStringArray()
+		if fx.has("hire_cost"):
+			lines.append("signing bounty x%.1f" % fx.hire_cost)
+		if fx.has("sailors"):
+			lines.append("seamen looking for a berth x%.1f" % fx.sailors)
+		if fx.has("rumours"):
+			lines.append("%d more rumours in the tavern" % fx.rumours)
+		if not lines.is_empty():
+			UIKit.label(box, "While it lasts: " + ", ".join(lines) + ".", "", Style.c("dim"))
+		var a := PortLife.action(port_id, h, s, ship.stats)
+		if not a.is_empty() and not disguised:
+			var done: bool = _done.has(h.id)
+			var b := UIKit.button(box, a.text if not done else a.text + " (done)", func():
+				_done[h.id] = true
+				hide()
+				life_event.emit(a.event), a.problem)
+			b.disabled = a.problem != "" or done
+			b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
 
 func _act(action: Callable) -> void:

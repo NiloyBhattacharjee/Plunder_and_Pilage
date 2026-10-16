@@ -1,0 +1,565 @@
+{
+ "_comment": "Port life: what a visiting captain can do at a happening (chain_only: started from the port screen's Town tab, see data/port_life.json), and arrival events that grow out of how the town is (town.* keys) and how it sees you.",
+ "life_festival": {
+  "where": "port",
+  "chain_only": true,
+  "title": "{port} makes merry",
+  "text": "Fireworks over the harbour, a procession with a saint (or a bull, or a giant made of straw), and a crowd that will cheer anyone who gives it a show.",
+  "choices": [
+   {
+    "text": "Enter the shooting match",
+    "check": {
+     "who": "captain",
+     "skill": "gunnery",
+     "dc": 13
+    },
+    "outcomes": [
+     "gold +80",
+     "relation port +2",
+     "opinion crew +3"
+    ],
+    "result": "Three shots, three oranges off the post. The crowd carries you round the square.",
+    "fail_outcomes": [
+     "gold -20",
+     "opinion crew -1"
+    ],
+    "fail_result": "You miss the post entirely. Your entry fee buys the winner a drink."
+   },
+   {
+    "text": "Give the crew a night ashore",
+    "conditions": [
+     "gold >= 30"
+    ],
+    "outcomes": [
+     "gold -30",
+     "opinion crew +4",
+     "morale +10 20"
+    ],
+    "result": "They come back at dawn, broke, hoarse and happy."
+   },
+   {
+    "text": "Pay for a feast for the whole town",
+    "conditions": [
+     "gold >= 150"
+    ],
+    "outcomes": [
+     "gold -150",
+     "relation port +5",
+     "honour +2",
+     "influence {port} poor 5"
+    ],
+    "result": "Roast pigs on every corner, and your name on every tongue."
+   },
+   {
+    "text": "Leave them to it",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_fair": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The fair",
+  "text": "Bales of Rouen linen and Seville wine stacked to the eaves, mule trains from the mines, bankers changing silver at the church door, and more sharpers than honest men.",
+  "choices": [
+   {
+    "text": "Haggle for European cloth",
+    "conditions": [
+     "gold >= 120"
+    ],
+    "check": {
+     "who": "captain",
+     "skill": "trade",
+     "dc": 12
+    },
+    "outcomes": [
+     "gold -120",
+     "cargo cloth +30"
+    ],
+    "result": "You beat a Sevillan factor down to a price he'll regret.",
+    "fail_outcomes": [
+     "gold -120",
+     "cargo cloth +15"
+    ],
+    "fail_result": "The factor smiles all the way through. You've paid full price."
+   },
+   {
+    "text": "Buy the moneylenders a dinner and listen",
+    "conditions": [
+     "gold >= 30"
+    ],
+    "outcomes": [
+     "gold -30",
+     "secret ledger"
+    ],
+    "result": "Somebody important owes somebody else a great deal, and you know who."
+   },
+   {
+    "text": "Sign on seamen paid off from the fleet",
+    "outcomes": [
+     "crew +4"
+    ],
+    "result": "Deep-water men, used to long voyages."
+   },
+   {
+    "text": "Keep your purse in your shirt and go back aboard",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_bread_riot": {
+  "where": "port",
+  "chain_only": true,
+  "title": "Bread riots",
+  "text": "The market square is a mob: women waving empty baskets, men with cudgels, militia with bayonets fixed and no idea what to do. Your hold has food in it, and everyone knows ships carry food.",
+  "choices": [
+   {
+    "text": "Sell your provisions at a fair price",
+    "conditions": [
+     "cargo.food >= 30"
+    ],
+    "outcomes": [
+     "cargo food -30",
+     "gold +60",
+     "relation port +3",
+     "honour +2",
+     "influence {port} poor 5"
+    ],
+    "result": "They queue at your boat all afternoon. An old woman kisses your hand."
+   },
+   {
+    "text": "Sell them at what hunger will pay",
+    "conditions": [
+     "cargo.food >= 30"
+    ],
+    "outcomes": [
+     "cargo food -30",
+     "gold +220",
+     "honour -2",
+     "influence {port} poor -3"
+    ],
+    "result": "A fortune for salt pork. They'll remember your face, and not fondly."
+   },
+   {
+    "text": "Help the militia clear the square",
+    "check": {
+     "who": "captain",
+     "skill": "authority",
+     "dc": 11
+    },
+    "outcomes": [
+     "relation port +4",
+     "fear +2",
+     "influence {port} military 5",
+     "opinion crew -1"
+    ],
+    "result": "A volley over their heads, and your men with cudgels. The square empties.",
+    "fail_outcomes": [
+     "wound captain",
+     "relation port +1"
+    ],
+    "fail_result": "A flying cobblestone finds your head before the square is clear."
+   },
+   {
+    "text": "Sign on hungry men for their keep",
+    "outcomes": [
+     "crew +5",
+     "cargo food -10"
+    ],
+    "result": "They'd sail to hell for three meals a day."
+   }
+  ]
+ },
+ "life_ball": {
+  "where": "port",
+  "chain_only": true,
+  "title": "The governor's ball",
+  "text": "Candles by the hundred, a string band sawing at a minuet, and {gov} receiving guests at the top of the stairs. A planter's wife looks you up and down; two merchants stop talking when you pass.",
+  "roles": {
+   "gov": {
+    "from": "official",
+    "where": [
+     "office == governor"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Charm {gov}'s circle",
+    "check": {
+     "who": "captain",
+     "skill": "charisma",
+     "dc": 13
+    },
+    "outcomes": [
+     "favour {gov} 1",
+     "relation port +3",
+     "honour +1"
+    ],
+    "result": "{gov} laughs at your stories and asks you to call again. A favour freely given is a favour owed.",
+    "fail_outcomes": [
+     "relation port -1"
+    ],
+    "fail_result": "You tread on the feet of {gov}'s partner in the minuet. Twice."
+   },
+   {
+    "text": "Gamble with the planters",
+    "conditions": [
+     "gold >= 150"
+    ],
+    "check": {
+     "who": "captain",
+     "skill": "experience",
+     "dc": 12
+    },
+    "outcomes": [
+     "gold +250",
+     "opinion crew +1"
+    ],
+    "result": "Planters play deep and badly. You leave with their sugar money.",
+    "fail_outcomes": [
+     "gold -150"
+    ],
+    "fail_result": "Planters play deep and well, it turns out."
+   },
+   {
+    "text": "Slip away and listen at the study door",
+    "check": {
+     "who": "captain",
+     "skill": "charisma",
+     "dc": 14
+    },
+    "outcomes": [
+     "secret letters {gov}"
+    ],
+    "result": "Letters on the desk that {gov} would not want read aloud.",
+    "fail_outcomes": [
+     "relation port -5",
+     "honour -2"
+    ],
+    "fail_result": "A footman finds you with your ear to the keyhole."
+   },
+   {
+    "text": "Talk trade with the merchants",
+    "outcomes": [
+     "influence {port} merchants 4",
+     "relation port +1"
+    ],
+    "result": "Contacts, introductions, and an idea of who's buying."
+   }
+  ]
+ },
+ "life_hanging": {
+  "where": "port",
+  "chain_only": true,
+  "title": "Hanging day",
+  "text": "Three on the cart, hands tied, one still defiant. The crowd jeers; a parson reads; the hangman tests his ropes. Your crew are watching you as much as the gallows.",
+  "roles": {
+   "condemned": {
+    "from": "new",
+    "nation": "pirates"
+   }
+  },
+  "choices": [
+   {
+    "text": "Watch with the crowd",
+    "outcomes": [
+     "morale -5 10",
+     "fear -1"
+    ],
+    "result": "It takes a long time. The men are quiet that night."
+   },
+   {
+    "text": "Bribe the hangman for one life",
+    "conditions": [
+     "gold >= 150"
+    ],
+    "outcomes": [
+     "gold -150",
+     "hire {condemned}",
+     "honour +1",
+     "opinion crew +2"
+    ],
+    "result": "The rope 'breaks'. By the custom of the place, whoever the rope won't hang goes free, and {condemned} goes free into your crew."
+   },
+   {
+    "text": "Cut {condemned} down tonight, from the gibbet",
+    "conditions": [
+     "pirate"
+    ],
+    "check": {
+     "who": "captain",
+     "skill": "intimidation",
+     "dc": 14
+    },
+    "outcomes": [
+     "hire {condemned}",
+     "notoriety +5",
+     "fear +2",
+     "relation port -5",
+     "opinion crew +4"
+    ],
+    "result": "One guard runs, one is persuaded. The Brethren will sing of it.",
+    "fail_outcomes": [
+     "notoriety +5",
+     "relation port -10",
+     "crew -2"
+    ],
+    "fail_result": "The guard raises the alarm. You lose two hands getting back to the boats."
+   },
+   {
+    "text": "Stay aboard",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "life_captains_table": {
+  "where": "port",
+  "chain_only": true,
+  "title": "A captain's table",
+  "text": "{cap} has the best table in the tavern, a bottle of good Madeira, and half their crew around them. They look up as you come in.",
+  "roles": {
+   "cap": {
+    "from": "captain_npc",
+    "where": [
+     "in_town"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Buy a round and talk shop",
+    "check": {
+     "who": "captain",
+     "skill": "charisma",
+     "dc": 11
+    },
+    "outcomes": [
+     "bond {cap} 1",
+     "intel {cap}"
+    ],
+    "result": "By the third bottle you're old friends, and you know every weak timber in their ship.",
+    "fail_outcomes": [
+     "rivalry {cap} 1"
+    ],
+    "fail_result": "A joke lands badly. Knives aren't drawn, quite."
+   },
+   {
+    "text": "Ask what they've seen on the sea lanes",
+    "outcomes": [
+     "reveal_cove"
+    ],
+    "result": "They let slip an anchorage that isn't on your chart."
+   },
+   {
+    "text": "Challenge {cap} to cards",
+    "conditions": [
+     "gold >= 100"
+    ],
+    "check": {
+     "who": "captain",
+     "skill": "experience",
+     "dc": 12
+    },
+    "outcomes": [
+     "gold +150",
+     "rivalry {cap} 1"
+    ],
+    "result": "You take their money, and they take it hard.",
+    "fail_outcomes": [
+     "gold -100"
+    ],
+    "fail_result": "They take your money, and laugh about it."
+   },
+   {
+    "text": "Pick a fight",
+    "outcomes": [
+     "rivalry {cap} 2",
+     "fear +2",
+     "opinion crew +2"
+    ],
+    "result": "Tables go over. Now everyone knows there's bad blood between you."
+   }
+  ]
+ },
+ "town_beggars": {
+  "where": "port",
+  "weight": 8,
+  "title": "Beggars on the quay",
+  "text": "{port} has fallen on hard times. Beggars line the quay: sailors with no ship, a widow with three children, a soldier with one leg.",
+  "conditions": [
+   "town.prosperity < 35"
+  ],
+  "choices": [
+   {
+    "text": "Give alms",
+    "conditions": [
+     "gold >= 20"
+    ],
+    "outcomes": [
+     "gold -20",
+     "honour +1"
+    ],
+    "result": "Blessings follow you up the quay."
+   },
+   {
+    "text": "Offer the sailors a berth",
+    "outcomes": [
+     "crew +3"
+    ],
+    "result": "Three of them are aboard before you've finished speaking."
+   },
+   {
+    "text": "Walk past",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "town_patron": {
+  "where": "port",
+  "weight": 8,
+  "title": "A rich man's errand",
+  "text": "Business is booming in {port}, and a merchant with more money than time wants a dependable captain to carry letters of credit to his partners. Word is you can be trusted.",
+  "conditions": [
+   "town.prosperity >= 65",
+   "honour >= 5",
+   "not wanted"
+  ],
+  "choices": [
+   {
+    "text": "Take the commission",
+    "outcomes": [
+     "gold +150",
+     "relation port +2",
+     "time 2"
+    ],
+    "result": "Easy money, and a friend in the counting house."
+   },
+   {
+    "text": "Decline politely",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ },
+ "town_curfew": {
+  "where": "port",
+  "weight": 8,
+  "title": "Curfew",
+  "text": "{port} is close to revolt. The militia has proclaimed a curfew: any sailor in the streets after dark goes to the stocks.",
+  "conditions": [
+   "town.order < 30",
+   "not town.lawless"
+  ],
+  "choices": [
+   {
+    "text": "Keep the crew aboard after dark",
+    "outcomes": [
+     "opinion crew -2"
+    ],
+    "result": "A long dull evening of watching the town's lights."
+   },
+   {
+    "text": "Let them go ashore anyway",
+    "outcomes": [
+     "opinion crew +2",
+     "relation port -3",
+     "crew -1"
+    ],
+    "result": "One ends up in the stocks and isn't let out before you sail."
+   }
+  ]
+ },
+ "town_welcome": {
+  "where": "port",
+  "weight": 6,
+  "title": "A welcome",
+  "text": "Word of your coming has reached {port} ahead of you. People wave from the quay; a boy runs to tell the tavern keeper; the harbour master raises a hat.",
+  "conditions": [
+   "relation.port >= 30",
+   "notoriety >= 15",
+   "not wanted"
+  ],
+  "choices": [
+   {
+    "text": "Doff your hat to the crowd",
+    "outcomes": [
+     "opinion crew +3",
+     "morale +10 15"
+    ],
+    "result": "The crew walk a little taller ashore."
+   }
+  ]
+ },
+ "town_ballads": {
+  "where": "port",
+  "weight": 6,
+  "title": "Ballads",
+  "text": "Children in {port} are singing a ballad about you: your cruelty, your gold, and how you'll hang one day. Their mothers drag them indoors as you pass.",
+  "conditions": [
+   "notoriety >= 40",
+   "pirate"
+  ],
+  "choices": [
+   {
+    "text": "Toss them a coin for the next verse",
+    "outcomes": [
+     "fear +1",
+     "opinion crew +1"
+    ],
+    "result": "The next verse is worse. The crew love it."
+   },
+   {
+    "text": "Scowl",
+    "outcomes": [
+     "fear +1"
+    ],
+    "result": "They scatter."
+   }
+  ]
+ },
+ "town_war_widows": {
+  "where": "port",
+  "weight": 6,
+  "title": "The widows' fund",
+  "text": "The war has filled {port}'s churchyard with sailors who never came home. The parish is collecting for their widows, and the churchwarden has an eye on you.",
+  "conditions": [
+   "town.war",
+   "not wanted"
+  ],
+  "choices": [
+   {
+    "text": "Give generously",
+    "conditions": [
+     "gold >= 50"
+    ],
+    "outcomes": [
+     "gold -50",
+     "honour +2",
+     "relation port +2",
+     "influence {port} church 3"
+    ],
+    "result": "Your name goes in the parish book."
+   },
+   {
+    "text": "Give a little",
+    "conditions": [
+     "gold >= 10"
+    ],
+    "outcomes": [
+     "gold -10"
+    ],
+    "result": "A nod from the churchwarden."
+   },
+   {
+    "text": "Pretend not to see",
+    "outcomes": [],
+    "result": ""
+   }
+  ]
+ }
+}

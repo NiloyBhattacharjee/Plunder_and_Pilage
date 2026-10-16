@@ -277,8 +277,9 @@ func value(key: String, ctx: Dictionary) -> Variant:
 	var s: Dictionary = ctx.s
 	var head := key.get_slice(".", 0)
 	var rest := key.substr(head.length() + 1)
-	var cap := ShipStats.captain(s)
 	match head:
+		"town": return PortLife.situation(ctx.port).get(rest, 0.0) if ctx.get("port", "") != "" else 0.0  # what the port is like
+		"life": return PortLife.is_on(ctx.get("port", ""), rest)  # what's going on there
 		"gold": return s.gold
 		"crew": return ShipStats.headcount(s)
 		"hull": return s.hull / ctx.stats.hull * 100.0
@@ -299,8 +300,8 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"stolen": return s.stolen.values().reduce(func(a, b): return a + b, 0.0)
 		"cargo": return s.cargo.get(rest, 0.0)
 		"relation": return s.relations.get(_faction(rest, ctx), 0)
-		"captain": return People.value(cap, rest)
-		"captain_trait": return rest in cap.traits
+		"captain": return People.value(ShipStats.captain(s), rest)
+		"captain_trait": return rest in ShipStats.captain(s).traits
 		"has_officer": return s.officers.has(rest)
 		"at_sea": return ctx.port == ""
 		"in_port": return ctx.port != ""
@@ -358,6 +359,7 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"hidden": return not c.hidden.is_empty()
 			"office": return c.get("role", "")
 			"bonded": return Bonds.level(ctx.s, id) != 0
+			"in_town": return PortLife.captain_here(ctx.get("port", "")) == id  # drinking in this port's tavern
 		if head in People.STATS or head in People.SKILLS:
 			return People.value(c, head)
 	elif Ports.state.has(id):
@@ -908,9 +910,10 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"prizes", "hostages", "contracts", "year", "month", "date", "guns", "stolen", "cargo", "relation", "captain", "captain_trait",
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
-	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base"]
+	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base",
+	"town", "life"]
 const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality"]
-const CAND_KEYS := ["loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
+const CAND_KEYS := ["in_town", "loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
 	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held"]
 
 

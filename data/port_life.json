@@ -1,0 +1,194 @@
+{
+ "_comment": "Port life (scripts/port_life.gd). Each happening: when (event conditions; town.* keys read the port's situation: wealth, prosperity, hunger, order, piety 0-100, war, lawless, fleet), chance per day once possible, days it lasts, cooldown days before it can come again, effects while it lasts (hire_cost and sailors multiply, rumours adds), an optional market shock (economy.json shocks) when it starts, news that spreads at the speed of a ship, names by nation, captain: true to bring a named captain to the tavern, and an action a visiting captain can take (an event; requires: conditions on you).",
+ "_town": {
+  "size_wealth": {
+   "small": 25,
+   "medium": 50,
+   "large": 75
+  },
+  "hunger_from": 1.2,
+  "hunger_per_mult": 125
+ },
+ "festival": {
+  "name": "Feast day",
+  "names": {
+   "spain": "Fiesta",
+   "france": "Carnaval",
+   "dutch": "Kermis",
+   "england": "Fair day",
+   "pirates": "A carouse"
+  },
+  "text": "{name} in {port}: music in the streets, cheap wine, every tavern open all night, and a crowd for any show of skill.",
+  "when": [
+   "town.prosperity >= 45",
+   "town.hunger < 35"
+  ],
+  "chance": 0.025,
+  "days": [
+   3,
+   6
+  ],
+  "cooldown": 50,
+  "effects": {
+   "rumours": 2,
+   "sailors": 1.2
+  },
+  "news": "{port} is holding its {name}.",
+  "action": {
+   "text": "Join the {name}",
+   "event": "life_festival"
+  }
+ },
+ "fair": {
+  "name": "The fleet's fair",
+  "names": {
+   "spain": "La feria"
+  },
+  "text": "The fleet is in, and {port} has turned into one great market: merchants from Seville, muleteers from the interior, sharpers and moneylenders from everywhere.",
+  "when": [
+   "town.fleet"
+  ],
+  "chance": 0.5,
+  "days": [
+   6,
+   12
+  ],
+  "cooldown": 40,
+  "effects": {
+   "rumours": 3,
+   "sailors": 1.5
+  },
+  "news": "The fair has opened in {port}.",
+  "action": {
+   "text": "Walk the fair",
+   "event": "life_fair"
+  }
+ },
+ "press_gang": {
+  "name": "Press gangs",
+  "text": "The navy is short of men for the war, and the press gangs are out in {port}. Seamen keep off the streets, and the few who'll sign on want more.",
+  "when": [
+   "town.war",
+   "not town.lawless"
+  ],
+  "chance": 0.05,
+  "days": [
+   5,
+   15
+  ],
+  "cooldown": 25,
+  "effects": {
+   "hire_cost": 1.6,
+   "sailors": 0.5
+  },
+  "news": "The press gangs are out in {port}."
+ },
+ "bread_riot": {
+  "name": "Bread riots",
+  "text": "Food is dear in {port} and the poor can't afford to eat. Crowds outside the bakers, stones through the merchants' windows, militia on the corners. Desperate men will sign on for almost nothing.",
+  "when": [
+   "town.hunger >= 40",
+   "town.order < 60"
+  ],
+  "chance": 0.08,
+  "days": [
+   2,
+   6
+  ],
+  "cooldown": 30,
+  "effects": {
+   "hire_cost": 0.6,
+   "sailors": 1.6
+  },
+  "news": "There are bread riots in {port}.",
+  "action": {
+   "text": "Go down to the market square",
+   "event": "life_bread_riot"
+  }
+ },
+ "governors_ball": {
+  "name": "The governor's ball",
+  "text": "The governor of {port} gives a ball: planters' wives in silk, officers in their best coats, merchants doing business behind the potted palms. Everyone who matters is there, and everyone is watching everyone else.",
+  "when": [
+   "town.wealth >= 55",
+   "town.order >= 40",
+   "not town.lawless",
+   "not town.war"
+  ],
+  "chance": 0.015,
+  "days": [
+   2,
+   4
+  ],
+  "cooldown": 90,
+  "news": "The governor of {port} is giving a ball.",
+  "action": {
+   "text": "Attend the ball",
+   "event": "life_ball",
+   "requires": [
+    "relation.port >= 5",
+    "not wanted",
+    "honour >= 0"
+   ],
+   "refused": "No invitation: you need standing 5 with this nation, an honest name (honour 0 or better), and no price on your head."
+  }
+ },
+ "hanging": {
+  "name": "Hanging day",
+  "text": "Pirates are to hang at {port}'s gallows. A crowd gathers early; the hawkers sell ballads of their crimes. The governor wants every sailor in the harbour to see it.",
+  "when": [
+   "town.order >= 50",
+   "not town.lawless"
+  ],
+  "chance": 0.02,
+  "days": [
+   1,
+   2
+  ],
+  "cooldown": 45,
+  "news": "Pirates hang at {port} this week.",
+  "action": {
+   "text": "Go to the gallows",
+   "event": "life_hanging"
+  }
+ },
+ "fever": {
+  "name": "Yellow jack",
+  "text": "Fever in {port}. The church bells toll every day; ships anchor in the outer roads and send their boats in as little as they can.",
+  "when": [
+   "month >= 6",
+   "month <= 10",
+   "town.wealth < 60"
+  ],
+  "chance": 0.012,
+  "days": [
+   10,
+   25
+  ],
+  "cooldown": 120,
+  "effects": {
+   "sailors": 0.6,
+   "hire_cost": 1.3
+  },
+  "market": "epidemic",
+  "news": "Yellow fever has broken out in {port}."
+ },
+ "captains_drinking": {
+  "name": "A captain in the tavern",
+  "text": "{captain}, captain of the {ship}, is ashore in {port}, drinking with the crew in the best tavern on the waterfront.",
+  "when": [
+   "true"
+  ],
+  "chance": 0.05,
+  "days": [
+   2,
+   5
+  ],
+  "cooldown": 8,
+  "captain": true,
+  "action": {
+   "text": "Join {captain}'s table",
+   "event": "life_captains_table"
+  }
+ }
+}

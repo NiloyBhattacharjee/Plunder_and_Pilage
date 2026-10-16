@@ -11,7 +11,7 @@ signal enter_port_pressed
 signal crew_pressed
 signal save_pressed
 signal load_pressed
-signal map_mode_changed(good: String)  # "" = political, "@standing" = your standing, "@routes" = merchant traffic
+signal map_mode_changed(good: String)  # "" = political, "@standing" = your standing, "@routes" = merchant traffic, "@life" = how the towns are
 signal flag_changed(flag: String)
 signal ambition_pressed
 
@@ -115,6 +115,8 @@ func _ready() -> void:
 	_modes.set_item_metadata(1, "@standing")
 	_modes.add_item("Map: Trade routes")
 	_modes.set_item_metadata(2, "@routes")
+	_modes.add_item("Map: Town life")
+	_modes.set_item_metadata(3, "@life")
 	for good in Data.table("goods"):
 		_modes.add_item("Map: " + Data.table("goods")[good].name)
 		_modes.set_item_metadata(_modes.item_count - 1, good)

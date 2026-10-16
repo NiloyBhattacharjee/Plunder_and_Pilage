@@ -82,7 +82,8 @@ func _ready() -> void:
 		port_layer.trade_good = good)
 	port_screen.message.connect(hud.show_message)
 	port_screen.closed.connect(port_layer.queue_redraw)
-	Clock.day_passed.connect(func(_d): if port_layer.trade_good != "": port_layer.queue_redraw())
+	port_screen.life_event.connect(_life_event)
+	Clock.day_passed.connect(func(_d): port_layer.queue_redraw())  # what's going on in the towns changes daily
 	hud.crew_pressed.connect(_open_crew)
 	hud.ambition_pressed.connect(func(): if not busy(): choose_ambition())
 	crew_screen.message.connect(hud.show_message)
@@ -467,6 +468,19 @@ You will play on as the new captain." % [how_text, "
 	Contracts.changed.emit()
 	_in_event = false
 	UIKit.resume_clock()
+
+
+## Taking part in what's going on in port (port_life.json): its event, then back to the port.
+func _life_event(id: String) -> void:
+	var here: String = ship.anchored_at
+	var inst := Events.instance_of(id, _event_ctx())
+	if inst.is_empty():
+		hud.show_message("Nothing comes of it today.")
+		port_screen.reopen()
+		return
+	await run_event(Events.materialize(inst, _event_ctx()))
+	if ship.anchored_at == here and combat == null and not port_screen.visible:
+		port_screen.reopen()
 
 
 ## Take up an ambition, or see how the one you're chasing goes.

@@ -58,6 +58,8 @@ func _draw() -> void:
 			var k: Dictionary = Ports.known.get(id, {}).get(trade_good, {})
 			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd%s)" % [
 				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]
+		elif trade_good == "@life":
+			label += "  " + PortLife.describe(id)
 		var k := 1.5 * s  # the town at a steady size on screen
 		draw_texture_rect(TOWN, Rect2(pos - Vector2(14, 18) * k, Vector2(28, 22) * k), false)
 		var pole := pos + Vector2(11, -14) * k  # a pennant in the nation's colours
@@ -68,6 +70,11 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("chart_paper_light"))
 		draw_string(Style.font("pixel"), text_pos, label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), Style.c("chart_ink"))
+		var on := PortLife.active(id)  # what's going on there, under the name
+		if not on.is_empty():
+			var what := "  ".join(on.map(func(h): return PortLife.name_of(id, h.id)))
+			draw_string_outline(Style.font("italic"), text_pos + Vector2(0, 15) * s, what, HORIZONTAL_ALIGNMENT_LEFT, -1, int(14 * s), int(4 * s), Style.c("chart_paper_light"))
+			draw_string(Style.font("italic"), text_pos + Vector2(0, 15) * s, what, HORIZONTAL_ALIGNMENT_LEFT, -1, int(14 * s), Style.c("wax"))
 
 
 ## Trade routes map mode: a line for each route merchants have used lately, thicker the busier, redder the riskier.
