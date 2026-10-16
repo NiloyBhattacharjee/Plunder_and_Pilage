@@ -179,7 +179,7 @@ func daily() -> void:
 		n.age += 1
 		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.get("treasure", false):  # contract targets and named captains stay
 			remove(n)
-	if count("pirate") < cfg().pirates:
+	if count("pirate") < int(round(cfg().pirates * Economy.model.world_mult("pirates"))):
 		spawn("pirate", "pirates")
 	for f in Career.nations():
 		if not _ports_of(f).is_empty() and npcs.filter(func(n): return n.kind == "navy" and n.enemy.faction == f).size() < cfg().navy_per_faction:

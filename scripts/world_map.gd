@@ -41,6 +41,7 @@ static var start_config := {}
 
 func _ready() -> void:
 	_pixel_layers()
+	EconomyEffects.player = ship.state if ship.state is Dictionary else {}
 	rng.randomize()
 	terrain = TerrainGrid.new(load("res://data/map/terrain.png").get_image(), int(Data.map.cell_px))
 	for id in Data.table("ports"):
@@ -648,6 +649,9 @@ func start_combat(enemy: Dictionary, mode: String) -> void:
 		s.reputation.fear += int(fx.fear)
 		s.reputation.honour += int(fx.honour)
 		hud.show_message("You run up the %s. Her crew blanch." % Data.table("flags")[flag].name.to_lower())
+	var resist = EconomyEffects.active(s, "merchant_resist")
+	if resist != null and enemy.kind == "merchant":
+		enemy.morale *= resist.value
 	var dread := ShipStats.look_effect(s, "enemy_morale")  # black sails, a snarling figurehead
 	if dread != 0.0:
 		enemy.morale += dread

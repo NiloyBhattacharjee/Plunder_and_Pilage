@@ -49,22 +49,14 @@ func daily() -> void:
 		ps.notables_age += 1
 		if ps.notables_age >= Data.rules.tavern.notables_refresh_days:
 			refresh_notables(id)
-		for ev in Data.rules.market_events:
-			if rng.randf() < ev.daily_chance:
-				start_market_event(id, ev)
 
 
-## A market event (rules.json market_events) on a good this port makes ("produces") or only uses ("used").
-func start_market_event(id: String, ev: Dictionary) -> void:
-	var made := Economy.produces(id)
-	var goods := Economy.model.traded().filter(func(g):
-		return (g in made) == (ev.kind == "produces") and not Economy.mods(id).any(func(m): return m.good == g))
-	if goods.is_empty():
-		return
-	var good: String = goods[rng.randi() % goods.size()]
-	Economy.shock(id, {"good": good, "stock": ev.get("stock", 1.0), "make": ev.get("make", 1.0), "use": ev.get("use", 1.0),
-		"days": rng.randi_range(ev.days[0], ev.days[1]), "reason": ev.name, "rumour": ev.rumour})
-	Economy.add_news(ev.rumour.format({"good": _name(good), "port": port(id).name}), id)
+## A market shock (economy.json "shocks") in this port, on purpose: events use it. Returns the news.
+func start_market_event(id: String, shock: String) -> String:
+	var news := Economy.model.shocks.strike(shock, id, Economy.model.day)
+	Economy.model.shocks.take_events()
+	Economy.add_news(news, id)
+	return news
 
 
 func record_prices(id: String, day: int, goods: Array = []) -> void:
@@ -149,6 +141,8 @@ func buy(id: String, good: String, qty: int, s: Dictionary, capacity: float, spr
 	qty = mini(qty, int((capacity - Market.cargo_used(s.cargo)) / w + 0.0001))
 	qty = mini(qty, int(s.gold / price(id, good, true, spread_mult)))
 	var cost := Economy.quote(id, good, qty, true, spread_mult)
+	if good in ["food", "water"] and EconomyEffects.active(s, "free_supplies", id) != null:
+		cost = 0  # the town gives what you need
 	while qty > 0 and cost > s.gold:  # rising prices during the trade can push the total over budget
 		qty -= 1
 		cost = Economy.quote(id, good, qty, true, spread_mult)
@@ -197,7 +191,7 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	if n_stolen > 0:  # stolen goods sell cheap unless there's a fence (they're sold last, at the lower end of the quote)
 		var clean_part := Economy.quote(id, good, n_clean, false, spread_mult)
 		var stolen_income := int((income - clean_part) * fence_mult(id, s))
-		if port(id).get("fence", false):
+		if is_fence(id, s):
 			while n_stolen > 0 and stolen_income > ps.fence_cash:  # a fence has only so much coin
 				n_stolen -= maxi(1, n_stolen / 8)
 				qty = n_clean + n_stolen
@@ -210,12 +204,22 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 		income = clean_part + stolen_income
 		if qty <= 0:
 			return {"ok": false, "text": "The fence has no coin left for stolen goods. Come back in a few days."}
-	if Data.table("goods")[good].demand == "treasure" and port(id).faction != "spain" and not port(id).get("fence", false):
+	if Data.table("goods")[good].demand == "treasure" and port(id).faction != "spain" and not is_fence(id, s):
 		income = int(income * Data.rules.fence.treasure_legal_mult)  # few honest buyers for a heap of Spanish silver
 		note += " Few here will touch so much Spanish treasure; it went cheap."
 	var sm: Dictionary = Data.rules.smuggling
 	var contraband: bool = good in ps.laws.contraband
-	if rng.randf() < Market.seizure_chance(ps.laws, good, qty):
+	var opened = EconomyEffects.active(s, "open_market", id)
+	if opened != null and contraband:  # a smugglers' night: they want what's forbidden, and no customs
+		income = int(income * (1.0 + opened.bonus))
+		note += " The interlopers pay well."
+	var trade = EconomyEffects.active(s, "trade_mult")
+	if trade != null:
+		income = int(income * trade.value)
+	var risk: float = Market.seizure_chance(ps.laws, good, qty) * (1.0 - EconomyEffects.econ(s).smugglers / 200.0)  # friends among the smugglers
+	if opened != null and contraband:
+		risk = 0.0
+	if rng.randf() < risk:
 		var fine := int(round(income * sm.fine_mult))
 		remove_cargo(s, good, have)
 		s.gold = maxf(0.0, s.gold - fine)
@@ -277,10 +281,18 @@ func cannot_buy_ship(id: String, type_id: String, s: Dictionary) -> String:
 ## an honest market pays a pittance and asks no questions it would rather not hear the answers to.
 func fence_mult(id: String, s := {}) -> float:
 	var f: Dictionary = Data.rules.fence
-	if not port(id).get("fence", false):
+	if not is_fence(id, s):
 		return f.legal_mult
 	var trust: float = s.get("fence_trust", {}).get(id, 0.0)
-	return minf(1.0, f.fence_mult + trust * f.trust_per_gold)
+	var dependence: float = s.get("econ", {}).get("fence_dependence", {}).get(id, 0.0)  # they know you need them
+	return clampf(f.fence_mult + trust * f.trust_per_gold - dependence * f.dependence_per_point, f.legal_mult, 1.0)
+
+
+## Is there a fence here for you? The havens' own (unless the law has closed them), or one an event found you.
+func is_fence(id: String, s := {}) -> bool:
+	if s.get("econ", {}).get("fences", {}).get(id, false):
+		return true
+	return port(id).get("fence", false) and not state.get(id, {}).get("fence_closed", false)
 
 
 func _fence_cash_max(id: String) -> float:
@@ -289,6 +301,8 @@ func _fence_cash_max(id: String) -> float:
 
 ## Sells a prize ship at the shipyard, with whatever cargo is left aboard. The prize crew rejoins.
 func sell_prize(id: String, index: int, s: Dictionary) -> Dictionary:
+	if s.get("econ", {}).get("prize_banned", {}).get(id, false):
+		return {"ok": false, "text": "No one here will touch your prize."}
 	var prize: Dictionary = s.prizes[index]
 	var value := prize_value(id, prize)
 	s.gold += value
@@ -301,7 +315,7 @@ func prize_value(id: String, prize: Dictionary) -> int:
 	var st := ShipStats.effective(prize.type, [])
 	var v: float = Data.table("ships")[prize.type].price * Data.rules.prizes.sale_mult * clampf(prize.hull / st.hull, 0.2, 1.0)
 	for g in prize.cargo:
-		v += Economy.quote(id, g, int(prize.cargo[g]), false) * fence_mult(id)
+		v += Economy.quote(id, g, int(prize.cargo[g]), false) * (1.0 if prize.get("laundered", false) else fence_mult(id))
 	return int(v)
 
 
@@ -461,7 +475,11 @@ func rumour(here: String, day: int, false_chance := 0.0) -> String:
 		id = with_news[rng.randi() % with_news.size()]
 		var m: Dictionary = Economy.mods(id)[rng.randi() % Economy.mods(id).size()]
 		good = m.good
-		text = m.rumour.format({"good": _name(good), "port": port(id).name})
+		if m.get("rumour", "") != "":
+			text = m.rumour.format({"good": _name(good), "port": port(id).name})
+		else:  # a shock with no rumour of its own: say what it's doing
+			text = "Word from %s: %s. %s is %s there." % [port(id).name, str(m.get("reason", "trouble")).to_lower(), _name(good),
+				"dear" if Economy.level(id, good) == "scarce" else ("cheap" if Economy.level(id, good) == "plenty" else "unsettled")]
 		record_prices(id, day - rng.randi_range(1, 6), [good])
 		known[id][good].source = "rumour"
 	else:  # a price, as a captain in from there would know it: this port's own news, as old as the last ship in

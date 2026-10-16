@@ -137,7 +137,7 @@ func test_boost_points_bank_and_spend():
 func test_melee_allies_and_fire_take_turns():
 	var b := battle("merchant")
 	b.turn()
-	var posts: Array = b.queue.map(func(q): return q.post)
+	var posts: Array = b.next_queue.map(func(q): return q.post)  # next round's, untouched: specials at the front of this one may already be passed over
 	assert_has(posts, "@melee")
 	assert_has(posts, "@damage")
 	assert_false(b.special_applies({"side": -1, "post": "@melee"}), "no melee unless grappled")

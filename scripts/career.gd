@@ -227,7 +227,9 @@ static func port_access(s: Dictionary, port_id: String) -> Dictionary:
 	var pa: Dictionary = Data.rules.port_access
 	var reason := ""
 	var tolerant: bool = Ports.state[port_id].laws.get("pirates", 0.0) > 0.4  # the townsfolk rule here, and pirates spend money
-	if s.get("blind_eye", {}).get(port_id, 0.0) > Clock.day or Bonds.port_open(s, port_id):
+	if EconomyEffects.active(s, "closed_ports", port_id) != null:
+		reason = "The harbour is closed to you after what happened."
+	elif s.get("blind_eye", {}).get(port_id, 0.0) > Clock.day or Bonds.port_open(s, port_id):
 		reason = ""  # the harbour master owes you
 	elif f == "pirates":
 		if rel <= pa.closed:
@@ -278,6 +280,8 @@ static func npc_hostile(s: Dictionary, enemy: Dictionary, rng: RandomNumberGener
 		"warship":
 			if enemy.kind == "hunter" and wanted(s):
 				return true
+			if EconomyEffects.active(s, "hostile", enemy.faction) != null:
+				return true  # they've been fitted out against you
 			if enemy.faction == "spain" and shown != "spain" and carries_spanish_contraband(s):
 				return true  # a guarda costa: every foreign hull with forbidden goods aboard is a prize
 			if s.get("patrol_warning", {}).get(enemy.faction, 0.0) > Clock.day:

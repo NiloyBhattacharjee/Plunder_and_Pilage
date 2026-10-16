@@ -36,6 +36,8 @@ func _on_day(d: int) -> void:
 	model.step(date.month, date.year)
 	for ev in model.fleets.take_events():
 		fleet_event.emit(ev)
+	for ev in model.shocks.take_events():
+		add_news(ev.news, ev.port)
 	if d % 7 == 0:
 		model.sample_week()
 

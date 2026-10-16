@@ -32,7 +32,7 @@ func step(day: int, month: int, year: int) -> void:
 		var st: Dictionary = state[id]
 		if st.status == "waiting" and month == int(f.month) and st.year != year:
 			st.year = year
-			if year >= int(f.get("irregular_from", 99999)) and m.rng.randf() < f.get("skip_chance", 0.0):
+			if m.world_has("fleet_blocked:" + id) or (year >= int(f.get("irregular_from", 99999)) and m.rng.randf() < f.get("skip_chance", 0.0)):
 				events.append({"kind": "skipped", "fleet": id, "day": day, "ports": f.ports})
 				continue
 			st.status = "due"

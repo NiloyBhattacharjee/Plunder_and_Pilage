@@ -62,24 +62,7 @@
   },
   "storm_shelter": 0.25,
 
-  "market": {
-    "normal_stock": {"produces": 160, "neutral": 60, "wants": 20},
-    "size_mult": {"small": 0.6, "medium": 1.0, "large": 1.6},
-    "elasticity": 0.6,
-    "price_clamp": [0.25, 4.0],
-    "spread": 0.15,
-    "reversion": 0.05,
-    "noise": 0.04
-  },
   "ledger_max": 200,
-  "market_events": [
-    {"id": "shortage", "name": "Shortage", "kind": "used", "stock": 0.35, "use": 1.5, "days": [20, 45], "daily_chance": 0.004,
-     "rumour": "{good} is fetching a fortune in {port}. They can't get enough of it."},
-    {"id": "glut", "name": "Glut", "kind": "produces", "stock": 2.0, "make": 1.4, "days": [20, 45], "daily_chance": 0.004,
-     "rumour": "Warehouses in {port} are overflowing with {good}. It's going for nothing."},
-    {"id": "bad_harvest", "name": "Poor harvest", "kind": "produces", "stock": 0.6, "make": 0.3, "days": [30, 60], "daily_chance": 0.003,
-     "rumour": "The {good} crop failed around {port}. Prices there have gone mad."}
-  ],
   "smuggling": {
     "seizure_per_10_units": 0.08,
     "fine_mult": 0.5,
@@ -162,7 +145,7 @@
     "Swallow", "Good Fortune", "Black Joke", "Rising Sun", "Night Rambler", "Happy Delivery", "Defiance", "Sea Nymph",
     "Merry Christmas", "Bachelor's Delight", "Liberty", "Wolf", "Dragon", "Pearl", "Fortune's Folly"],
 
-  "fence": {"legal_mult": 0.5, "fence_mult": 0.85, "trust_per_gold": 0.00003, "cash": {"small": 1500, "medium": 3000, "large": 5000},
+  "fence": {"legal_mult": 0.5, "fence_mult": 0.85, "trust_per_gold": 0.00003, "trust_per_point": 100, "dependence_per_point": 0.01, "cash": {"small": 1500, "medium": 3000, "large": 5000},
             "cash_regen": 0.05, "treasure_legal_mult": 0.7,
             "_comment": "Stolen goods: an honest port pays legal_mult of the price; a fence pays fence_mult, rising toward full price as you do business (trust_per_gold), but has only so much cash (refilling cash_regen of it a day). Silver and gold sold outside Spanish ports and fences fetch treasure_legal_mult."},
   "encounters": {"daily_chance": 0.12, "hostile_relation": -25, "friendly_pirate_relation": 20},

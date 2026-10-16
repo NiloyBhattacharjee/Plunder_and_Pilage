@@ -87,5 +87,40 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `abandon TEMPLATE` | Fails your active contract of that template (a double-cross, a bribe taken) |
 | `event ID [delay] [window]` | Chain: queue another event, with the same roles, after `delay` days; it waits up to `window` days for its conditions |
 | `fight KIND [faction] [mode]` | A battle: `merchant`, `pirate`, `navy`, `hunter`; mode `defend` (default), `attack`, `ambush`, `flee` |
-| `market PORT shortage` | Starts a market event (`shortage`, `glut`, `bad_harvest`) |
+| `market PORT shortage` | Sets off a market shock from `economy.json` `shocks` (`shortage`, `glut`, `bad_harvest`, `hurricane`, `epidemic`, `warehouse_fire`, `garrison_reinforced`, `coin_shortage`, `piracy_wave`, `bankruptcy`) |
 | `time 3` | Days pass |
+
+## Structured effects (the market and the world)
+
+Beside its string `outcomes`, a choice can carry `"effects": [...]` (and `"fail_effects"`): objects shaped
+`{"type": ..., params}`, the shape the Johnson events use. `scripts/economy/effects.gd` handles them; a type it
+doesn't know logs a warning and is skipped (the validator warns at startup too). Ports: an id, `"current"` (where the
+player is), or a role of the event that names a port. Durations are `days`.
+
+| Type | Params | What it does |
+|---|---|---|
+| `market_shock` | port, goods (ids or aliases, a list or `a/b`), price_multiplier, days | Stock falls (or rises) to move the price that much, and supply stays short for the days, then trade restores it |
+| `port_damage` | port, severity 0-1 | Warehouses wrecked, production cut, fewer sailings for months |
+| `open_market` | kind, price_bonus (%), days | A smugglers' market here: forbidden goods sell for the bonus, no customs |
+| `port_closed_days` | port, days | The harbour won't let you in |
+| `free_supplies` | port, days | Provisions and water cost nothing there |
+| `repair_discount` | percent, days | Shipyard repairs cost less |
+| `trade_profit_multiplier` | value, days | Everything you sell fetches that much more (or less) |
+| `merchant_resistance_multiplier` | value, days | Merchants' morale in a fight, times this |
+| `buy_provisions` | days, price_multiplier | Buy that many days of food for the crew at that price |
+| `sell_items` | items, price_multiplier | Sell what you hold of those goods at that share of their worth |
+| `launder_prize`, `prize_unsellable_here` | | Your prizes' cargo sells as lawful; no yard here will buy your prize |
+| `unlock_fence`, `fence_trust` (amount), `fence_dependence` (amount) | | A fence here for you; trust raises (or lowers) what a fence pays; dependence lowers it |
+| `rep_with_smugglers` | amount | Better contacts: less risk of seizure when you smuggle |
+| `unlock_trade_with` | npc | Remembered, for content that trades with that captain |
+| `treat_ships_from`, `faction_port_hostility` | port, days / amount | That port's nation's warships attack you on sight; your standing with it falls |
+| `bombard_port`, `burn_ships_in_road` | severity / count | Damage the port (and your standing); destroy ships in the roads (their voyages are lost) |
+| `war` | between [a, b], until YYYY-MM-DD | War, ending on the date |
+| `world_state` | key, value, days | A world condition, and a flag events can test |
+| `pirate_spawn_rate_multiplier` | value, days | More (or fewer) pirates at sea, and merchants lost to them |
+| `letter_of_marque`, `revoke_letter_of_marque` | faction | Grant or cancel the player's commission |
+| `gold`, `gold_percent`, `cargo_percent`, `provisions` | amount, percent, days | Money and supplies |
+| `fleet_blocked`, `trade_slump`, `fair_access`, `port_laws`, `flows`, `stock`, `spread`, `sailings`, `route_risk` | | History's own (data/history.json): a blockade, a credit crash, the asiento, new laws in a port, and the raw market levers shocks use |
+
+`start_land_raid` is known but isn't the market's business: it's logged and skipped.
+

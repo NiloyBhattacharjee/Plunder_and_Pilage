@@ -104,6 +104,31 @@
     "network_max": 0.4
   },
 
+  "shock_chance_per_day": 0.03,
+  "shocks": {
+    "_comment": "Random shocks (scripts/economy/shocks.gd): about one a month somewhere. months: when it can happen; tags: the ports it can hit (any of these tags); weight: how often, against the others; effects: the shared vocabulary (EconomyModel.apply_effect: port_damage, flows, stock, spread, sailings, route_risk, market_shock); goods: ids, made, used, all, random (one this port makes) or random_used (one it ships in). The news goes out at sailing speed.",
+    "hurricane": {"name": "Hurricane", "months": [7, 8, 9, 10], "weight": 3, "effects": [{"type": "port_damage", "severity": 0.35}],
+                  "news": "A hurricane has torn through {port}: roofs gone, warehouses flooded, the fields flattened."},
+    "epidemic": {"name": "Fever", "weight": 1.5, "effects": [{"type": "flows", "goods": "all", "use": 0.7, "make": 0.7, "days": 120}, {"type": "sailings", "mult": 0.5, "days": 90}],
+                 "news": "Yellow fever in {port}. Half the town is sick, and few ships will put in."},
+    "bad_harvest": {"name": "Poor harvest", "weight": 2, "tags": ["plantation", "capital"], "effects": [{"type": "flows", "goods": "random", "make": 0.3, "days": 90}, {"type": "stock", "goods": "random", "mult": 0.6}],
+                    "news": "The {good} crop has failed around {port}. Prices there are climbing."},
+    "glut": {"name": "Bumper harvest", "weight": 2, "effects": [{"type": "flows", "goods": "random", "make": 1.6, "days": 60}, {"type": "stock", "goods": "random", "mult": 2.0}],
+             "news": "Warehouses in {port} are overflowing with {good}. It's going for nothing."},
+    "shortage": {"name": "Shortage", "weight": 1.5, "effects": [{"type": "stock", "goods": "random_used", "mult": 0.35}, {"type": "flows", "goods": "random_used", "use": 1.5, "days": 40}],
+                 "news": "{good} is fetching a fortune in {port}. They can't get enough of it."},
+    "bankruptcy": {"name": "A merchant house fails", "weight": 1, "tags": ["capital", "free_port"], "effects": [{"type": "sailings", "mult": 0.4, "days": 90}, {"type": "spread", "mult": 1.4, "days": 90}],
+                   "news": "A great merchant house in {port} has failed. Credit is gone, and few ships are fitting out there."},
+    "warehouse_fire": {"name": "Warehouse fire", "weight": 1.5, "effects": [{"type": "stock", "goods": "all", "mult": 0.55}],
+                       "news": "Fire on the waterfront at {port}: a row of warehouses has burned to the ground."},
+    "garrison_reinforced": {"name": "Garrison reinforced", "weight": 1, "tags": ["garrison", "capital"], "effects": [{"type": "flows", "goods": ["food", "gunpowder", "rum", "naval_stores"], "use": 1.8, "days": 120}],
+                            "news": "Fresh troops have landed at {port}. They'll need feeding, and powder."},
+    "coin_shortage": {"name": "No coin", "weight": 1, "effects": [{"type": "spread", "mult": 1.8, "days": 90}, {"type": "flows", "goods": ["silver", "gold"], "use": 2.0, "days": 90}],
+                      "news": "There's no coin to be had in {port}. Merchants trade in sugar and promises, and drive hard bargains."},
+    "piracy_wave": {"name": "Pirates about", "weight": 1.5, "effects": [{"type": "route_risk", "risk": 0.5}],
+                    "news": "Pirates are working the approaches to {port}. Ships are being taken in sight of the fort."}
+  },
+
   "sailing": [1.0, 1.0, 1.0, 1.0, 1.0, 0.9, 0.75, 0.6, 0.55, 0.65, 0.85, 1.0],
   "_sailing": "Outside trade by month: fewer ships sail in the hurricane season (June to November).",
 

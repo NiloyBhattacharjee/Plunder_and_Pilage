@@ -76,6 +76,8 @@ func allowed(f: String, dest: String) -> bool:
 	if at_war(f, p.faction):
 		return false
 	if p.faction == "spain":
+		if m.world_has("fair_access:" + f) and m.fleets.for_port(dest).get("status", "") == "fair":
+			return true  # the asiento's annual ship, at the fair
 		return f in cfg().smugglers  # as smugglers: only forbidden goods, at the risk of the guarda costas
 	if p.faction == "pirates":
 		return f in cfg().haven_traders
@@ -105,7 +107,7 @@ func _voyages_at_sea(day: int, month: int) -> void:
 				_arrive(v, day)
 			continue
 		var key: String = v.origin + ">" + v.dest
-		if m.rng.randf() < cfg().pirate_loss_per_day * (1.0 + risk.get(key, 0.0) * cfg().risk_breeds_pirates):
+		if m.rng.randf() < cfg().pirate_loss_per_day * m.world_mult("pirates") * (1.0 + risk.get(key, 0.0) * cfg().risk_breeds_pirates):
 			lose(v, "pirates", day)
 		elif m.rng.randf() < storm:
 			lose(v, "storm", day)
@@ -160,7 +162,7 @@ func _sailings(day: int, month: int) -> void:
 	var sail: float = m.cfg.sailing[month - 1]
 	for o in m.stock:
 		var p: Dictionary = m.ports[o]
-		var rate: float = p.population / 1000.0 * cfg().sailings_per_1000 * sail
+		var rate: float = p.population / 1000.0 * cfg().sailings_per_1000 * sail * m.world_mult("sailings:" + o) * m.world_mult("sailings:" + p.faction)
 		for t in p.tags:
 			rate *= cfg().tag_sailings.get(t, 1.0)
 		var n := int(rate) + (1 if m.rng.randf() < rate - int(rate) else 0)

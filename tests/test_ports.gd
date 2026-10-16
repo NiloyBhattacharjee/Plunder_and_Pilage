@@ -12,6 +12,7 @@ func before_each():
 
 
 func test_buy_respects_hold_space():
+	s.gold = 5000.0  # plenty, so the hold is what stops it
 	var r := Ports.buy("port_royal", "sugar", 1000, s, 60.0)
 	assert_true(r.ok)
 	assert_almost_eq(Market.cargo_used(s.cargo), 60.0, 1.0, "10 tons of food plus 50 of sugar")
@@ -100,7 +101,7 @@ func test_rumour_teaches_a_price_elsewhere():
 	assert_false(Ports.known.has("port_royal"))
 
 
-func test_market_events_happen_over_a_year():
-	for i in 365:
-		Ports.daily()
-	assert_true(Ports.state.keys().any(func(id): return not Economy.mods(id).is_empty()))
+func test_market_events_on_purpose():
+	var news := Ports.start_market_event("bridgetown", "glut")
+	assert_string_contains(news, "Bridgetown")
+	assert_false(Economy.mods("bridgetown").is_empty())

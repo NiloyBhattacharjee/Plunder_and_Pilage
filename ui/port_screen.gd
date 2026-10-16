@@ -276,8 +276,10 @@ func _repair_job(per_day: int, days: int) -> Dictionary:
 	var h := mini(hull_missing, per_day * d)
 	var sl := mini(sails_missing, per_day * d)
 	var guns: int = ship.state.guns_lost if d > 0 or days == 0 else 0
+	var discount = EconomyEffects.active(ship.state, "repair_discount")
+	var mult: float = 1.0 - (discount.percent / 100.0 if discount != null else 0.0)
 	return {"days": maxi(d, 1 if guns > 0 else 0), "hull": h, "sails": sl, "guns": guns,
-		"cost": int(h * y.cost_per_hull + sl * y.cost_per_sail + guns * y.cost_per_gun)}
+		"cost": int((h * y.cost_per_hull + sl * y.cost_per_sail + guns * y.cost_per_gun) * mult)}
 
 
 func _repair(days: int) -> void:

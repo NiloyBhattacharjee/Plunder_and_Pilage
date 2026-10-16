@@ -426,6 +426,12 @@ func resolve(inst: Dictionary, index: int, ctx: Dictionary) -> Dictionary:
 		var line := _apply(_sub(o, vars, false), ctx, inst.vars, res)  # chains carry the roles, not the built-ins
 		if line != "":
 			res.effects.append(line)
+	# structured effects ({type, ...}: the market, fences, the world; see scripts/economy/effects.gd)
+	var named := {"s": ctx.s, "port": ctx.get("port", "")}
+	for k in inst.vars:
+		if Ports.state.has(str(inst.vars[k])):
+			named[k] = inst.vars[k]
+	res.effects.append_array(EconomyEffects.apply_all(ch.get("effects" if success else "fail_effects", []), named))
 	res.effects = Array(lines) + res.effects
 	_cleanup(inst, ctx)
 	return res
@@ -595,8 +601,7 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			var f: String = _faction(a[2], ctx) if a.size() > 2 else ("pirates" if kind == "pirate" else Career.nations()[rng.randi() % Career.nations().size()])
 			res.fight = {"kind": kind, "faction": f, "mode": a[3] if a.size() > 3 else "defend"}
 		"market":
-			var ev: Array = Data.rules.market_events.filter(func(m): return m.id == a[2])
-			Ports.start_market_event(a[1], ev[0])
+			Ports.start_market_event(a[1], a[2])
 			return "Prices will move in %s" % Ports.port(a[1]).name
 		"time":
 			Clock.advance(float(a[1]))
@@ -839,6 +844,9 @@ func validate() -> PackedStringArray:
 					out.append("%s: unknown check skill '%s'" % [where, sk])
 				if not ch.has("fail_outcomes") and not ch.has("fail_result"):
 					out.append("%s: a check needs a fail_result" % where)
+			for e in ch.get("effects", []) + ch.get("fail_effects", []):
+				if not EconomyEffects.known(e.get("type", "")):
+					push_warning("Events: %s uses effect '%s', which isn't handled; it will be skipped." % [where, e.get("type", "")])
 			for o in ch.get("outcomes", []) + ch.get("fail_outcomes", []):
 				var a: PackedStringArray = o.split(" ", false)
 				if not VERBS.has(a[0]):

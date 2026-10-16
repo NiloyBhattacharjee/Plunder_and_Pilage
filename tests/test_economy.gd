@@ -6,7 +6,9 @@ var m: EconomyModel
 
 func before_each():
 	m = EconomyModel.new()
-	m.setup(Data.table("goods"), Data.table("ports"), Data.table("economy"), 7)
+	var cfg: Dictionary = Data.table("economy").duplicate(true)
+	cfg.shock_chance_per_day = 0.0  # these tests watch the market's own workings: no random shocks
+	m.setup(Data.table("goods"), Data.table("ports"), cfg, 7)
 
 
 func warm() -> void:
@@ -44,7 +46,12 @@ func test_ports_have_characters():
 	assert_lt(m.mult("bridgetown", "sugar"), 0.95, "sugar is cheap where it grows")
 	assert_gt(m.mult("cartagena", "cloth"), m.mult("port_royal", "cloth") * 1.2, "European goods are dear where foreigners can't trade")
 	assert_lt(m.mult("willemstad", "cloth"), m.mult("port_royal", "cloth"), "the Dutch free port undercuts everyone")
-	assert_gt(m.mult("bridgetown", "food"), m.mult("santo_domingo", "food"), "plantations must buy their food")
+	var food := [0.0, 0.0]  # over a year: one day's prices are noisy
+	for d in 365:
+		m.step(d / 31 + 1)
+		food[0] += m.mult("bridgetown", "food")
+		food[1] += m.mult("santo_domingo", "food")
+	assert_gt(food[0], food[1], "plantations must buy their food")
 
 
 func test_sugar_is_cheapest_after_the_harvest():
@@ -83,7 +90,7 @@ func test_shocks_change_production_and_expire():
 
 func test_same_seed_same_economy():
 	var other := EconomyModel.new()
-	other.setup(Data.table("goods"), Data.table("ports"), Data.table("economy"), 7)
+	other.setup(Data.table("goods"), Data.table("ports"), m.cfg, 7)
 	for d in 100:
 		m.step(3)
 		other.step(3)

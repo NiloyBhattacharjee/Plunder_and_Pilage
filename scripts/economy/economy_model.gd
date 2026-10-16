@@ -18,6 +18,9 @@ var history := {}    # port -> good -> weekly price multipliers, oldest first
 var params := {}     # port -> good -> {make, use, imp, exp, normal}, fixed by the data
 var traffic: Traffic # merchant voyages between the ports (scripts/economy/traffic.gd)
 var fleets: Fleets   # the treasure fleets and sugar convoys (scripts/economy/fleets.gd)
+var shocks: Shocks   # random shocks: hurricanes, epidemics, fires... (scripts/economy/shocks.gd)
+var world := {}      # key -> {value, until}: world conditions in force (pirates, sailings:<faction or port>,
+                     # imports:<faction>, spread:<port>, fleet_blocked:<fleet>, fair_access:<faction>, state:<key>)
 var day := 0         # days the model has run
 var _seasons := {}
 var _traded: Array = []
@@ -53,6 +56,8 @@ func setup(goods_t: Dictionary, ports_t: Dictionary, cfg_t: Dictionary, seed: in
 	day = 0
 	traffic = Traffic.new(self)
 	fleets = Fleets.new(self)
+	shocks = Shocks.new(self)
+	world = {}
 
 
 func traded() -> Array:
@@ -98,7 +103,7 @@ func mult(id: String, g: String) -> float:
 ## carries haggling and standing), and the duty.
 func unit_price(id: String, g: String, s: float, buying: bool, spread_mult := 1.0, duty := 0.0) -> float:
 	var mid: float = goods[g].base_price * (mult_at(id, g, s) if is_traded(g) else 1.0)
-	var half: float = cfg.spread[ports[id].size] * spread_mult / 2.0
+	var half: float = cfg.spread[ports[id].size] * spread_mult * world_mult("spread:" + id) / 2.0
 	return mid * (1.0 + half if buying else 1.0 - half) * (1.0 + duty if buying else 1.0 - duty)
 
 
@@ -160,7 +165,7 @@ func flows(id: String, g: String, month: int) -> Dictionary:
 	return {
 		"make": pr.make * _seasons[gd.season][month - 1] * make_mod,
 		"use": pr.use * use_mod * fleets.use_mult(id, g) * minf(cap, pow(m, -cfg.demand_response[gd.demand])),
-		"imp": pr.use * pr.imp * sail * minf(cap, pow(m, sr)),
+		"imp": pr.use * pr.imp * sail * world_mult("imports:" + ports[id].faction) * world_mult("imports:" + id) * minf(cap, pow(m, sr)),
 		"exp": (pr.make * pr.exp + pr.use * pr.rex) * sail * minf(cap, pow(m, -sr)),
 		"spoil": stock[id][g] * gd.get("spoils", 0.0),
 	}
@@ -170,6 +175,10 @@ func flows(id: String, g: String, month: int) -> Dictionary:
 ## (irregular after 1700); without one, each 365 days counts as a new year.
 func step(month: int, year := -1) -> void:
 	day += 1
+	for k in world.keys():
+		if world[k].until >= 0 and world[k].until < day:
+			world.erase(k)
+	shocks.step(day, month)
 	traffic.step(day, month)
 	fleets.step(day, month, year if year > 0 else 1000 + day / 365)
 	for id in stock:
@@ -208,6 +217,82 @@ func add_mod(id: String, shock: Dictionary) -> void:
 	stock[id][g] *= shock.get("stock", 1.0)
 	mods[id].append({"good": g, "make": shock.get("make", 1.0), "use": shock.get("use", 1.0), "days_left": int(shock.days),
 		"reason": shock.get("reason", ""), "rumour": shock.get("rumour", "")})
+
+
+# ---- world conditions and shocks ------------------------------------------------------------------
+
+## A world condition for `days` (negative: until further notice).
+func set_world(key: String, value: Variant, days: int) -> void:
+	world[key] = {"value": value, "until": day + days if days >= 0 else -1}
+
+
+func world_mult(key: String) -> float:
+	return float(world[key].value) if world.has(key) else 1.0
+
+
+func world_has(key: String) -> bool:
+	return world.has(key)
+
+
+## Applies a market effect to a port (shared by shocks, history and story events). Returns false if the type
+## isn't one the model handles. Prefer stock, production and consumption to direct price changes, so the effect
+## fades as trade restores supply.
+func apply_effect(id: String, e: Dictionary) -> bool:
+	match e.type:
+		"market_shock":  # price_multiplier on goods for days: the stock falls (or rises) to match, supply stays short
+			var p: float = float(e.get("price_multiplier", 1.0))
+			for g in _goods_of(id, e.get("goods", [])):
+				var el: float = cfg.elasticity[goods[g].demand]
+				stock[id][g] *= pow(p, -1.0 / el)
+				mods[id].append({"good": g, "make": 1.0 / p, "use": 1.0, "days_left": int(e.get("days", 60)),
+					"reason": e.get("reason", "Short since the disaster" if p > 1.0 else "A glut after the windfall"), "rumour": ""})
+		"port_damage":  # warehouses wrecked and work stopped for a while
+			var sev: float = clampf(float(e.get("severity", 0.5)), 0.0, 1.0)
+			for g in _traded:
+				stock[id][g] *= 1.0 - sev * 0.6
+			for g in produces(id):
+				mods[id].append({"good": g, "make": 1.0 - sev * 0.6, "use": 1.0, "days_left": int(120 + sev * 240),
+					"reason": e.get("reason", "Still rebuilding after the disaster"), "rumour": ""})
+			set_world("sailings:" + id, 1.0 - sev * 0.5, int(90 + sev * 180))
+		"flows":  # make and use multipliers on goods for days (crops, epidemics, garrisons)
+			for g in _goods_of(id, e.get("goods", [])):
+				mods[id].append({"good": g, "make": float(e.get("make", 1.0)), "use": float(e.get("use", 1.0)),
+					"days_left": int(e.get("days", 60)), "reason": e.get("reason", ""), "rumour": ""})
+		"stock":  # stock multiplied at once (a fire, a windfall)
+			for g in _goods_of(id, e.get("goods", [])):
+				stock[id][g] *= float(e.get("mult", 1.0))
+		"spread":  # merchants' margins widen (a shortage of coin, a scare)
+			set_world("spread:" + id, float(e.get("mult", 1.5)), int(e.get("days", 60)))
+		"sailings":  # fewer ships leave this port (a bankruptcy, a plague)
+			set_world("sailings:" + id, float(e.get("mult", 0.5)), int(e.get("days", 60)))
+		"route_risk":  # a wave of piracy on the routes into this port
+			for o in stock:
+				if o != id:
+					var key: String = o + ">" + id
+					traffic.risk[key] = minf(1.0, traffic.risk.get(key, 0.0) + float(e.get("risk", 0.3)))
+		_:
+			return false
+	return true
+
+
+## Goods named in an effect: a list of ids (aliases allowed), "made" (what the port produces), "used" (what it
+## doesn't), "all", or "random" (one of what it makes).
+func _goods_of(id: String, spec: Variant) -> Array:
+	if spec is String:
+		match spec:
+			"made": return produces(id)
+			"used": return _traded.filter(func(g): return params[id][g].make <= 0.0)
+			"all": return _traded
+			"random":
+				var made := produces(id)
+				return [made[rng.randi() % made.size()]] if not made.is_empty() else []
+		spec = spec.split("/")
+	var out := []
+	for g in spec:
+		var real: String = cfg.aliases.get(g, g)
+		if real in _traded:
+			out.append(real)
+	return out
 
 
 # ---- what it means ------------------------------------------------------------------------------
@@ -290,7 +375,7 @@ func breakdown(id: String, g: String, month: int, spread_mult := 1.0, duty := 0.
 
 func save_state() -> Dictionary:
 	return {"rng": str(rng.state), "stock": stock, "mods": mods, "history": history, "day": day, "traffic": traffic.save_state(),
-		"fleets": fleets.save_state()}
+		"fleets": fleets.save_state(), "world": world}
 
 
 func load_state(d: Dictionary) -> void:
@@ -309,3 +394,6 @@ func load_state(d: Dictionary) -> void:
 		traffic.load_state(d.traffic)
 	if d.has("fleets"):
 		fleets.load_state(d.fleets)
+	world = d.get("world", {})
+	for k in world:
+		world[k].until = int(world[k].until)

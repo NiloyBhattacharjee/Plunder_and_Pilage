@@ -7,6 +7,7 @@ signal changed(text: String)
 var wars: Array = []        # sorted pairs: ["france", "spain"]
 var pardons: Array = []     # factions currently offering a general pardon
 var applied: Array = []     # history event ids already applied
+var timed: Array = []       # [{pair, until "YYYY-MM-DD"}]: wars declared by events, with their end
 
 
 func _ready() -> void:
@@ -18,6 +19,7 @@ func reset() -> void:
 	wars = []
 	pardons = []
 	applied = []
+	timed = []
 	apply_history(true)
 
 
@@ -44,6 +46,12 @@ func apply_history(quiet := false) -> void:
 		if ev.date > stamp:
 			continue
 		applied.append(id)
+		if ev.has("unless_flag") and Events.flags.has(ev.unless_flag):
+			continue  # the player changed history
+		if ev.has("if_flag") and not Events.flags.has(ev.if_flag):
+			continue
+		if ev.has("effects"):  # what it does to the market and the world (scripts/economy/effects.gd)
+			EconomyEffects.apply_all(ev.effects, {"s": EconomyEffects.player})
 		match ev.kind:
 			"war", "peace":
 				for a in ev.sides[0]:
@@ -61,7 +69,25 @@ func apply_history(quiet := false) -> void:
 				for f in ev.factions:
 					pardons.erase(f)
 		if not quiet:
-			changed.emit(ev.text)
+			if ev.has("port"):
+				Economy.add_news(ev.text, ev.port)  # news of it travels at sailing speed
+			else:
+				changed.emit(ev.text)
+	for w in timed.duplicate():
+		if w.until != "" and w.until <= stamp:
+			timed.erase(w)
+			wars.erase(w.pair)
+			if not quiet:
+				changed.emit("Peace between %s and %s." % [Data.table("factions")[w.pair[0]].name, Data.table("factions")[w.pair[1]].name])
+
+
+## A war started by an event, ending on `until` ("YYYY-MM-DD", or "" for none).
+func declare(a: String, b: String, until: String) -> void:
+	var pair := _pair(a, b)
+	if not pair in wars:
+		wars.append(pair)
+	if until != "":
+		timed.append({"pair": pair, "until": until})
 
 
 func war_summary() -> String:
@@ -71,13 +97,14 @@ func war_summary() -> String:
 
 
 func save_state() -> Dictionary:
-	return {"wars": wars, "pardons": pardons, "applied": applied}
+	return {"wars": wars, "pardons": pardons, "applied": applied, "timed": timed}
 
 
 func load_state(d: Dictionary) -> void:
 	wars = d.wars
 	pardons = d.pardons
 	applied = d.applied
+	timed = d.get("timed", [])
 
 
 static func _pair(a: String, b: String) -> Array:
