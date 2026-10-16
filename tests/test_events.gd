@@ -43,6 +43,13 @@ func rich_state(kind: String) -> void:
 	Politics.add_favours(Politics.official("port_royal", "merchant"), s, -1)
 	Politics.council_members()
 	s.council_member = true
+	var r := Bonds.roster()  # an ally, a rival, and a captain who likes you
+	s.bonds = {r[0]: {"type": "alliance", "level": 3, "since": "", "strain": 0, "history": []},
+		r[1]: {"type": "rivalry", "level": 2, "since": "", "strain": 0, "history": []}}
+	People.person(r[2]).relations[s.captain] = 40
+	People.person(r[1]).relations[s.captain] = -30
+	var trait_holder: String = s.officers.values()[0]
+	People.person(trait_holder).traits = ["ambitious"]
 	s.secrets = []
 	s.gold = 2000.0
 	s.cargo.rum = 20.0

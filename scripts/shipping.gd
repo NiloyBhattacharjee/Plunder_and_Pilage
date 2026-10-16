@@ -118,6 +118,10 @@ func _arrive(n: Dictionary) -> void:
 
 func _new_goal(n: Dictionary) -> void:
 	var goal: Vector2
+	if n.has("captain_id") and Bonds.level(world.ship.state, n.captain_id) <= -3 and rng.randf() < 0.7:
+		n.route = terrain.find_path(n.pos, world.ship.position)  # a blood feud: they come looking for you
+		if not n.route.is_empty():
+			return
 	if n.has("home"):  # a contract target keeps to the waters she was reported in
 		var r: float = nm(Data.rules.contracts.lurk_nm)
 		goal = terrain.nearest_sea(world.anchorages[n.home] + Vector2(rng.randf_range(-r, r), rng.randf_range(-r, r)))
@@ -147,7 +151,7 @@ func _new_goal(n: Dictionary) -> void:
 func daily() -> void:
 	for n in npcs.duplicate():
 		n.age += 1
-		if n.age > cfg().max_age_days and not n.has("contract"):  # contract targets sail until the job is settled
+		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id"):  # contract targets and named captains stay
 			remove(n)
 	for i in cfg().spawn_per_day:
 		if count("merchant") < cfg().merchants:
@@ -167,7 +171,7 @@ func daily() -> void:
 
 func _meetings() -> void:
 	for p in npcs.filter(func(n): return n.kind == "pirate"):
-		for m in npcs.filter(func(n): return n.kind == "merchant" and not n.has("contract")):
+		for m in npcs.filter(func(n): return n.kind == "merchant" and not n.has("contract") and not n.has("captain_id")):
 			if p.pos.distance_to(m.pos) < nm(cfg().contact_nm) * 2.0:
 				for g in m.enemy.cargo:
 					p.enemy.cargo[g] = p.enemy.cargo.get(g, 0) + m.enemy.cargo[g]
@@ -175,7 +179,7 @@ func _meetings() -> void:
 					Data.table("factions")[m.enemy.faction].adjective, m.enemy.name, Ports.port(m.dest).name])
 				remove(m)
 	for v in npcs.filter(func(n): return n.kind == "navy" or n.kind == "hunter"):
-		for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("contract")):
+		for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("contract") and not n.has("captain_id")):
 			if v.pos.distance_to(p.pos) < nm(cfg().contact_nm) * 2.0:
 				_say(p, "The %s navy ran down the pirate %s." % [Data.table("factions")[v.enemy.faction].adjective, p.enemy.name])
 				remove(p)
@@ -227,6 +231,23 @@ func spawn(kind: String, f: String) -> Dictionary:
 		flag = Data.table("factions")[nat[rng.randi() % nat.size()]].flag  # honest-looking colours
 	var homes := _ports_of(f) if f != "pirates" else Ports.state.keys().filter(func(id): return Ports.port(id).get("fence", false))
 	var n := _add(kind, e, world.anchorages[homes[rng.randi() % homes.size()]], flag)
+	_new_goal(n)
+	return n
+
+
+## A named captain from the roster (Bonds), in their own ship, haunting their home waters.
+func spawn_captain(id: String) -> Dictionary:
+	var c := People.person(id)
+	var kind := "pirate" if c.faction == "pirates" else "hunter"
+	var e := Encounters.generate(c.faction, rng, kind, c.ship_type)
+	e.name = c.ship
+	e.captain = c.duplicate(true)
+	e.captain_id = id
+	e.label = "the %s, %s's ship" % [c.ship, c.name]
+	var flag: String = Data.table("factions")[c.faction].flag
+	var n := _add(kind, e, world.anchorages[c.haunt], flag)
+	n.captain_id = id
+	n.home = c.haunt
 	_new_goal(n)
 	return n
 

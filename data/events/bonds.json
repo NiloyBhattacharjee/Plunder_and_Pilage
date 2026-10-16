@@ -1,0 +1,94 @@
+{
+  "_comment": "Alliances and rivalries as events: calls for help, betrayals, proposals, rivals at work, officers who leave for their own ships. scripts/bonds.gd queues the calls and betrayals; see docs/events.md.",
+
+  "ally_calls_for_help": {
+    "title": "{ally} calls for help",
+    "text": "A fast boat brings word from {ally}: they're in a fight with a {nation_adj} ship and need you. You're bound to answer, and it will cost you.",
+    "where": "any", "chain_only": true,
+    "roles": {"ally": {"from": "ally"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Sail to their aid", "conditions": ["at_sea"], "outcomes": ["opinion {ally} +10", "fight navy {nation} attack"], "result": "You come up under full sail, guns run out."},
+      {"text": "Send powder and gold instead", "conditions": ["gold >= 120"], "outcomes": ["gold -120", "opinion {ally} +3"], "result": "Not what they asked for, but something."},
+      {"text": "You have your own troubles", "outcomes": ["strain {ally}", "opinion {ally} -10"], "result": "They'll remember who didn't come."}
+    ]
+  },
+
+  "ally_betrays": {
+    "title": "Treachery",
+    "text": "Word reaches you that {ally} has been talking to the {nation_adj} authorities about your course, your haunts and your hold. Your ally has decided you're worth more sold than kept.",
+    "where": "any", "chain_only": true,
+    "roles": {"ally": {"from": "ally"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Change course and lie low", "check": {"who": "post.navigator", "skill": "navigation", "dc": 12},
+       "outcomes": ["betray {ally}"], "result": "You slip away before the trap closes. {ally} is your enemy now.",
+       "fail_outcomes": ["betray {ally}", "event ambush_trap 2 15"], "fail_result": "Too late: a warship is already on your course."},
+      {"text": "Confront {ally} with it", "check": {"who": "captain", "skill": "intimidation", "dc": 14},
+       "outcomes": ["opinion {ally} +5", "favour {ally} +2"], "result": "{ally} backs down and swears it was a misunderstanding. Now they owe you.",
+       "fail_outcomes": ["betray {ally}", "notoriety +5"], "fail_result": "{ally} laughs, and your secrets are already sold."}
+    ]
+  },
+
+  "captain_proposes": {
+    "title": "A proposal from {captain}",
+    "text": "{captain} sends a bottle of good brandy and a note: two captains who keep out of each other's way do better than two who don't.",
+    "where": "port", "cooldown": 60, "weight": 8,
+    "roles": {"captain": {"from": "captain_npc", "where": ["opinion >= 20", "not bonded"]}},
+    "choices": [
+      {"text": "Agree to an understanding", "outcomes": ["bond {captain} +1", "opinion {captain} +5"], "result": "Neither of you will fire on the other."},
+      {"text": "Decline politely", "outcomes": ["opinion {captain} -5"], "result": "No hard feelings. Probably."}
+    ]
+  },
+
+  "rival_taunt": {
+    "title": "{rival}'s men",
+    "text": "In a {port} tavern, some of {rival}'s crew are drinking to your hanging. One of them spits at your feet.",
+    "where": "port", "cooldown": 45, "weight": 12,
+    "roles": {"rival": {"from": "rival"}},
+    "choices": [
+      {"text": "Draw steel", "check": {"who": "captain", "skill": "swordplay", "dc": 12},
+       "outcomes": ["fear +2", "morale +5 20"], "result": "They carry their man out. Your crew will tell the story for weeks.",
+       "fail_outcomes": ["wound captain", "morale -3 20"], "fail_result": "It ends with you bleeding on the floor and them laughing."},
+      {"text": "Buy the room a round and drink to {rival}'s ruin", "conditions": ["gold >= 30"], "outcomes": ["gold -30", "morale +3 15"], "result": "The whole tavern drinks with you. Word will reach {rival}."},
+      {"text": "Walk away", "outcomes": ["morale -3 15"], "result": "Your crew wanted more from you."}
+    ]
+  },
+
+  "rival_sabotage": {
+    "title": "{rival} has friends ashore",
+    "text": "The harbour master of {port} has suddenly found faults with your papers. {rival}'s money got here before you did.",
+    "where": "port", "cooldown": 60, "weight": 12,
+    "conditions": ["port_faction != pirates"],
+    "roles": {"rival": {"from": "rival"}, "official": {"from": "official", "where": ["office == harbour_master"]}},
+    "choices": [
+      {"text": "Outbid {rival}", "conditions": ["gold >= 120"], "outcomes": ["gold -120", "opinion {official} +10"], "result": "Money talks louder than grudges, today."},
+      {"text": "Remind {official} who you are", "check": {"who": "captain", "skill": "intimidation", "dc": 13},
+       "outcomes": ["opinion {official} -5"], "result": "The faults disappear.", "fail_outcomes": ["relation port -5", "time 2"], "fail_result": "Two days kicking your heels while they inspect every barrel."},
+      {"text": "Pay the fines", "outcomes": ["gold -10%"], "result": "Cheaper than a fight."}
+    ]
+  },
+
+  "rival_offers_peace": {
+    "title": "A message from {rival}",
+    "text": "{rival} sends word: there are bigger sharks in these waters than either of you. Perhaps it's time to bury the hatchet.",
+    "where": "any", "cooldown": 90, "weight": 6,
+    "roles": {"rival": {"from": "rival", "where": ["opinion >= -50"]}},
+    "choices": [
+      {"text": "Make peace", "outcomes": ["peace {rival}", "opinion {rival} +20"], "result": "The feud is over. For now."},
+      {"text": "Never", "outcomes": ["rivalry {rival} 2", "morale +3 20"], "result": "The crew cheer. The feud goes on."}
+    ]
+  },
+
+  "officer_wants_own_ship": {
+    "title": "A ship of their own",
+    "text": "{officer} has served you well, and wants what every good officer wants: a command of their own. They mean to go, with or without your blessing.",
+    "where": "port", "cooldown": 120, "weight": 5,
+    "roles": {"officer": {"from": "officer", "where": ["trait.ambitious"]}},
+    "choices": [
+      {"text": "Go with my blessing, and a loan for a sloop", "conditions": ["gold >= 300"], "outcomes": ["gold -300", "own_ship {officer} 2"], "result": "{officer} sails as your friend, and owes you."},
+      {"text": "Go with my blessing", "outcomes": ["own_ship {officer} 1"], "result": "You part on good terms."},
+      {"text": "Persuade them to stay", "check": {"who": "captain", "skill": "charisma", "dc": 14},
+       "outcomes": ["opinion {officer} +5", "morale +2 20"], "result": "One more voyage, {officer} agrees.",
+       "fail_outcomes": ["own_ship {officer} -1"], "fail_result": "{officer} goes anyway, angry, and talks about you in every tavern."}
+    ]
+  }
+}

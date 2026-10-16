@@ -236,6 +236,10 @@ func play_round(player_orders: Dictionary) -> Array:
 			if result != "":
 				break
 			_act(i, post, orders[i][post])
+	if band < 3:  # allied ships in company add their broadsides (not into a grappled melee)
+		for a in sides[0].get("allies", []):
+			if result == "":
+				_ally_fires(a)
 	if result == "" and band == 3:
 		_melee()
 	for i in 2:
@@ -438,6 +442,24 @@ func _broadside(i: int, post: String, id: String, a: Dictionary) -> void:
 	if c.crit:
 		text += " " + _crit(o, ammo)
 	_note(i, post, text, c)
+
+
+## An allied ship fires into the enemy, rolled like any broadside.
+func _ally_fires(a: Dictionary) -> void:
+	var t: Dictionary = sides[1]
+	var c := Dice.check(rng, "%s's broadside" % a.name, [["Their gunnery", Dice.mod(a.gunnery)]], gun_dc(0))
+	if not c.success:
+		_note(-1, "", "Your ally the %s fires and misses." % a.name, c)
+		return
+	var n := maxi(1, ceili(a.guns / 2.0 / cfg().guns_per_die))
+	var dmg := Dice.roll(rng, n, _damage_die(a.gun_weight))
+	var killed := minf(t.crew, dmg * cfg().ammo.round.crew)
+	var hull_before: float = t.hull
+	t.hull -= dmg
+	t.crew -= killed
+	t.casualties += killed
+	_hit_morale(1, killed / maxf(t.crew_start, 1.0) * 100.0 * cfg().morale_per_crew_pct + (hull_before - t.hull) / t.hull_start * 100.0 * cfg().morale_per_hull_pct)
+	_note(-1, "", "Your ally the %s rakes her: %d damage, %d men down." % [a.name, dmg, killed], c)
 
 
 static func _damage_die(gun_weight: float) -> int:

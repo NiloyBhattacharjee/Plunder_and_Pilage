@@ -387,6 +387,36 @@ Unknown traits show as ?. Use favours and secrets in each port's Politics tab.",
 		var owed := Politics.favours(id, s)
 		UIKit.label(g, ("owes you %d" % owed) if owed > 0 else (("you owe %d" % -owed) if owed < 0 else ""), "", Style.c("bad") if owed < 0 else Color(0, 0, 0, 0))
 	UIKit.label(box, "")
+	UIKit.label(box, "Alliances and rivalries", "Every bond has benefits and costs. Allies hold fire, share news and prices, fight beside you and answer calls; they also call on you, drag their reputation onto yours and may betray you if you look weak.
+Rivals compete, feud, then hunt you; beating one brings fame and bounties. With no bonds at all, nobody owes you anything, and pirates think you easy prey.", Style.c("header"))
+	var bonds: Array = Bonds.all(s).keys().filter(func(k): return Bonds.exists(k))
+	if bonds.is_empty():
+		UIKit.label(box, "None. You're neutral: free to deal with anyone, with no one to call on.", "", Style.c("dim"))
+	for key in bonds:
+		var b: Dictionary = Bonds.all(s)[key]
+		var lvl := Bonds.level(s, key)
+		var owed := Politics.favours(key, s) if not key.begins_with("f:") else 0
+		var kind := Bonds.kind(key)
+		var what: String = Bonds.cfg().benefits[kind][lvl - 1] + "
+Costs: " + Bonds.cfg().costs[kind][lvl - 1] if lvl > 0 else Bonds.cfg().rivalry[-lvl - 1].text
+		UIKit.label(box, "%s: %s since %s.%s%s" % [Bonds.name_of(key), Bonds.level_name(key, lvl), b.since,
+			("  Owes you %d favour%s." % [owed, "" if owed == 1 else "s"]) if owed > 0 else (("  You owe them %d." % -owed) if owed < 0 else ""),
+			"  Strained." if b.strain > 0 else ""], what + ("
+
+" + "
+".join(b.history) if not b.history.is_empty() else ""),
+			Style.c("good") if lvl > 0 else Style.c("bad"))
+	UIKit.label(box, "")
+	UIKit.label(box, "Captains of the Caribbean", "Named captains who sail these waters. Meet them in their home ports to deal with them.", Style.c("header"))
+	var cg := UIKit.grid(box, 5)
+	for id in Bonds.roster():
+		var c := People.person(id)
+		cg.add_child(Portrait.make(c, "captain", 32))
+		UIKit.label(cg, "%s, %s" % [c.name, "pirate" if c.faction == "pirates" else Data.table("factions")[c.faction].adjective + " privateer"], People.describe(c))
+		UIKit.label(cg, "the %s, out of %s" % [c.ship, Ports.port(c.haunt).name])
+		UIKit.label(cg, "opinion %+d" % c.relations.get(s.captain, 0))
+		UIKit.label(cg, Bonds.level_name(id, Bonds.level(s, id)) if Bonds.level(s, id) != 0 else "")
+	UIKit.label(box, "")
 	UIKit.label(box, "Secrets", "Letters, ledgers, receipts and schedules. Use them in the Politics tab of the port where their subject holds office.", Style.c("header"))
 	var secrets: Array = s.get("secrets", [])
 	if secrets.is_empty():

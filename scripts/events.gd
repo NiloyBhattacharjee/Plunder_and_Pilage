@@ -19,10 +19,11 @@ const VERBS := {  # verb: [min args, max args]
 	"skill": [3, 3], "trait": [2, 2], "untrait": [2, 2], "reveal": [1, 1],
 	"flag": [1, 2], "unflag": [1, 1], "abandon": [1, 1],
 	"favour": [2, 2], "secret": [1, 3], "influence": [3, 3], "stir": [1, 1], "scandal": [1, 1], "council_vote": [2, 2], "join_council": [0, 0],
+	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
 	"morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
-	"official", "creditor", "enemy_official", "council"]
+	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc"]
 
 var events := {}
 var errors := PackedStringArray()
@@ -186,6 +187,9 @@ func _bind(spec: Dictionary, ctx: Dictionary, vars: Dictionary) -> Variant:
 		"creditor": cands = Politics.creditors(s)
 		"enemy_official": cands = Politics.enemies(s)
 		"council": cands = Politics.council_members()
+		"ally": cands = Bonds.allies(s).filter(func(k): return not k.begins_with("f:"))
+		"rival": cands = Bonds.rivals(s).filter(func(k): return not k.begins_with("f:"))
+		"captain_npc": cands = Bonds.roster()
 		"here": cands = [ctx.port] if ctx.port != "" else []
 		"port": cands = Ports.state.keys()
 		"nation": cands = Career.nations()
@@ -298,6 +302,9 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"shares": return s.articles.pay == "shares"
 		"crew_share": return s.articles.crew_share * 100.0
 		"owes": return Politics.creditors(s).size()
+		"allies": return Bonds.allies(s).size()
+		"rivals": return Bonds.rivals(s).size()
+		"neutral": return Bonds.neutral(s)
 		"secrets": return s.get("secrets", []).size()
 		"council_member": return s.get("council_member", false)
 		"council_leader": return Politics.council_leader == "player"
@@ -322,6 +329,7 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"age": return c.age
 			"hidden": return not c.hidden.is_empty()
 			"office": return c.get("role", "")
+			"bonded": return Bonds.level(ctx.s, id) != 0
 		if head in People.STATS or head in People.SKILLS:
 			return People.value(c, head)
 	elif Ports.state.has(id):
@@ -600,6 +608,29 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			return Politics.replace(c.port, c.role, "was recalled in disgrace") if c.port != "" else ""
 		"council_vote":
 			return Politics.council_vote(s, a[1], a[2] == "yes", ctx).text
+		"bond":
+			var key := _who(a[1], ctx, vars) if not a[1].begins_with("f:") else a[1]
+			var lvl := Bonds.level(s, key)
+			var to := clampi(maxi(lvl, 0) + int(a[2]), 0, 4)
+			if to == 0:
+				Bonds.all(s).erase(key)
+				return "Your bond with %s is gone" % Bonds.name_of(key)
+			Bonds.all(s)[key] = {"type": "alliance", "level": to, "since": Clock.date_string(), "strain": 0, "history": Bonds.all(s).get(key, {}).get("history", [])}
+			return "%s with %s" % [Bonds.level_name(key, to), Bonds.name_of(key)]
+		"rivalry":
+			return Bonds.start_rivalry(s, _who(a[1], ctx, vars), int(a[2]), res.title.to_lower())
+		"strain":
+			return Bonds.strain(s, _who(a[1], ctx, vars))
+		"betray":
+			return Bonds.betray(s, _who(a[1], ctx, vars))
+		"peace":
+			var key := _who(a[1], ctx, vars)
+			if Bonds.level(s, key) < 0:
+				Bonds.all(s).erase(key)
+				return "Peace with %s" % Bonds.name_of(key)
+			return ""
+		"own_ship":
+			return Bonds.former_officer(s, _who(a[1], ctx, vars), int(a[2]))
 		"join_council":
 			Politics.council_members()
 			s.council_member = true
@@ -781,9 +812,9 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"prizes", "hostages", "contracts", "year", "month", "date", "guns", "stolen", "cargo", "relation", "captain", "captain_trait",
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
-	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power"]
+	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral"]
 const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality"]
-const CAND_KEYS := ["office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
+const CAND_KEYS := ["bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
 	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held"]
 
 

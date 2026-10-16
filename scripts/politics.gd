@@ -285,6 +285,9 @@ func enemies(s: Dictionary) -> Array:
 	for id in council:
 		if People.chars.has(id) and People.person(id).relations.get(s.captain, 0) <= cfg().grudge:
 			out.append(id)
+	for id in Bonds.rivals(s, 2):  # a feuding rival schemes like any enemy in office
+		if not id.begins_with("f:") and not id in out:
+			out.append(id)
 	return out
 
 
@@ -426,6 +429,7 @@ func council_members() -> Array:
 			c.stats.intimidation = mini(20, c.stats.intimidation + 4)
 			c.skills.swordplay = mini(20, c.skills.swordplay + 4)
 			c.role = "council"
+			c.faction = "pirates"
 			c.port = "nassau"
 			c.ship = Data.table("factions").pirates.ship_names[i % Data.table("factions").pirates.ship_names.size()]
 			c.favours = {}
@@ -467,7 +471,7 @@ func member_votes_yes(s: Dictionary, id: String, topic: String, side: bool) -> b
 		"pardon": lean = (0.4 if "family_man" in c.traits else 0.0) - (0.4 if "bloodthirsty" in c.traits else 0.0) - 0.1
 		"defend": lean = (0.3 if "brave" in c.traits else 0.0) - (0.4 if "cowardly" in c.traits else 0.0) + 0.1
 		"punish": lean = (0.3 if "honest" in c.traits else 0.0) - (0.3 if "schemer" in c.traits else 0.0)
-	var mine: float = c.relations.get(s.captain, 0) / 50.0 + favours(id, s) * 0.3
+	var mine: float = c.relations.get(s.captain, 0) / 50.0 + favours(id, s) * 0.3 + Bonds.level(s, id) * 0.25
 	var yes := 0.5 + lean + (mine if side else -mine) + rng.randf_range(-0.25, 0.25)
 	return yes > 0.5
 

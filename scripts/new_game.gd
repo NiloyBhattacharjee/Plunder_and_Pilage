@@ -9,6 +9,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 	Ports.reset()
 	Factions.reset()
 	Politics.reset()
+	Bonds.reset()
 	Contracts.reset()
 	Events.reset()
 	var bg: Dictionary = Data.table("backgrounds")[cfg.background]
@@ -60,6 +61,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 	auto_appoint(state, 7)
 	Crew.ensure(state)
 	state.secrets = []
+	state.bonds = {}
 	return {"state": state, "start_port": start_port}
 
 

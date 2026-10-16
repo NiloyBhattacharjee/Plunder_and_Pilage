@@ -56,6 +56,8 @@ func test_trust_unlocks_bigger_jobs():
 	s.career.marque = "england"
 	assert_eq(job("capture_ship", gov()).tier, 0)
 	People.person(gov()).relations[s.captain] = 40
+	assert_eq(job("capture_ship", gov()).tier, 1, "the best jobs aren't for neutrals")
+	s.bonds = {gov(): {"type": "alliance", "level": 2, "since": "", "strain": 0, "history": []}}
 	var big := job("capture_ship", gov())
 	assert_eq(big.tier, 2)
 	assert_eq(big.enemy.type, "galleon")

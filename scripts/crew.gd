@@ -87,6 +87,7 @@ static func morale(s: Dictionary, stats: Dictionary) -> Dictionary:
 		parts.append(["What they think of you", loyal])
 	for m in s.morale_mods:
 		parts.append([m.name, float(m.value)])
+	parts.append_array(Bonds.morale_parts(s))
 	var total := 0.0
 	var lines := PackedStringArray()
 	for p in parts:
@@ -585,4 +586,5 @@ static func make_captain(s: Dictionary, id: String, how: String) -> Array:
 		"elected": add_mod(s, "new_captain", "A captain of their own choosing", c.elected, c.new_captain_days)
 		"force": add_mod(s, "new_captain", "Command taken by force", c.by_force, c.new_captain_days)
 	s.erase("succession")
+	msgs.append_array(Bonds.reconsider(s))  # the ship's bonds carry over, but allies weigh up the new captain
 	return msgs

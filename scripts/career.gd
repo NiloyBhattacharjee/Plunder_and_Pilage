@@ -173,7 +173,7 @@ static func check_peace(s: Dictionary) -> String:
 
 
 static func pardon_cost(s: Dictionary, f: String, port_id := "") -> int:
-	if f in Factions.pardons:
+	if f in Factions.pardons or Bonds.level(s, "f:" + f) >= 4:  # a patron nation forgives for nothing
 		return 0
 	var cost: float = Data.rules.pardon.base_cost + s.reputation.notoriety * Data.rules.pardon.per_notoriety
 	if port_id != "":  # where the church holds sway, repentance comes cheaper
@@ -227,7 +227,7 @@ static func port_access(s: Dictionary, port_id: String) -> Dictionary:
 	var pa: Dictionary = Data.rules.port_access
 	var reason := ""
 	var tolerant: bool = Ports.state[port_id].laws.get("pirates", 0.0) > 0.4  # the townsfolk rule here, and pirates spend money
-	if s.get("blind_eye", {}).get(port_id, 0.0) > Clock.day:
+	if s.get("blind_eye", {}).get(port_id, 0.0) > Clock.day or Bonds.port_open(s, port_id):
 		reason = ""  # the harbour master owes you
 	elif f == "pirates":
 		if rel <= pa.closed:
@@ -254,15 +254,19 @@ static func price_mult(s: Dictionary, port_id: String) -> float:
 	var pa: Dictionary = Data.rules.port_access
 	var rel: int = s.relations.get(Ports.port(port_id).faction, 0)
 	var tariff: float = Ports.state[port_id].laws.get("tariff", 0.0)
-	return clampf(1.0 - rel * pa.price_per_standing, pa.price_clamp[0], pa.price_clamp[1]) * (1.0 + tariff)
+	return clampf(1.0 - rel * pa.price_per_standing, pa.price_clamp[0], pa.price_clamp[1]) * (1.0 + tariff) * Bonds.price_mult(s, port_id)
 
 
 ## Will this ship attack you on sight? Navies judge you by your record and by the colours you fly.
 static func npc_hostile(s: Dictionary, enemy: Dictionary, rng: RandomNumberGenerator) -> bool:
+	var bond = Bonds.hostile_override(s, enemy)  # allies hold fire; sworn rivals never do
+	if bond != null:
+		return bond
 	var shown := flag_faction(s.get("flag", "white"))
 	match enemy.behaviour:
-		"aggressive":
-			return s.relations.get("pirates", 0) < Data.rules.encounters.friendly_pirate_relation
+		"aggressive":  # a captain with no friends anywhere looks like easy prey
+			var easy: int = Data.table("bonds").neutral_easy_target if Bonds.neutral(s) else 0
+			return s.relations.get("pirates", 0) < Data.rules.encounters.friendly_pirate_relation + easy
 		"warship":
 			if enemy.kind == "hunter" and wanted(s):
 				return true

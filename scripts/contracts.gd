@@ -104,6 +104,8 @@ func make(tid: String, emp_id: String, s: Dictionary) -> Dictionary:
 	for i in t.tiers.size():
 		if trust(emp_id, s) >= t.tiers[i].trust:
 			tier = i
+	if tier == t.tiers.size() - 1 and Bonds.level(s, emp_id) < 2 and Bonds.level(s, "f:" + f) < 2:
+		tier = maxi(0, tier - 1)  # the best jobs go to people they're bound to, not to neutrals
 	var td: Dictionary = t.tiers[tier]
 	var c := {"id": "k%d" % next_id, "template": tid, "objective": t.objective, "employer": emp_id, "employer_port": e.port,
 		"faction": f, "tier": tier, "reward": int(td.reward), "days": int(t.days), "count": int(td.get("count", 1)), "progress": 0,

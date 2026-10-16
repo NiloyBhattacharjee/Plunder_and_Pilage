@@ -160,7 +160,7 @@ static func remove_cargo(s: Dictionary, good: String, qty: float, stolen_part :=
 func cannot_buy_ship(id: String, type_id: String, s: Dictionary) -> String:
 	var t: Dictionary = Data.table("ships")[type_id]
 	var f: String = port(id).faction
-	if s.relations.get(f, 0) < t.min_standing:
+	if s.relations.get(f, 0) < t.min_standing - (20 if Bonds.level(s, "f:" + f) >= 2 else 0):  # a pact opens the yard
 		return "%s won't sell a %s to someone with your standing (needs %+d, you have %+d)." % [
 			Data.table("factions")[f].name, t.name.to_lower(), t.min_standing, s.relations.get(f, 0)]
 	if t.price - ShipStats.trade_in_value(s) > s.gold:

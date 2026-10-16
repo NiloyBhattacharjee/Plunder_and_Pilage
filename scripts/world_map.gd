@@ -16,7 +16,8 @@ var rng := RandomNumberGenerator.new()
 var current_npc := {}     # the NPC ship you're dealing with, if any
 var chase_id := ""        # the NPC ship you're chasing
 var _chase_timer := 0.0
-var _in_event := false   # an event's "time" outcome runs days; don't start another inside it
+var _in_event := false
+var _attacked := false   # you opened fire in the last battle (it matters to named captains)   # an event's "time" outcome runs days; don't start another inside it
 
 ## Set by the new-game screen before switching here: {name, nationality, background, ship_name} or {"load": true}.
 static var start_config := {}
@@ -72,6 +73,7 @@ func _ready() -> void:
 	shipping.setup(terrain, self)
 	Contracts.shipping = shipping
 	Politics.news.connect(hud.show_message)
+	Bonds.news.connect(hud.show_message)
 	Contracts.changed.connect($PortLayer.queue_redraw)
 	shipping.contact.connect(_on_contact)
 	shipping.news.connect(hud.show_message)
@@ -117,8 +119,11 @@ func _daily() -> void:
 	for m in Contracts.daily(s):
 		hud.show_message(m)
 	Politics.prune_secrets(s)
+	Bonds.ensure_on_map(shipping)
 	if Clock.date().day == 1:
 		Politics.leverage_month(s)
+		for m in Bonds.monthly(s):
+			hud.show_message(m)
 	if s.has("succession") and not busy():
 		run_succession()
 		return
@@ -393,6 +398,10 @@ func encounter(enemy: Dictionary, npc := {}) -> void:
 		flag_note = "\nShe was flying %s colours, but up close she's no %s." % [
 			Data.table("factions")[Career.flag_faction(npc.flag)].adjective if Career.flag_faction(npc.flag) != "" else "plain",
 			Data.table("factions")[Career.flag_faction(npc.flag)].adjective if Career.flag_faction(npc.flag) != "" else "honest ship"]
+	if enemy.has("captain_id"):  # a named captain: who they are to you matters
+		var lvl := Bonds.level(s, enemy.captain_id)
+		flag_note += "\nIt's %s.%s" % [People.person(enemy.captain_id).name, "" if lvl == 0 else " %s: %s." % [
+			"Your ally" if lvl > 0 else "Your rival", Bonds.level_name(enemy.captain_id, lvl)]]
 	var job := Contracts.find(enemy.get("contract", ""))
 	if not job.is_empty():
 		flag_note += "
@@ -426,6 +435,9 @@ This is the %s you were hired to find." % enemy.name
 			tip += " Your service counts toward promotion; the Crown takes %d%% of the prize." % int(Career.crown_cut(s) * 100)
 		if Career.false_colours(s):
 			tip += "\nYou're under false colours: she won't run until it's too late (honour %d)." % Data.rules.flags.false_colours_honour
+		if enemy.has("captain_id") and Bonds.level(s, enemy.captain_id) > 0:
+			tip += "\n%s is your ally: attacking breaks your %s, and everyone hears of it." % [People.person(enemy.captain_id).name,
+				Bonds.level_name(enemy.captain_id, Bonds.level(s, enemy.captain_id)).to_lower()]
 		var pick: int = await dialog.ask("Sail ho!", "A %s.\n%s%s" % [enemy.label, seen, flag_note], [
 			{"text": "Attack her" + ("" if verdict.legal else " (piracy)"), "tooltip": tip},
 			{"text": "Let her pass", "tooltip": "Hold your course."},
@@ -456,7 +468,12 @@ func start_combat(enemy: Dictionary, mode: String) -> void:
 	_show_world(false)
 	get_tree().root.add_child(combat)
 	var w := Weather.wind_at(ship.position)
-	combat.start(Encounters.player_side(s), enemy, mode, w.dir, w.strength)
+	var side := Encounters.player_side(s)
+	side.allies = Bonds.battle_allies(s, ship.position, shipping).filter(func(a): return a.id == "" or a.id != enemy.get("captain_id", ""))
+	_attacked = mode in ["attack", "ambush"]
+	if not side.allies.is_empty():
+		hud.show_message("Your allies close in to fight beside you: " + ", ".join(side.allies.map(func(a): return "the " + a.name)) + ".")
+	combat.start(side, enemy, mode, w.dir, w.strength)
 	combat.get_node("Camera2D").make_current()
 	combat.finished.connect(_on_combat_finished)
 
@@ -478,6 +495,8 @@ func _on_combat_finished(result: Dictionary) -> void:
 	var e: Dictionary = result.enemy_data
 	for m in Contracts.on_battle(s, e, result.outcome, ship.position):
 		hud.show_message(m)
+	for m in Bonds.on_battle(s, e, result.outcome, _attacked):
+		hud.show_message(m)
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
 		shipping.remove(current_npc)
 	current_npc = {}
@@ -492,6 +511,11 @@ func _on_combat_finished(result: Dictionary) -> void:
 			prize_screen.open(ship, result)
 			for m in await prize_screen.done:
 				hud.show_message(m)
+			var allies: Array = result.player.get("allies", [])
+			if not allies.is_empty() and e.gold > 0:  # those who fought beside you take their cut
+				var cut: float = floorf(e.gold * Data.table("bonds").split * allies.size())
+				s.gold = maxf(0.0, s.gold - cut)
+				hud.show_message("Your allies take their share of the strongbox: %d gold." % cut)
 		"enemy_sunk":
 			hud.show_message("The %s sank with all her cargo." % e.name)
 		"separated":

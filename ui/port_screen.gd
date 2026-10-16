@@ -263,6 +263,10 @@ func _build_governor() -> void:
 	UIKit.label(box, "Your standing with %s: %+d.  You are: %s." % [Career.fname(f), s.relations.get(f, 0), Career.status_text(s)],
 		"Standing changes prices here (x%.2f), who will deal with you, and whether the harbour stays open." % Career.price_mult(s, port_id))
 	UIKit.label(box, Factions.war_summary(), "", Style.c("dim"))
+	if f != "pirates" and not disguised:
+		var brow := UIKit.row(box)
+		UIKit.label(brow, "Your bond with %s: %s.  " % [Career.fname(f), Bonds.level_name("f:" + f, Bonds.level(s, "f:" + f))], "Beyond standing: a nation can be your ally, or your patron.")
+		_bond_buttons(brow, "f:" + f, s)
 	if disguised:
 		UIKit.label(box, "You're here under false colours. The governor's door is not one to knock on.", "", Style.c("bad"))
 		return
@@ -409,8 +413,9 @@ func _build_politics() -> void:
 		var line := UIKit.row(box)
 		line.add_child(Portrait.make(c, "captain", 44))
 		var owed := Politics.favours(id, s)
-		UIKit.label(line, "%s: %s.  Opinion of you %+d.  Wants to %s.  %s" % [P.roles[c.role].name, c.name, c.relations.get(s.captain, 0),
-			P.goals[c.get("goal", "keep_order")].name, ("Owes you %d favour%s." % [owed, "" if owed == 1 else "s"]) if owed > 0 else (("You owe them %d." % -owed) if owed < 0 else "")],
+		UIKit.label(line, "%s: %s.  Opinion of you %+d.  Wants to %s.  %s%s" % [P.roles[c.role].name, c.name, c.relations.get(s.captain, 0),
+			P.goals[c.get("goal", "keep_order")].name, ("Owes you %d favour%s." % [owed, "" if owed == 1 else "s"]) if owed > 0 else (("You owe them %d." % -owed) if owed < 0 else ""),
+			("  " + Bonds.level_name(id, Bonds.level(s, id)) + ".") if Bonds.level(s, id) != 0 else ""],
 			People.describe(c))
 		if disguised and c.role == "governor":
 			continue
@@ -418,6 +423,7 @@ func _build_politics() -> void:
 		var indent := Control.new()
 		indent.custom_minimum_size = Vector2(52, 0)
 		acts.add_child(indent)
+		_bond_buttons(acts, id, s)
 		for kind in P.roles[c.role].favours:
 			var f: Dictionary = P.favours[kind]
 			var why := Politics.favour_problem(id, s, kind, false)
@@ -449,8 +455,43 @@ func _build_politics() -> void:
 			UIKit.button(line, "Expose to the Crown", _act.bind(func(): return {"ok": true, "text": Politics.expose(s, sec)}),
 				"A scandal: they're recalled and replaced, their side loses influence, and %s thanks you." % Data.table("factions")[Ports.port(port_id).faction].name)
 
+	var here_captains: Array = Bonds.roster().filter(func(id): return People.person(id).haunt == port_id)
+	if not here_captains.is_empty():
+		UIKit.label(box, "")
+		UIKit.label(box, "Captains in port", "Named captains who use this port. Ally with them and their ship fights beside you; cross them and they come after you.", Style.c("header"))
+	for id in here_captains:
+		var c := People.person(id)
+		var line := UIKit.row(box)
+		line.add_child(Portrait.make(c, "captain", 44))
+		var lvl := Bonds.level(s, id)
+		UIKit.label(line, "%s of the %s (%s).  Opinion of you %+d.%s" % [c.name, c.ship, Data.table("ships")[c.ship_type].name.to_lower(),
+			c.relations.get(s.captain, 0), ("  " + Bonds.level_name(id, lvl) + ".") if lvl != 0 else ""], People.describe(c))
+		_bond_buttons(line, id, s)
+	if Ports.port(port_id).faction == "pirates":
+		UIKit.label(box, "")
+		var brethren := UIKit.row(box)
+		UIKit.label(brethren, "The Brethren of the Coast: %s.  " % Bonds.level_name("f:pirates", Bonds.level(s, "f:pirates")), "Your bond with the pirates as a whole.", Style.c("header"))
+		_bond_buttons(brethren, "f:pirates", s)
 	if port_id == "nassau":
 		_build_council(box, s)
+
+
+## Propose the next step, declare a rivalry, or break a bond. Every button explains itself first.
+func _bond_buttons(parent: Node, key: String, s: Dictionary) -> void:
+	var lvl := Bonds.level(s, key)
+	var acc := Bonds.acceptance(s, key)
+	if lvl < 4:
+		var label := "Make peace" if lvl < 0 else "Propose: %s" % Bonds.level_name(key, acc.next)
+		var b := UIKit.button(parent, label + (" (%d/%d)" % [acc.score, acc.need]), _act.bind(func(): return {"ok": true, "text": Bonds.propose(s, key)}), Bonds.preview(s, key))
+		b.modulate = Color(1, 1, 1, 1.0 if acc.ok else 0.6)
+	if lvl > 0:
+		UIKit.button(parent, "Break it", _act.bind(func(): return {"ok": true, "text": Bonds.break_bond(s, key)}),
+			"Honour -%d, and everyone you know trusts you a little less.%s" % [lvl * Data.table("bonds").break_honour,
+				" They'll be your rival." if lvl >= 2 and not key.begins_with("f:") else ""])
+	elif not key.begins_with("f:") and lvl > -3:
+		UIKit.button(parent, "Declare a rivalry" if lvl == 0 else "Escalate", _act.bind(func(): return {"ok": true, "text": Bonds.declare(s, key)}),
+			"%s
+Rivals compete, then feud, then hunt you. Beating a rival brings fame, and a bounty if they're a pirate; your crew pull together against a common enemy." % Bonds.cfg().rivalry[mini(2, -lvl)].text)
 
 
 func _build_council(box: Node, s: Dictionary) -> void:
@@ -464,6 +505,7 @@ func _build_council(box: Node, s: Dictionary) -> void:
 		var owed := Politics.favours(id, s)
 		UIKit.label(line, "%s of the %s%s.  Opinion of you %+d.%s" % [c.name, c.ship, " (leader)" if id == lead else "", c.relations.get(s.captain, 0),
 			"  Owes you %d." % owed if owed > 0 else ""], People.describe(c))
+		_bond_buttons(line, id, s)
 		var b := UIKit.button(line, "Buy their vote (%d)" % Data.table("politics").council.bribe, _act.bind(func(): return {"ok": true, "text": Politics.bribe(s, id)}),
 			"Gold talks: their opinion of you +%d." % Data.table("politics").council.bribe_opinion)
 		b.disabled = s.gold < Data.table("politics").council.bribe
