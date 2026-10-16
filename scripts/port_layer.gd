@@ -4,6 +4,8 @@ extends Node2D
 ## In a trade map mode (`trade_good` set) each label also shows the last known buy/sell price and its age.
 
 
+const TOWN := preload("res://assets/map/town.png")
+
 var port_positions := {}  # port id -> map position, filled by world_map
 var ship_state := {}
 var trade_good := "":
@@ -46,7 +48,7 @@ func _draw() -> void:
 	for id in port_positions:
 		var port: Dictionary = Data.table("ports")[id]
 		var pos: Vector2 = port_positions[id]
-		var off: Array = port.get("label_offset", [9, 5])  # optional, for ports too close together
+		var off: Array = port.get("label_offset", [24, 5])  # optional, for ports too close together; clear of the town
 		var text_pos := pos + Vector2(off[0], off[1]) * s
 		var label: String = port.name
 		if trade_good == "@standing" and not ship_state.is_empty():
@@ -56,8 +58,12 @@ func _draw() -> void:
 			var k: Dictionary = Ports.known.get(id, {}).get(trade_good, {})
 			label += "  ?" if k.is_empty() else "  buy %s / sell %s (%dd%s)" % [
 				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]
-		draw_circle(pos, 6.0 * s, Color(Data.table("factions")[port.faction].color))
-		draw_circle(pos, 6.0 * s, Style.c("chart_ink"), false, 1.5 * s)
+		var k := 1.5 * s  # the town at a steady size on screen
+		draw_texture_rect(TOWN, Rect2(pos - Vector2(14, 18) * k, Vector2(28, 22) * k), false)
+		var pole := pos + Vector2(11, -14) * k  # a pennant in the nation's colours
+		draw_line(pole, pole + Vector2(0, -9) * k, Style.c("chart_ink"), 1.0 * k)
+		draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -9) * k, pole + Vector2(7, -7) * k, pole + Vector2(0, -5) * k]),
+			Color(Data.table("factions")[port.faction].color))
 		draw_string_outline(Style.font("pixel"), text_pos, label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("chart_paper_light"))
 		draw_string(Style.font("pixel"), text_pos, label,

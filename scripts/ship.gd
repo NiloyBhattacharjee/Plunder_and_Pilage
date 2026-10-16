@@ -23,6 +23,7 @@ var sail_info := {}
 var speed_text := ""
 var wind := {}
 var _last_storm := ""
+var _wake: Array = []  # recent positions, for the foam trail
 
 
 func _ready() -> void:
@@ -65,7 +66,14 @@ func _on_tick(dd: float) -> void:
 	$Hull.set_state(state.hull / stats.hull, state.sails / stats.sails, 0 if route.is_empty() else 2)
 	if route.is_empty() or state.hull <= 0:
 		speed_knots = 0.0
+		if not _wake.is_empty():
+			_wake.pop_front()
+			queue_redraw()
 		return
+	if _wake.is_empty() or position.distance_to(_wake[-1]) > 2.5:
+		_wake.append(position)
+		if _wake.size() > 14:
+			_wake.pop_front()
 
 	heading = Geo.bearing(route[0] - position)
 	var off_wind := Geo.angle_between(heading, wind.dir)
@@ -263,8 +271,12 @@ func load_state(d: Dictionary) -> void:
 
 
 func _draw() -> void:
-	# Planned route as a dashed line, drawn in local space (this node is never rotated).
+	# Planned route as a dotted gold line, drawn in local space (this node is never rotated).
 	var prev := Vector2.ZERO
 	for p in route:
-		draw_dashed_line(prev, p - position, Color(0.15, 0.1, 0.05, 0.6), 1.5, 6.0)
+		draw_dashed_line(prev, p - position, Color(Style.c("header"), 0.75), 1.5, 4.0)
 		prev = p - position
+	for i in _wake.size():  # foam left behind, fading
+		var a := float(i + 1) / _wake.size()
+		var w: Vector2 = _wake[i] - position
+		draw_rect(Rect2(w - Vector2(1, 1), Vector2(2, 2)), Color(0.95, 0.98, 1.0, a * 0.7))

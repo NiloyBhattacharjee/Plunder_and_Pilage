@@ -20,4 +20,5 @@ func _ready() -> void:
 		mat.set_shader_parameter(key + "_color", Style.c(key))
 	mat.set_shader_parameter("ink", Style.c("chart_ink"))
 	mat.set_shader_parameter("parchment", Style.c("chart_paper"))
+	mat.set_shader_parameter("art_px", float(Data.table("palette").map_pixel))
 	material = mat

@@ -1,59 +1,49 @@
 extends Node2D
-## The chart itself: land, inked coastlines with period water-lining, reef outlines, a lat/long grid,
-## sea lettering (data/map_labels.json) and a compass rose. Drawn once; Godot caches it.
-## The sea underneath and the paper on top are shaders (sea_layer.gd); colours come from data/palette.json.
+## The world map's land, HD-2D style: beaches, then the land lit as relief by assets/map/land.gdshader (hills
+## and mountains from assets/map/height.png), coastlines, and the sea's names (data/map_labels.json).
+## Drawn once; Godot caches it. The sea underneath and the clouds on top are shaders (sea_layer.gd).
 
-const WATERLINES := [4.0, 9.0, 15.0]   # offsets in map pixels, period-chart style
-const GRID_DEGREES := 5
+func _ready() -> void:
+	var land := _Land.new()  # the land itself, drawn behind this node's lettering through the relief shader
+	land.show_behind_parent = true
+	land.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://assets/map/land.gdshader")
+	mat.set_shader_parameter("height_map", load("res://assets/map/height.png"))
+	mat.set_shader_parameter("detail", load("res://assets/map/land_tile.png"))
+	mat.set_shader_parameter("map_size", Vector2(Data.map.size[0], Data.map.size[1]))
+	mat.set_shader_parameter("art_px", float(Data.table("palette").map_pixel))
+	land.material = mat
+	add_child(land)
 
 
 func _draw() -> void:
-	var ink := Style.c("chart_ink")
 	var size := Vector2(Data.map.size[0], Data.map.size[1])
-	var land_polys: Array[PackedVector2Array] = []
-	for flat in Data.map.land:
-		land_polys.append(_points(flat))
-
-	for i in WATERLINES.size():  # concentric lines round every coast; land drawn over them hides the inner half
-		var a: float = 0.32 - i * 0.09
-		for pts in land_polys:
-			for ring in Geometry2D.offset_polygon(pts, WATERLINES[i]):
-				_ring(ring, Color(ink, a), 1.0)
-	for pts in land_polys:
-		draw_colored_polygon(pts, Style.c("chart_paper"))
-	for pts in land_polys:
-		_ring(pts, ink, 1.6)
-	for flat in Data.map.get("reefs", []):
-		var pts := _points(flat)
-		for i in pts.size():
-			draw_dashed_line(pts[i], pts[(i + 1) % pts.size()], Color(ink, 0.6), 1.0, 3.0)
-
-	_grid(size, ink)
 	_labels()
-	_compass(Geo.latlon_to_px(27.6, -63.2), 105.0, ink)
-	draw_rect(Rect2(Vector2.ZERO, size), ink, false, 4.0)
-	draw_rect(Rect2(Vector2(10, 10), size - Vector2(20, 20)), Color(ink, 0.6), false, 1.5)
+	draw_rect(Rect2(Vector2.ZERO, size), Color("#0e1224"), false, 6.0)
+	draw_rect(Rect2(Vector2(3, 3), size - Vector2(6, 6)), Style.c("header"), false, 2.0)
 
 
-func _grid(size: Vector2, ink: Color) -> void:
-	var p: Dictionary = Data.map.projection
-	var font := Style.font("italic")
-	var lon := ceili(p.lon_min / GRID_DEGREES) * GRID_DEGREES
-	while true:
-		var x := Geo.latlon_to_px(0, lon).x
-		if x > size.x:
-			break
-		draw_line(Vector2(x, 0), Vector2(x, size.y), Color(ink, 0.16), 1.0)
-		draw_string(font, Vector2(x + 4, 30), "%d° W" % absi(lon), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(ink, 0.7))
-		lon += GRID_DEGREES
-	var lat := floori(p.lat_max / GRID_DEGREES) * GRID_DEGREES
-	while true:
-		var y := Geo.latlon_to_px(lat, p.lon_min).y
-		if y > size.y:
-			break
-		draw_line(Vector2(0, y), Vector2(size.x, y), Color(ink, 0.16), 1.0)
-		draw_string(font, Vector2(16, y - 4), "%d° N" % lat, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(ink, 0.7))
-		lat -= GRID_DEGREES
+## The land polygons for the relief shader, which colours them by height: a beach ring just outside each coast
+## (sea level, so it comes out sand), the land, and the coastline (drawn dark, which the shader keeps dark).
+class _Land extends Node2D:
+	func _draw() -> void:
+		var polys: Array[PackedVector2Array] = []
+		for flat in Data.map.land:
+			var pts := PackedVector2Array()
+			for i in range(0, flat.size(), 2):
+				pts.append(Vector2(flat[i], flat[i + 1]))
+			polys.append(pts)
+		for pts in polys:
+			for ring in Geometry2D.offset_polygon(pts, 2.5):
+				if not Geometry2D.triangulate_polygon(ring).is_empty():  # skip holes and slivers that won't triangulate
+					draw_colored_polygon(ring, Color.WHITE)
+		for pts in polys:
+			draw_colored_polygon(pts, Color.WHITE)
+		for pts in polys:
+			var closed := pts.duplicate()
+			closed.append(pts[0])
+			draw_polyline(closed, Color.BLACK, 1.2)
 
 
 func _labels() -> void:
@@ -61,29 +51,11 @@ func _labels() -> void:
 		if id.begins_with("_"):
 			continue
 		var l: Dictionary = Data.table("map_labels")[id]
-		var font := Style.font("italic" if l.italic else "title")
+		var font := Style.font("pixel")
 		var pos := Geo.latlon_to_px(l.lat, l.lon)
 		var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size)).x
-		draw_string(font, pos - Vector2(w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size), Color(Style.c("chart_ink"), 0.45))
-
-
-func _compass(c: Vector2, r: float, ink: Color) -> void:
-	var paper := Style.c("chart_paper_light")
-	draw_circle(c, r * 1.08, Color(ink, 0.5), false, 1.0)
-	draw_circle(c, r * 0.98, Color(ink, 0.5), false, 1.0)
-	for i in 32:  # rhumb lines radiating across the chart, as on a portolan
-		draw_line(c, c + Geo.from_bearing(i * 11.25) * r * 9.0, Color(ink, 0.05), 1.0)
-	for i in 16:
-		var length := r if i % 4 == 0 else (r * 0.72 if i % 2 == 0 else r * 0.5)
-		var width := r * (0.13 if i % 4 == 0 else 0.09)
-		var dir := Geo.from_bearing(i * 22.5)
-		var side := Vector2(-dir.y, dir.x) * width
-		var tip := c + dir * length
-		draw_colored_polygon(PackedVector2Array([c, c + side, tip]), ink if i % 2 == 0 else paper)
-		draw_colored_polygon(PackedVector2Array([c, tip, c - side]), paper if i % 2 == 0 else ink)
-		_ring(PackedVector2Array([c + side, tip, c - side]), ink, 1.0)
-	draw_circle(c, r * 0.08, ink)
-	draw_string(Style.font("title"), c + Vector2(-10, -r - 14), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, ink)
+		draw_string_outline(font, pos - Vector2(w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size), 5, Color(0.04, 0.1, 0.2, 0.5))
+		draw_string(font, pos - Vector2(w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size), Color(0.9, 0.95, 1.0, 0.55))
 
 
 func _ring(pts: PackedVector2Array, color: Color, width: float) -> void:

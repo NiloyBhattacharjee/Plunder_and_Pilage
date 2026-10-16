@@ -16,9 +16,9 @@
     "wax_dark": "#121830",
     "wax_text": "#ece4cd",
     "sea": "#cdd5bd",
-    "deep": "#b6c4ae",
-    "shallow": "#e2e3c8",
-    "reef": "#9fb39c",
+    "deep": "#1d5f93",
+    "shallow": "#3fb6c4",
+    "reef": "#8fe3d2",
     "land": "#ead9b0",
     "player_ship": "#6b3d1a",
     "smoke": "#4a3d33",
@@ -41,5 +41,6 @@
   },
   "panel_texture": "res://assets/ui/pixel/panel.png",
   "pixel_ui": "res://assets/ui/pixel/",
-  "map_pixel": 2
+  "map_pixel": 1.5,
+  "_map_pixel": "Map pixels per art pixel: the world map's sea, land and clouds snap to this grid, so pixels grow as you zoom in and stay crisp when you zoom out."
 }

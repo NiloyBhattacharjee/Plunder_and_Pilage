@@ -19,7 +19,9 @@ var _chase_timer := 0.0
 var _in_event := false
 var _attacked := false
 @onready var port_layer: Node2D = $PortLayer
-var _overlays: Array = []  # the pixelation and label layers, hidden with the world
+var _overlays: Array = []  # the label layer, hidden with the world
+var _daylight: CanvasModulate
+var _lights: Array = []    # towns' and your lantern's light at night
 var at_base := ""         # the cove you're anchored at, if any (a cove isn't a port: you count as at sea)
 var cove_anchors := {}    # cove id -> navigable anchorage
 var _raid_base := ""      # the base you're fighting for   # you opened fire in the last battle (it matters to named captains)   # an event's "time" outcome runs days; don't start another inside it
@@ -541,28 +543,61 @@ This is the %s you were hired to find." % enemy.name
 			UIKit.resume_clock()
 
 
-## The pixel look: a layer that pixelates the chart and everything on it, with the port names and markers
-## lifted onto a layer above it (following the camera) so they stay sharp. The HUD sits above both.
+## The port names and markers sit on a layer of their own (following the camera), so the night doesn't dim them.
+## The map's own shaders snap to a grid of art pixels in world space, so there's no screen-wide pixel filter
+## to blur things when you zoom out. Day and night tint the world (a CanvasModulate), and lights come on at dusk.
 func _pixel_layers() -> void:
-	var pix := CanvasLayer.new()
-	pix.layer = 1
-	var rect := ColorRect.new()
-	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var mat := ShaderMaterial.new()
-	mat.shader = load("res://assets/map/pixelate.gdshader")
-	mat.set_shader_parameter("pixel", float(Data.table("palette").get("map_pixel", 3)))
-	rect.material = mat
-	pix.add_child(rect)
-	add_child(pix)
-	_overlays = [pix]
 	var labels := CanvasLayer.new()
 	labels.layer = 2
 	labels.follow_viewport_enabled = true
 	add_child(labels)
-	_overlays.append(labels)
+	_overlays = [labels]
 	port_layer.reparent.call_deferred(labels)
 	hud.layer = 5
+	ship.z_index = 2  # above the clouds
+	_daylight = CanvasModulate.new()
+	add_child(_daylight)
+	var glow := GradientTexture2D.new()
+	glow.fill = GradientTexture2D.FILL_RADIAL
+	glow.fill_from = Vector2(0.5, 0.5)
+	glow.fill_to = Vector2(1.0, 0.5)
+	glow.width = 128
+	glow.height = 128
+	var g := Gradient.new()
+	g.set_color(0, Color.WHITE)
+	g.set_color(1, Color(1, 1, 1, 0))
+	glow.gradient = g
+	_lights = []
+	for id in Data.table("ports"):
+		var l := PointLight2D.new()
+		l.texture = glow
+		l.color = Color("#ffc46b")
+		l.texture_scale = 1.2
+		l.position = Geo.latlon_to_px(Data.table("ports")[id].lat, Data.table("ports")[id].lon)
+		add_child(l)
+		_lights.append(l)
+	var lantern := PointLight2D.new()
+	lantern.texture = glow
+	lantern.color = Color("#ffb85a")
+	lantern.texture_scale = 0.6
+	lantern.energy = 0.0
+	lantern.set_meta("dim", 0.45)  # a lantern, not a lighthouse
+	ship.add_child(lantern)
+	_lights.append(lantern)
+	Clock.ticked.connect(func(_dd): _update_daylight())
+	_update_daylight()
+
+
+## The light of the hour: bright noon, gold at dusk and dawn, blue night with lit towns; storms darken it.
+func _update_daylight() -> void:
+	var hour := fposmod(Clock.day, 1.0) * 24.0
+	var night := clampf((absf(hour - 12.5) - 4.0) / 4.0, 0.0, 1.0)  # 0 from 8.30 to 16.30, gold toward 18, night by 20.30
+	var c := Color.WHITE.lerp(Color("#ffcf9a"), clampf(night * 2.0, 0.0, 1.0)).lerp(Color("#5a6cb0"), clampf(night * 2.0 - 1.0, 0.0, 1.0))
+	if ship.wind.get("storm", "") != "":
+		c = c.darkened(0.3)
+	_daylight.color = c
+	for l in _lights:
+		l.energy = clampf(night * 1.6 - 0.3, 0.0, 1.2) * l.get_meta("dim", 1.0)
 
 
 func _open_crew() -> void:

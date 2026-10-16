@@ -790,8 +790,54 @@ def make_props():
     save(im, out / "rock.png")
 
 
+# ---- the world map: land texture and port towns ---------------------------------------------------
+
+def make_map():
+    out = A / "map"
+    rng = random.Random(11)
+    W = 96  # a seamless tile of grass and jungle, lit from the upper left
+    tile = Image.new("RGBA", (W, W))
+    px = tile.load()
+    G = [(52, 92, 50, 255), (66, 112, 58, 255), (82, 132, 66, 255), (104, 150, 76, 255)]
+    for y in range(W):
+        for x in range(W):
+            n = (math.sin(x * 0.21) + math.sin(y * 0.17) + math.sin((x + y) * 0.11)) / 3.0
+            px[x, y] = dith(G[1], G[2], 0.5 + n * 0.5, x, y)
+    for _ in range(40):  # jungle clumps: dark crowns with a lit edge, wrapping round the tile edges
+        cx, cy, r = rng.randrange(W), rng.randrange(W), rng.randint(3, 6)
+        for dy in range(-r - 1, r + 2):
+            for dx in range(-r - 1, r + 2):
+                d = math.hypot(dx, dy)
+                x, y = (cx + dx) % W, (cy + dy) % W
+                if d <= r:
+                    px[x, y] = G[3] if (dx + dy) < -r * 0.6 else (G[0] if (dx + dy) > r * 0.5 else G[1])
+    for _ in range(140):  # grass flecks
+        x, y = rng.randrange(W), rng.randrange(W)
+        px[x, y] = G[3]
+    save(tile, out / "land_tile.png")
+    # a port town: walls, a fort, red roofs and a church tower; windows lit (they glow at night)
+    T = Image.new("RGBA", (28, 22), CLEAR)
+    d = ImageDraw.Draw(T)
+    WALL, WALL_D, ROOF, ROOF_D, STONE = (226, 210, 170, 255), (170, 150, 110, 255), (182, 70, 48, 255), (122, 44, 32, 255), (150, 146, 140, 255)
+    d.rectangle([1, 15, 26, 20], fill=STONE, outline=BLACK)  # the harbour wall
+    for x in range(2, 26, 3):
+        d.point((x, 15), fill=(190, 186, 178, 255))
+    houses = [(3, 9, 7), (9, 7, 6), (15, 10, 5), (20, 8, 6)]
+    for hx, hy, hw in houses:
+        d.rectangle([hx, hy + 3, hx + hw - 1, 15], fill=WALL, outline=BLACK)
+        d.polygon([(hx - 1, hy + 3), (hx + hw // 2, hy - 1), (hx + hw, hy + 3)], fill=ROOF, outline=BLACK)
+        d.line([hx + hw // 2, hy, hx + hw - 1, hy + 3], fill=ROOF_D)
+        d.point((hx + 2, hy + 6), fill=GLASS)
+        d.line([hx + hw - 1, hy + 4, hx + hw - 1, 14], fill=WALL_D)
+    d.rectangle([12, 1, 14, 9], fill=WALL, outline=BLACK)  # the church tower
+    d.point((13, 4), fill=GLASS)
+    d.point((13, 0), fill=BLACK)
+    save(T, out / "town.png")
+
+
 if __name__ == "__main__":
     make_ui()
     make_icons()
     make_ships()
     make_props()
+    make_map()

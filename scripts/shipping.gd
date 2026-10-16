@@ -65,7 +65,10 @@ func move(n: Dictionary, dd: float, player_pos: Vector2, s: Dictionary) -> void:
 		n.hostile = Career.npc_hostile(s, e, rng)
 	var was_chasing: bool = n.get("chasing", false)
 	n.chasing = false
-	if n.kind != "merchant" and n.hostile == true and dist < nm(cfg().chase_nm) and s.hull > 0:
+	var detour: bool = n.get("detour_until", 0.0) > Clock.day  # an island was in the way: following a path round it
+	if detour and not n.route.is_empty():
+		target = n.route[0]
+	elif n.kind != "merchant" and n.hostile == true and dist < nm(cfg().chase_nm) and s.hull > 0:
 		target = player_pos
 		free_course = true
 		n.chasing = true
@@ -85,8 +88,17 @@ func move(n: Dictionary, dd: float, player_pos: Vector2, s: Dictionary) -> void:
 	var next: Vector2 = n.pos.move_toward(target, Geo.knots_to_px_per_day(knots) * dd)
 	var ground := terrain.at(next)
 	var deep: bool = Data.rules.draught[st.draught].route_cost > 1.0
-	if ground == TerrainGrid.LAND or (free_course and deep and ground >= TerrainGrid.SHALLOW):
-		return  # can't go there: a sloop that runs into the shallows leaves a frigate behind
+	if free_course and (ground == TerrainGrid.LAND or (deep and ground >= TerrainGrid.SHALLOW)):
+		# can't go there: a sloop that runs into the shallows leaves a frigate behind, for a while.
+		# If she's stuck, she finds a way round instead of sitting against the coast forever.
+		n.stuck = n.get("stuck", 0.0) + dd
+		if n.stuck > 0.3:
+			n.stuck = 0.0
+			n.detour_until = Clock.day + 1.0
+			n.route = terrain.find_path(n.pos, terrain.nearest_sea(target))
+		return
+	n.stuck = 0.0
+	# Following a found path, she trusts it: its corners may clip a coast cell at a narrow cove mouth.
 	n.pos = next
 	n.heading = heading
 	if not free_course and not n.route.is_empty() and n.pos.distance_to(n.route[0]) < 1.0:
@@ -130,9 +142,7 @@ func _new_goal(n: Dictionary) -> void:
 	if n.has("home"):  # a contract target keeps to the waters she was reported in
 		var r: float = nm(Data.rules.contracts.lurk_nm)
 		goal = terrain.nearest_sea(world.anchorages[n.home] + Vector2(rng.randf_range(-r, r), rng.randf_range(-r, r)))
-		n.route = terrain.find_path(n.pos, goal)
-		if n.route.is_empty():
-			n.route = PackedVector2Array([goal])
+		_set_course(n, goal)
 		return
 	match n.kind:
 		"navy":
@@ -146,9 +156,16 @@ func _new_goal(n: Dictionary) -> void:
 			var a: Vector2 = world.anchorages[ids[rng.randi() % ids.size()]]
 			var b: Vector2 = world.anchorages[ids[rng.randi() % ids.size()]]
 			goal = terrain.nearest_sea(a.lerp(b, rng.randf_range(0.3, 0.7)))
+	_set_course(n, goal)
+
+
+## A path to the goal. If there's none (she's somewhere the pathfinder can't start from, deep in a cove),
+## she's eased out to the nearest open sea and tries again later, rather than sailing straight at the land.
+func _set_course(n: Dictionary, goal: Vector2) -> void:
 	n.route = terrain.find_path(n.pos, goal)
 	if n.route.is_empty():
-		n.route = PackedVector2Array([terrain.nearest_sea(n.pos + Vector2(rng.randf_range(-60, 60), rng.randf_range(-60, 60)))])
+		n.pos = terrain.nearest_sea(n.pos)
+		n.route = terrain.find_path(n.pos, goal)
 
 
 # ---- the daily round: spawning, ageing, ships meeting ships ----------------
@@ -365,10 +382,14 @@ func _update_sprites(player_pos: Vector2) -> void:
 
 
 func _draw() -> void:
-	var font := Style.font("italic")
+	var font := Style.font("pixel")
 	for n in npcs:
 		if _sprites.has(n.id):
-			draw_string(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 13, Color(Style.c("chart_ink"), 0.8))
+			var back := -Geo.from_bearing(n.heading)
+			for k in range(1, 6):  # her wake
+				draw_rect(Rect2(n.pos + back * (6.0 + k * 3.0) - Vector2(1, 1), Vector2(2, 2)), Color(0.95, 0.98, 1.0, 0.6 - k * 0.1))
+			draw_string_outline(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, 4, Color(0.04, 0.08, 0.16, 0.7))
+			draw_string(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, Color(0.95, 0.95, 0.9))
 
 
 # ---- saving ----------------------------------------------------------------
