@@ -8,6 +8,7 @@ signal changed
 
 var c: Dictionary
 var role := "captain"
+var preview_size := 200
 var _preview: Control
 var _rows: VBoxContainer
 
@@ -24,7 +25,7 @@ func edit(character: Dictionary, as_role := "captain") -> void:
 
 func _rebuild() -> void:
 	UIKit.clear(self)
-	_preview = Portrait.make(c, role, 200)
+	_preview = Portrait.make(c, role, preview_size)
 	add_child(_preview)
 	_rows = VBoxContainer.new()
 	_rows.add_theme_constant_override("separation", 2)
@@ -33,6 +34,14 @@ func _rebuild() -> void:
 	var drawn := {}
 	for l in Portraits.layers(c, Portraits.tags_for(c, role)):
 		drawn[l.layer] = l.id
+	var presets: Dictionary = d.get("presets", {})
+	if not presets.is_empty():  # start from a pirate type, then change what you like
+		var flow := HFlowContainer.new()
+		_rows.add_child(flow)
+		UIKit.label(flow, "Start from:  ")
+		for id in presets:
+			if not id.begins_with("_"):
+				UIKit.button(flow, presets[id].name, apply_preset.bind(id))
 	var g := UIKit.grid(_rows, 4)
 	for layer in Portraits.EDITABLE:
 		var options: Array = d.parts[layer].map(func(p): return p.id)
@@ -50,6 +59,13 @@ func _rebuild() -> void:
 	UIKit.button(_rows, "Roll a new face", func():
 		c.portrait = {"seed": randi(), "pick": {}}
 		_changed())
+
+
+func apply_preset(id: String) -> void:
+	var pick: Dictionary = Data.table("portraits").presets[id].pick
+	for layer in pick:
+		c.portrait.pick[layer] = pick[layer]
+	_changed()
 
 
 func _step(layer: String, options: Array, now: String, dir: int) -> void:

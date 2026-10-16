@@ -10,6 +10,9 @@ extends Control
 
 var _build := {}
 var _cap := {}         # a stand-in captain for the looks preview
+var _looks: LooksEditor
+var _nick: OptionButton
+var _title: Label
 var _page: PanelContainer
 var _sheet: VBoxContainer
 
@@ -61,10 +64,19 @@ func _describe() -> void:
 	%Description.text = "\n".join(lines)
 
 
+## The captain's name with a nickname in it, if one's chosen: Jack "Calico" Rackham.
+func _full_name() -> String:
+	var name := name_edit.text.strip_edges()
+	var nick: String = _nick.get_selected_metadata() if _nick and _nick.selected > 0 else ""
+	if nick == "" or name.find(" ") < 0:
+		return name
+	return '%s "%s" %s' % [name.get_slice(" ", 0), nick, name.substr(name.find(" ") + 1)]
+
+
 func _start() -> void:
 	var b := _build.duplicate(true)
 	b.portrait = _cap.portrait
-	_go({"name": name_edit.text.strip_edges(), "nationality": nation_pick.get_selected_metadata(),
+	_go({"name": _full_name(), "nationality": nation_pick.get_selected_metadata(),
 		"background": bg_pick.get_selected_metadata(), "ship_name": ship_edit.text.strip_edges(), "build": b})
 
 
@@ -88,15 +100,27 @@ func _captain_page() -> void:
 	add_child(_page)
 	var v := VBoxContainer.new()
 	_page.add_child(v)
-	var title := UIKit.label(v, "Captain %s" % _cap.name)
-	title.theme_type_variation = &"Title"
+	var head := UIKit.row(v)
+	_title = UIKit.label(head, "Captain %s" % _cap.name)
+	_title.theme_type_variation = &"Title"
+	UIKit.label(head, "     Known as:  ")
+	_nick = OptionButton.new()
+	_nick.add_item("(no nickname)")
+	_nick.set_item_metadata(0, "")
+	for e in Data.table("bonds").captains.epithets + Data.table("bonds").get("player_epithets", []):
+		_nick.add_item('"%s"' % e)
+		_nick.set_item_metadata(_nick.item_count - 1, e)
+	_nick.item_selected.connect(func(_i): _title.text = "Captain " + _full_name())
+	head.add_child(_nick)
+	UIKit.button(head, "  Roll a whole pirate  ", _roll_pirate, "A random face, a random pirate type, a nickname, and points spent for you. Change anything after.")
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 30)
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(row)
-	var looks := LooksEditor.new()
-	row.add_child(looks)
-	looks.edit(_cap, "captain")
+	_looks = LooksEditor.new()
+	_looks.preview_size = 256
+	row.add_child(_looks)
+	_looks.edit(_cap, "captain")
 	_sheet = VBoxContainer.new()
 	row.add_child(_sheet)
 	_build_sheet()
@@ -157,6 +181,27 @@ func _trait_pick(label: String, ids: Array, now: String, taken: Array, on_pick: 
 		on_pick.call(pick.get_item_metadata(i))
 		_build_sheet())
 	row.add_child(pick)
+
+
+## Everything at once: a face, a pirate type, a nickname, and the points spent where they suit the background.
+func _roll_pirate() -> void:
+	_cap.portrait = {"seed": randi(), "pick": {}}
+	var presets: Array = Data.table("portraits").presets.keys().filter(func(k): return not k.begins_with("_"))
+	_looks.apply_preset(presets[randi() % presets.size()])
+	_nick.select(randi() % _nick.item_count)
+	_title.text = "Captain " + _full_name()
+	_build = {"stats": {}, "skills": {}, "traits": [], "flaw": ""}
+	var g: Dictionary = Data.rules.growth.build
+	var bg: Dictionary = Data.table("backgrounds")[bg_pick.get_selected_metadata()]
+	for pool in ["stats", "skills"]:
+		var keys: Array = People.STATS if pool == "stats" else People.SKILLS
+		var guard := 200
+		while NewGame.build_points(_build)[pool] > 0 and guard > 0:
+			guard -= 1
+			var k: String = keys[randi() % keys.size()]
+			if NewGame.build_value(bg, _build, k) < int(g.max_start):
+				_build[pool][k] = int(_build[pool].get(k, 0)) + 1
+	_build_sheet()
 
 
 func _spend(pool: String, k: String, d: int) -> void:

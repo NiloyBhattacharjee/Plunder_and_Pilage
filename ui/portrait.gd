@@ -2,17 +2,7 @@ class_name Portrait
 extends Control
 ## Draws a character's layered portrait at any size. Use Portrait.make(c, "captain", 96) from code.
 
-const PIXEL_SHADER := preload("res://assets/ui/pixel_portrait.gdshader")
-static var _pixel: ShaderMaterial
-
 var _layers: Array = []
-
-
-func _init() -> void:
-	if _pixel == null:
-		_pixel = ShaderMaterial.new()
-		_pixel.shader = PIXEL_SHADER
-	material = _pixel
 
 
 static func make(c: Dictionary, role: String, px := 64) -> Portrait:
@@ -31,6 +21,8 @@ func show_character(c: Dictionary, role: String) -> void:
 
 
 func _draw() -> void:
+	# pixel art: sharp pixels when shown at or above its size; smoothed when shrunk into a small chip
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if size.x >= Data.table("portraits").size * 0.9 else CanvasItem.TEXTURE_FILTER_LINEAR
 	var rect := Rect2(Vector2.ZERO, size)
 	for l in _layers:
 		draw_texture_rect(l.texture, rect, false, l.color)

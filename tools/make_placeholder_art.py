@@ -522,7 +522,7 @@ if __name__ == "__main__":
     # make_ships() drew the engraved map ships; tools/make_pixel_art.py draws the pixel ones at the same paths.
     flags = make_flags()
     (ROOT / "data" / "flags.json").write_text("{\n" + ",\n".join(f'  "{k}": ' + json.dumps(v, ensure_ascii=False) for k, v in flags.items()) + "\n}\n", encoding="utf-8")
-    make_portraits()
+    # make_portraits() drew the engraved portraits; tools/make_pixel_portraits.py draws the pixel ones at the same paths.
     make_icons()
     make_fx()
     n = sum(1 for _ in A.rglob("*.png"))
