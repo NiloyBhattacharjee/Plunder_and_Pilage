@@ -10,6 +10,8 @@
                      "description": "Order them to strike. Harder the steadier they are; your fearsome reputation helps. Success ends the fight."},
     "duel":         {"name": "Seek out their captain", "hits": "steel", "skill": "swordplay", "vs": "captain", "vs_skill": "swordplay", "bands": [3],
                      "description": "Blade to blade on their quarterdeck. Win and their crew breaks; lose and you're wounded."},
+    "quarter":      {"name": "Offer them quarter", "hits": "nerve", "skill": "charisma", "vs": "captain", "vs_skill": "authority", "bands": [1, 2, 3],
+                     "description": "Promise their lives if they strike. Their morale drops by how badly they lose the contest, and more if your word is known to be good (your honour)."},
     "steady":       {"name": "Hold steady", "skill": "authority", "dc": 8, "bands": [0, 1, 2, 3],
                      "description": "Stand where the crew can see you. +1 to all your other officers' rolls this round and next."},
     "strike":       {"name": "Strike your colours", "skill": "authority", "dc": 0, "bands": [0, 1, 2, 3],
@@ -65,10 +67,16 @@
     "plug":         {"name": "Plug the shot holes", "skill": "carpentry", "dc": 10, "bands": [0, 1, 2, 3],
                      "description": "Stop leaks and fires, and patch the hull."},
     "rigging":      {"name": "Splice the rigging", "skill": "carpentry", "dc": 12, "bands": [0, 1, 2],
-                     "description": "Repair sails and rigging under fire."}
+                     "description": "Repair sails and rigging under fire."},
+    "remount":      {"name": "Remount the guns", "skill": "carpentry", "dc": 12, "bands": [0, 1, 2, 3],
+                     "description": "Get dismounted guns back on their carriages: firepower now, while the leaks and the rigging wait."}
   },
   "surgeon": {
     "tend":         {"name": "Tend the wounded", "skill": "medicine", "dc": 10, "bands": [0, 1, 2, 3],
-                     "description": "Patch men up and send some back to their stations. Morale rises when they see it."}
+                     "description": "Patch men up and send some back to their stations. Morale rises when they see it."},
+    "saw":          {"name": "Saw and tar", "skill": "medicine", "dc": 8, "bands": [0, 1, 2, 3],
+                     "description": "Quick and brutal: more men back on their feet than tending them, but the crew hear it, and morale falls."},
+    "officers":     {"name": "See to the officers", "skill": "medicine", "dc": 12, "bands": [0, 1, 2, 3],
+                     "description": "Leave the hands and get a wounded officer (the captain first) back on their feet."}
   }
 }

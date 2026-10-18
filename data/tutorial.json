@@ -1,0 +1,15 @@
+{
+  "_comment": "First-voyage hints (scripts/tutorial.gd). Each shows once, the first time you meet that part of the game. Keep them short: what it is, and the one decision that matters.",
+  "welcome": {"title": "Your first voyage",
+    "text": "You're in port. Time stops while a port screen is open. The Market buys and sells (hover a price to see why it is what it is); the Shipyard repairs and refits; the Tavern hires hands and hears rumours; the Governor and the Contracts tab give you work.\n\nA first plan: buy a cheap good this port makes, and sell it where it's wanted. The map-mode list on the top bar shows the last prices you know elsewhere."},
+  "sailing": {"title": "Setting sail",
+    "text": "Click the sea or a port to set a course; the route goes round the land. The wind matters: you're fast across it and slow into it. Space pauses, 1 2 3 set the speed. Food, water and wages go every day, so keep an eye on the top bar (hover anything for the breakdown).\n\nC opens the crew and ship screen."},
+  "encounter": {"title": "",
+    "text": "A ship at sea. Merchants are prizes, warships and hunters are danger, and attacking any nation's ship without their enemy's commission is piracy. A battle is turn-based: each officer acts once a round; the menu shows the odds. Hit her weak points to Break her. You can always run or strike your colours."},
+  "cove": {"title": "",
+    "text": "A hidden cove can be your base: a place to store plunder, careen, build, recruit and hold prisoners. It needs a garrison, food and money, and the busier it is the easier it is to find."},
+  "siege": {"title": "",
+    "text": "A siege runs day by day: scout first (it shows the weak side), silence the fort or starve them, and storm when the odds are good. A relief squadron is coming. Lift the siege and you can come back to it later, damage and all."},
+  "contracts": {"title": "Work",
+    "text": "Contracts are the surest work: pay, a deadline, and a promise. Employers remember how your last job ended, and some lie about the pay. A letter of marque from the governor makes raiding a nation's enemies lawful."}
+}

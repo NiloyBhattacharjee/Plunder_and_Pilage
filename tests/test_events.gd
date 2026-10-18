@@ -59,12 +59,24 @@ func rich_state(kind: String) -> void:
 	base.garrison = 10
 	base.manager = s.crew[5]
 	People.person(base.manager).relations[s.captain] = -40
+	for i in 30:  # and a town you hold, heavily taxed, loyal enough, thinly garrisoned
+		s.crew.append(People.add(People.generate({})))
+	Bases.hold_town(s, "maracaibo", 15)
+	Bases.bases.maracaibo.taxes = "heavy"
+	Bases.bases.maracaibo.loyalty = 60.0
+	base.manager = s.crew[5]  # the garrison came off the crew: make sure the manager is still someone
+	People.person(base.manager).relations[s.captain] = -40
+	People.person(s.crew[6]).traits = ["greedy"]
+	s.relations.spain = -30
+	s.bounty = {"spain": 2000.0}
 	s.gold = 2000.0
 	var trait_holder: String = s.officers.values()[0]
 	People.person(trait_holder).traits = ["ambitious"]
 	s.secrets = []
 	s.gold = 2000.0
 	s.cargo.rum = 20.0
+	s.cargo.gunpowder = 20.0
+	s.cargo.naval_stores = 5.0
 	s.cargo.silver = 5.0
 	s.stolen = {"silver": 5.0}
 	s.wages_owed = 50.0

@@ -85,6 +85,8 @@ static func _condition(id: String, port := "") -> Dictionary:
 ## harbour is closed to you, if your colours are at war with it, or if you attack one of its own ships under its
 ## walls; on her if her nation is at war with it, or if she attacks you, its guest, in its waters.
 static func fort_target(s: Dictionary, enemy: Dictionary, mode: String, port_id: String) -> int:
+	if Bases.bases.has(port_id):
+		return 1  # your own town's guns
 	var pf: String = Ports.port(port_id).faction
 	var on_you: bool = not Career.port_access(s, port_id).open or Factions.at_war(Career.flag_faction(s.get("flag", "white")), pf) \
 		or (mode in ["attack", "ambush"] and enemy.faction == pf)
@@ -146,6 +148,7 @@ static func player_side(s: Dictionary) -> Dictionary:
 		"roles": {"sailors": preset.sailors, "gunners": preset.gunners, "marines": preset.marines},
 		"flag": s.get("flag", "white"),
 		"look": s.get("look", {}),
+		"honour": s.reputation.honour,
 		"fear": s.reputation.fear,
 		"party": party(s),
 	}

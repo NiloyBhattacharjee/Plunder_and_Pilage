@@ -42,7 +42,7 @@ func _act(action: Callable) -> void:
 func refresh() -> void:
 	var b: Dictionary = Bases.bases[base_id]
 	var s: Dictionary = ship.state
-	%Title.text = "%s  (your base)" % b.name
+	%Title.text = "%s  (%s)" % [b.name, "your town" if b.has("town") else "your base"]
 	var upkeep: float = b.garrison * Data.rules.bases.garrison_wage
 	for bid in b.buildings:
 		upkeep += Bases.building(bid).upkeep
@@ -64,8 +64,22 @@ func _build_cove(b: Dictionary, s: Dictionary) -> void:
 	UIKit.clear(box)
 	var R: Dictionary = Data.rules.bases
 	var chance: float = b.visibility * R.raid_per_visibility + Bonds.rivals(s, 2).size() * R.raid_rival_bonus + (R.raid_wanted_bonus if Career.wanted(s) else 0.0)
-	UIKit.label(box, "Visibility %d%%   (raid risk about %.1f%% a day)" % [b.visibility, chance * 100],
-		"How easy the base is to find. Every building, every man ashore, every visit and every sale gives it away a little; quiet days and a well-hidden cove (shelter %d) let it fade.\nRivals in a feud and a price on your head make raids likelier." % Bases.cove(base_id).shelter, Style.c("header"))
+	if b.has("town"):
+		var who: String = Career.fname(b.town.from) if b.town.from != "pirates" else "the Brethren"
+		UIKit.label(box, "Taxes about %s a day.   Next expedition in about %d days (%+d, %d men)." % [Market.fmt(Bases.tax_income(base_id)), maxi(0, int(b.raid.get("day", Clock.day) - Clock.day)),
+			Bases.expedition_strength(base_id), Bases.expedition_men(base_id)],
+			"Taxes go into the treasury, times the town's loyalty. Your town charges you no duty, and keeps your laws: no contraband, pirates welcome.\nA town is no secret: %s keeps sending expeditions to take it back, each one stronger than the last (%d beaten so far). They sail %d days before they're due: catch one at sea and beat it, and that attempt is over. Lose a defence ashore and the town is lost." % [
+				who, b.town.get("failed", 0), Data.rules.sieges.hold.expedition.lead_days], Style.c("header"))
+		var trow := UIKit.row(box)
+		UIKit.label(trow, "Taxes:  ", "Heavier taxes fill the treasury and empty the town's goodwill. A town whose loyalty falls below %d may rise against you." % R.rebel_below)
+		for level in Data.rules.sieges.hold.taxes:
+			var tx: Dictionary = Data.rules.sieges.hold.taxes[level]
+			var tb := UIKit.button(trow, tx.name, func(): _act(func(): return Bases.set_taxes(base_id, level)),
+				"%s a day at this loyalty; loyalty %+d." % [Market.fmt(Bases.taxes(base_id) * tx.mult * b.loyalty / 100.0), tx.loyalty])
+			tb.disabled = b.get("taxes", "fair") == level
+	else:
+		UIKit.label(box, "Visibility %d%%   (raid risk about %.1f%% a day)" % [b.visibility, chance * 100],
+			"How easy the base is to find. Every building, every man ashore, every visit and every sale gives it away a little; quiet days and a well-hidden cove (shelter %d) let it fade.\nRivals in a feud and a price on your head make raids likelier." % Bases.cove(base_id).shelter, Style.c("header"))
 	var parts := Bases.defence_parts(s, base_id)
 	var total := 0
 	var lines := PackedStringArray()
@@ -77,9 +91,12 @@ func _build_cove(b: Dictionary, s: Dictionary) -> void:
 
 	UIKit.label(box, "")
 	var row := UIKit.row(box)
+	var loyal := Bases.loyalty_parts(base_id)
 	UIKit.label(row, "Garrison %d, loyalty %d.   " % [b.garrison, b.loyalty],
-		"The garrison is paid %s a day each from the treasury and eats from the storehouse%s. Unpaid or hungry, loyalty falls; below %d they desert.\nA good manager's authority and a tavern keep them happy. Fewer than 5 men and nothing gets grown or made." % [
-			Market.fmt(R.garrison_wage), "" if Bases.cove(base_id).water else " (food and water: there's no spring here)", R.desert_below])
+		"The garrison is paid %s a day each from the treasury%s. Unpaid or hungry, loyalty falls; below %d they desert, and below %d the base may rise against you.\nLoyalty drifts toward %d:\n%s\nFewer than 5 men and nothing gets grown or made.%s" % [
+			Market.fmt(R.garrison_wage), " and eats from the storehouse" + ("" if Bases.cove(base_id).water else " (food and water: there's no spring here)") if not b.has("town") else "",
+			R.desert_below, R.rebel_below, loyal.reduce(func(a, p): return a + p[1], 0.0), "\n".join(loyal.map(func(p): return "  %s %+d" % [p[0], p[1]])),
+			"\nFields and stills need %d hands beyond those five: they're working at %d%%." % [Bases.hands_needed(b), Bases.worked(b, "plantation" if Bases.has(b, "plantation") else "distillery") * 100] if Bases.hands_needed(b) > 0 else ""])
 	UIKit.button(row, "Leave 5 hands ashore", func(): _act(func(): return Bases.send_garrison(s, base_id, 5)), "Five of your least useful hands join the garrison.")
 	UIKit.button(row, "Take 5 aboard", func(): _act(func(): return Bases.take_garrison(s, base_id, 5, ship.stats.crew_max)))
 

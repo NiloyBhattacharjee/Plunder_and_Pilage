@@ -247,3 +247,41 @@ func test_captains_fight_to_their_temper():
 	assert_eq(DiceCombat.temperament({"traits": ["hot_headed"]}), "bold")
 	assert_eq(DiceCombat.temperament({"traits": ["calm"]}), "steady")
 	assert_eq(DiceCombat.temperament({"traits": []}), "")
+
+
+func test_the_carpenter_can_get_guns_back_and_the_surgeon_chooses_who_to_save():
+	var b := battle("navy", "attack", 4)
+	var e: Dictionary = b.sides[1]
+	e.party.carpenter.skills.carpentry = 20
+	e.party.surgeon.skills.medicine = 20
+	e.guns_working = int(e.stats.guns) - 6
+	for i in 5:
+		b._act(1, "carpenter", "remount")
+	assert_gt(e.guns_working, int(e.stats.guns) - 6, "guns back on their carriages")
+	e.party.captain.wounded = true
+	e.captain_wounded = true
+	for i in 5:
+		b._act(1, "surgeon", "officers")
+	assert_false(e.captain_wounded, "the captain first")
+	e.casualties = 40.0
+	var morale: float = e.morale
+	for i in 3:
+		b._act(1, "surgeon", "saw")
+	assert_lt(e.casualties, 40.0)
+	assert_lt(e.morale, morale + 1, "the crew hear the saw")
+
+
+func test_quarter_is_worth_more_from_an_honourable_captain():
+	var b := battle("navy", "attack", 9)
+	b.band = 2  # within hail
+	b.sides[0].party.captain.stats.charisma = 20
+	b.sides[0].honour = 0
+	var low := []
+	var high := []
+	for k in 2:
+		b.sides[0].honour = 0 if k == 0 else 50
+		for i in 20:
+			b.sides[1].morale = 80.0
+			b._act(0, "captain", "quarter")
+			(low if k == 0 else high).append(80.0 - b.sides[1].morale)
+	assert_gt(high.reduce(func(a, x): return a + x, 0.0), low.reduce(func(a, x): return a + x, 0.0))

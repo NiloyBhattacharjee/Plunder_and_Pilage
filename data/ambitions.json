@@ -1,5 +1,5 @@
 {
- "_comment": "Ambitions, Paradox style: the captain chases one at a time (scripts/ambitions.gd). Progress is a 'value' of your situation (any number the event conditions know: gold, fear, honour, prizes, bases...) or a 'tally' of deeds since you took it up (ships_taken, treasure_taken, lawful_prizes, rescues, finds, rivals_beaten, pardons, trade_profit). 'requires': event conditions for it to be offered. On success: 'rewards' (event outcomes), the 'title' for life, and any lasting 'bonus' (enemy_morale: added to every enemy's morale when you fight).",
+ "_comment": "Ambitions, Paradox style: the captain chases one at a time (scripts/ambitions.gd). Progress is a 'value' of your situation (any number the event conditions know: gold, fear, honour, prizes, bases...) or a 'tally' of deeds since you took it up (ships_taken, treasure_taken, lawful_prizes, rescues, finds, rivals_beaten, pardons, trade_profit, towns_taken). 'requires': event conditions for it to be offered. On success: 'rewards' (event outcomes), the 'title' for life, and any lasting 'bonus' (enemy_morale: added to every enemy's morale when you fight).",
  "scourge": {
   "name": "Scourge of the Main",
   "goal": "Take five ships",
@@ -175,5 +175,23 @@
   "rewards": [
    "honour +3"
   ]
+ },
+ "conqueror": {
+  "name": "Taker of Towns",
+  "goal": "Take two towns",
+  "description": "Ships are prizes; towns are kingdoms. Storm them, starve them or buy their gates, and every governor on the Main will sleep badly.",
+  "tally": "towns_taken",
+  "target": 2,
+  "requires": [
+   "fear >= 10"
+  ],
+  "title": "the Town-Taker",
+  "rewards": [
+   "fear +6",
+   "morale +10 60"
+  ],
+  "bonus": {
+   "enemy_morale": -3
+  }
  }
 }

@@ -91,6 +91,25 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
   storage safe from capture, production, cheap repairs and careening, recruits, a smugglers' market, a stockade for ransoms, guns.
   Visibility grows with activity; visible bases get raided. Be there and you fight with the shore guns beside you; be away and the
   defence (garrison, walls, shelter, manager, warning, allies) is rolled against the raiders. Base events in `events/bases.json`.
+- Taking towns (`scripts/sieges.gd`, the dialog in `ui/siege_flow.gd`, tuning in `rules.json` `sieges`): lay siege from the governor
+  tab or a closed harbour. Each turn: scout, fight the guard ship, bombard the fort, blockade (the town starves and may riot), wait
+  for allies, bribe the gate, arm a rioting town, raid by night, or storm a side of your choice; a relief squadron is on its way.
+  Then sack it (gold, ruin, a governor's feud), ransom it, or hold it: a held town is a base keyed by its port id, paying taxes,
+  attacked by expeditions from its old masters. Capitals need a squadron. Leading Nassau's council hands you Nassau the same way.
+  A lifted siege is remembered (`s.sieges`): come back and the damage is still there, less repairs. Consorts' crews land and die too.
+  A held town is yours: no duty, your laws, no officials but your manager; you set its taxes (light, fair, heavy), and its loyalty
+  follows taxes, order and hunger. Expeditions grow with each one beaten and sail from a real port: catch one at sea and it's over.
+  Any base whose loyalty collapses may rise against you (`bases` `rebel_below`). Plantations and stills need hands from the garrison.
+- Wars of the moment (`scripts/factions.gd`, `rules.json` `diplomacy`): tension between nations drifts and rises with incidents
+  (privateer raids, false colours, sacks); at war, each side takes the other's smaller towns (`Ports.change_owner`), and the peace may hand them back.
+- The price on your head (`Career.add_bounty`, `rules.json` `career.bounty`): piracy and sacks raise it per nation; hunters come in
+  bigger ships as it grows; that nation's pardon clears it. Named captains grow (`bonds.json` `growth`): fame from prizes and from
+  beating you buys bigger ships; the dead are replaced. Smugglers, coasters and guarda costas sail too (`encounters.json`).
+- Contracts also escort, blockade, take a town (`siege`) and kidnap; employers remember how your last job ended (`last_job`), and
+  templates with `after` follow from it (a second chance, finishing the town you blockaded).
+- Endings (`scripts/endings.gd`, `rules.json` `endings`): retire rich, a governorship, a pirate republic at Nassau (chosen from the
+  crew screen); hanged, lost at sea, or no one left (they choose you). The crew screen's Log tab reads back the line of captains.
+  New games can be ironman (one save, written in every port, gone at the end) and have first-voyage hints (`data/tutorial.json`).
 - `events/*.json`: random and historical events (128 so far, in batches by category). `scripts/events.gd` is the engine;
   `docs/events.md` explains the format for writing more. Every event is checked at startup and by the tests. Tuning in `rules.json` `events`.
 - `encounters.json`: who you meet at sea (ship types, crew, morale, cargo, how hostile, prisoner willingness). Battle actions per officer post are in `combat_actions.json`; dice, damage, morale and AI crews are tuned in `rules.json` `dice_combat`. Prisoner fates and prize rules: `prisoners`, `prizes`, `fence`.

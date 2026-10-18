@@ -4,7 +4,9 @@ extends Node2D
 ## Controls: left-click sea or a port to sail there. Right/middle-drag pans, wheel zooms, F follows the ship.
 ## Space pauses, 1/2/3 set time speed. F5 quick-saves, F9 quick-loads.
 
-const PORT_CLICK_RADIUS := 14.0  # screen pixels
+signal battle_over(outcome: String)  # after a battle is fully settled (prizes, succession): a siege waits on it
+
+const PORT_CLICK_RADIUS := 24.0  # screen pixels
 const ZOOM_MAX := 4.0
 
 var terrain: TerrainGrid
@@ -50,7 +52,8 @@ func _ready() -> void:
 	for id in Data.table("ports"):
 		var p: Dictionary = Data.table("ports")[id]
 		port_positions[id] = Geo.latlon_to_px(p.lat, p.lon)
-		anchorages[id] = terrain.nearest_sea(port_positions[id])
+		var at: Array = p.get("anchor", [p.lat, p.lon])  # where ships lie, if the town itself is out of a route's reach
+		anchorages[id] = terrain.nearest_sea(Geo.latlon_to_px(at[0], at[1]))
 	port_layer.port_positions = port_positions
 	for id in Data.table("coves"):
 		if not id.begins_with("_"):
@@ -82,11 +85,17 @@ func _ready() -> void:
 		port_layer.trade_good = good)
 	port_screen.message.connect(hud.show_message)
 	port_screen.closed.connect(port_layer.queue_redraw)
+	port_screen.closed.connect(func(): if not busy(): Tutorial.show(self, "sailing"))
 	port_screen.life_event.connect(_life_event)
+	port_screen.siege.connect(func(id): SiegeFlow.new(self).run(id))
+	port_screen.govern.connect(func(id): $BaseScreen.open(id, ship))
 	Clock.day_passed.connect(func(_d): port_layer.queue_redraw())  # what's going on in the towns changes daily
 	hud.crew_pressed.connect(_open_crew)
 	hud.ambition_pressed.connect(func(): if not busy(): choose_ambition())
 	crew_screen.message.connect(hud.show_message)
+	crew_screen.ending.connect(func(id):
+		crew_screen.close()
+		end_game(id))
 	shipping.setup(terrain, self)
 	finds = Finds.new()
 	add_child(finds)
@@ -121,9 +130,15 @@ func _ready() -> void:
 	hud.show_message("Captain %s and the %s lie at anchor in %s. Click the sea or a port to set a course. C opens the crew and ship." % [
 		ShipStats.captain(ship.state).name, ship.state.name, Data.table("ports")[start_port].name])
 	if start_config.get("load", false):
-		_load.call_deferred()
+		_load.call_deferred(true)
 	else:
-		port_screen.open.call_deferred(start_port, ship)
+		_first_port.call_deferred(start_port)
+
+
+## The first port of a new game: a word of welcome on a first voyage, then the port screen.
+func _first_port(id: String) -> void:
+	await Tutorial.show(self, "welcome")
+	port_screen.open(id, ship)
 
 
 func _process(delta: float) -> void:
@@ -145,6 +160,7 @@ func _process(delta: float) -> void:
 func _daily() -> void:
 	var s: Dictionary = ship.state
 	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
+	Career.bounty_daily(s)
 	for m in Contracts.daily(s):
 		hud.show_message(m)
 	Politics.prune_secrets(s)
@@ -157,7 +173,7 @@ func _daily() -> void:
 		if found != "":
 			hud.show_message(found)
 			port_layer.queue_redraw()
-	var base_day := Bases.daily(s, at_base)
+	var base_day := Bases.daily(s, at_base if at_base != "" else ship.anchored_at)  # a held town is a base too
 	for m in base_day.messages:
 		hud.show_message(m)
 	if base_day.messages.size() > 0:
@@ -236,11 +252,15 @@ func _set_course(target: Vector2) -> void:
 	if port_id != "" and port_id == ship.anchored_at:
 		port_screen.open(port_id, ship)
 		return
+	if port_id == "" and terrain.at(target) == TerrainGrid.LAND:
+		port_id = _port_near(target, 2.5)  # a click on the shore by a town means the town
+		if port_id == "":
+			target = terrain.nearest_sea(target)  # otherwise sail as close in as the water allows
+			if terrain.at(target) == TerrainGrid.LAND:
+				hud.show_message("That's dry land, Captain.")
+				return
 	if port_id != "":
 		target = anchorages[port_id]
-	elif terrain.at(target) == TerrainGrid.LAND:
-		hud.show_message("That's dry land, Captain.")
-		return
 	var path := terrain.find_path(ship.position, target)
 	if path.is_empty():
 		hud.show_message("No sea route to there.")
@@ -271,8 +291,8 @@ func _at_cove(id: String) -> void:
 		return
 	UIKit.pause_clock()
 	var why := Bases.claim_problem(ship.state, id)
-	var pick: int = await dialog.ask(Bases.cove(id).name, "%s\n\nMake it your base? It costs %d gold to set up, and %d hands stay behind as a garrison. A base needs men, food and money, and the more you use it the easier it is to find." % [
-		Bases.cove(id).description, Data.rules.bases.claim_cost, Data.rules.bases.claim_garrison],
+	var pick: int = await dialog.ask(Bases.cove(id).name, "%s\n\nMake it your base? It costs %d gold to set up, and %d hands stay behind as a garrison. A base needs men, food and money, and the more you use it the easier it is to find.%s" % [
+		Bases.cove(id).description, Data.rules.bases.claim_cost, Data.rules.bases.claim_garrison, Tutorial.note(ship.state, "cove")],
 		[{"text": "Make it ours", "disabled": why != "", "tooltip": why if why != "" else "Shelter %d. %s%s" % [Bases.cove(id).shelter,
 			"Good soil for a plantation. " if Bases.cove(id).soil else "", "A spring: the garrison needs no water brought in." if Bases.cove(id).water else "No fresh water: bring it."]},
 		{"text": "Not now"}])
@@ -288,7 +308,8 @@ func _at_cove(id: String) -> void:
 func defend_base(id: String) -> void:
 	var b: Dictionary = Bases.bases[id]
 	var r: Dictionary = b.raid
-	var enemy := Encounters.generate(r.faction, rng, r.kind)
+	var kind: String = r.kind if r.kind != "expedition" else ("pirate" if r.faction == "pirates" else "navy")
+	var enemy := Encounters.generate(r.faction, rng, kind)
 	if r.captain != "" and People.chars.has(r.captain):
 		var c := People.person(r.captain)
 		enemy.name = c.ship
@@ -299,8 +320,8 @@ func defend_base(id: String) -> void:
 	start_combat(enemy, "defend")
 
 
-func _port_near(pos: Vector2) -> String:
-	var radius := PORT_CLICK_RADIUS / camera.zoom.x
+func _port_near(pos: Vector2, reach := 1.0) -> String:
+	var radius := PORT_CLICK_RADIUS * reach / camera.zoom.x
 	for id in port_positions:
 		if pos.distance_to(port_positions[id]) < radius or pos.distance_to(anchorages[id]) < radius:
 			return id
@@ -322,6 +343,9 @@ func _on_arrived(id: String) -> void:
 	var access := Career.port_access(ship.state, id)
 	if access.open:
 		hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
+		if ship.state.get("ironman", false):  # ironman keeps one save, written for you
+			SaveGame.save_game(self)
+		await Tutorial.show(self, "contracts")
 		var inst := Events.pick("port", _event_ctx())
 		if not inst.is_empty():
 			await run_event(inst)
@@ -339,7 +363,11 @@ func _on_arrived(id: String) -> void:
 				if fools else "Hoist the flag of a nation at peace with %s first (Colours, top left)." % Data.table("factions")[p.faction].name},
 		{"text": "Bribe the harbour master (%d gold)" % access.bribe, "disabled": s.gold < access.bribe,
 			"tooltip": "Usually works. Sometimes he takes the money and calls the guard anyway."},
+		{"text": "Lay siege to %s" % p.name, "disabled": Sieges.problem(s, id) != "", "tooltip": Sieges.problem(s, id) if Sieges.problem(s, id) != "" else SiegeFlow.preview(id)},
 	])
+	if pick == 3:
+		await SiegeFlow.new(self).run(id)
+		return
 	var pa: Dictionary = Data.rules.port_access
 	var entered := false
 	match pick:
@@ -430,15 +458,7 @@ func run_succession() -> void:
 	var old := ShipStats.captain(s)
 	var cause: String = s.succession.cause
 	if s.crew.is_empty():
-		s.captains.append({"name": old.name, "until": Clock.date_string(), "fate": cause})
-		var line := "
-".join(s.captains.map(func(c): return "%s (until %s, %s)" % [c.name, c.until, c.fate]))
-		await dialog.ask("The end of the %s" % s.name, "Captain %s %s, and there is no one left to take the helm.
-
-The captains of the %s:
-%s" % [
-			old.name, cause, s.name, line], [{"text": "Start a new game"}])
-		get_tree().change_scene_to_file("res://ui/new_game.tscn")
+		await end_game("hanged" if cause.ends_with("hanged") else "")
 		return
 	var cands := Crew.candidates(s, rng)
 	var winner := Crew.chosen(s, cands)
@@ -527,12 +547,27 @@ func ambition_won(won: Dictionary) -> void:
 	UIKit.resume_clock()
 
 
+## The end: how it ended, and the ship's log read back. Then a new game. An ironman game's save goes with it.
+func end_game(id: String) -> void:
+	UIKit.pause_clock()
+	_in_event = true
+	var e := Endings.epitaph(ship.state, id)
+	if ship.state.get("ironman", false):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveGame.QUICKSAVE))
+	await dialog.ask(e.title, e.text, [{"text": "Start a new game"}])
+	get_tree().change_scene_to_file("res://ui/new_game.tscn")
+
+
 func _save() -> void:
 	var err := SaveGame.save_game(self)
 	hud.show_message("Game saved." if err == OK else "Save failed: %s" % error_string(err))
 
 
-func _load() -> void:
+## starting: the Continue button on the new-game screen (allowed in ironman: it's the only way back in).
+func _load(starting := false) -> void:
+	if ship.state.get("ironman", false) and not starting:
+		hud.show_message("Ironman: no going back. The game saves itself in every port.")
+		return
 	for screen in [port_screen, crew_screen]:
 		if screen.visible:
 			screen.close()
@@ -555,15 +590,15 @@ func busy() -> bool:
 
 ## An NPC ship has come within hail.
 func _on_contact(npc: Dictionary) -> void:
+	chase_id = ""  # caught her: stop running her down
 	if npc.has("fight"):
 		battle_at_sea(npc)
 		return
-	var e: Dictionary = npc.enemy
-	if e.behaviour == "warship" and e.kind == "navy" and not npc.get("treasure", false) and npc.get("hostile") != true \
-			and not Career.npc_hostile(ship.state, e, rng) and AtSea.wants_search(ship.state, e.faction, rng):
+	if npc.get("search", false):  # a friendly patrol came over to look in your hold
+		npc.search = false
 		inspection(npc)
 		return
-	encounter(e, npc)
+	encounter(npc.enemy, npc)
 
 
 ## The port nearest a point (for news and prices at sea).
@@ -740,6 +775,7 @@ func encounter(enemy: Dictionary, npc := {}) -> void:
 		var temper := DiceCombat.temperament(People.person(enemy.captain_id))
 		if temper != "":  # you know their reputation
 			flag_note += " Known to be %s: %s." % [DiceCombat.cfg().temperaments[temper].name, DiceCombat.cfg().temperaments[temper].text]
+	flag_note += Tutorial.note(s, "encounter")
 	var job :=Contracts.find(enemy.get("contract", ""))
 	if not job.is_empty():
 		flag_note += "
@@ -910,6 +946,7 @@ func start_combat(enemy: Dictionary, mode: String) -> void:
 			hud.show_message("Nobody believes false colours over black sails.")
 		else:
 			s.reputation.honour += int(Data.rules.flags.false_colours_honour)
+			Factions.incident(Career.flag_faction(flag), enemy.faction, Data.rules.diplomacy.incident.false_colours)  # they'll blame the flag
 			mode = "ambush"
 	combat = load("res://scenes/combat.tscn").instantiate()
 	_show_world(false)
@@ -941,6 +978,11 @@ func _show_world(on: bool) -> void:
 
 
 func _on_combat_finished(result: Dictionary) -> void:
+	await _settle_battle(result)
+	battle_over.emit(result.outcome)
+
+
+func _settle_battle(result: Dictionary) -> void:
 	combat.queue_free()
 	combat = null
 	_show_world(true)
@@ -976,6 +1018,9 @@ func _on_combat_finished(result: Dictionary) -> void:
 				", and sends across a purse of %d gold" % thanks if thanks > 0 else "", Career.fname(f), int(AtSea.cfg().rescue_relation)])
 		_rescued = ""
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
+		if current_npc.has("expedition"):  # caught at sea before it reached your town
+			hud.show_message(Bases.expedition_beaten(current_npc.expedition))
+			port_layer.queue_redraw()
 		if current_npc.has("voyage"):  # her cargo never reaches port, and the route remembers
 			var v := Economy.voyage(current_npc.voyage)
 			if not v.is_empty():  # her papers: what her home port knew of prices when she sailed
@@ -1012,6 +1057,9 @@ func _on_combat_finished(result: Dictionary) -> void:
 			hud.show_message("You and the %s go your separate ways." % e.name)
 		"player_struck":
 			hud.show_message("You struck your colours. " + Encounters.surrender_losses(s))
+			var hanged := Endings.hanging(s, e, rng)
+			if hanged != "":
+				hud.show_message(hanged)
 		"player_sunk":
 			s.hull = 0.0
 			ship.route.clear()
@@ -1026,4 +1074,5 @@ func _on_combat_finished(result: Dictionary) -> void:
 
 func _on_foundered() -> void:
 	Clock.set_speed(0)
-	hud.show_message("The ship has foundered. All hands lost. (Restart to try again.)")
+	hud.show_message("The ship has foundered. All hands lost.")
+	end_game("lost")

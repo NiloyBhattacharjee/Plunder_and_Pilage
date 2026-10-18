@@ -66,18 +66,23 @@ func move(n: Dictionary, dd: float, player_pos: Vector2, s: Dictionary) -> void:
 	var free_course := false  # off its route: deep keels won't follow into shallows
 	if dist > sight:
 		n.hostile = null  # out of sight: they'll judge you afresh next time
+		n.search = false
 	elif n.hostile == null and n.kind != "merchant":
 		n.hostile = Career.npc_hostile(s, e, rng)
+		# a friendly patrol may want a look in your hold: she comes to you, the rest hold their course
+		n.search = not n.hostile and e.behaviour == "warship" and e.kind == "navy" and not n.get("treasure", false) and AtSea.wants_search(s, e.faction, rng)
 	var was_chasing: bool = n.get("chasing", false)
 	n.chasing = false
 	var detour: bool = n.get("detour_until", 0.0) > Clock.day  # an island was in the way: following a path round it
 	if detour and not n.route.is_empty():
 		target = n.route[0]
-	elif n.kind != "merchant" and n.hostile == true and dist < nm(cfg().chase_nm) * vis and s.hull > 0:
+	elif n.kind != "merchant" and (n.hostile == true or n.get("search", false)) and dist < nm(cfg().chase_nm) * vis and s.hull > 0:
 		target = player_pos
 		free_course = true
 		n.chasing = true
-		if not was_chasing:
+		if not was_chasing and n.hostile != true:
+			news.emit("The %s %s is closing on you, signalling you to heave to." % [Data.table("factions")[e.faction].adjective, e.name])
+		elif not was_chasing:
 			alert.emit("The %s is bearing down on you from the %s!" % [n.enemy.name, Geo.compass_name(Geo.bearing(n.pos - player_pos))])
 	elif n.kind == "merchant" and dist < sight and wary(n, s):
 		target = n.pos + (n.pos - player_pos).normalized() * 200.0
@@ -118,11 +123,14 @@ func wary(n: Dictionary, s: Dictionary) -> bool:
 	return shown == "pirates" or Factions.at_war(shown, n.enemy.faction)
 
 
+## Only two kinds of meeting stop you: a ship you chose to run down (clicked), and one that came after you.
+## Everyone else passes by on her own business.
 func _contacts(player: Node2D) -> void:
 	if world.busy() or player.anchored_at != "" or player.state.hull <= 0:
 		return
 	for n in npcs:
-		if n.cooldown <= Clock.day and n.pos.distance_to(player.position) < nm(cfg().contact_nm):
+		var wanted: bool = n.id == world.chase_id or (n.get("chasing", false) and n.cooldown <= Clock.day)
+		if wanted and n.pos.distance_to(player.position) < nm(cfg().contact_nm):
 			n.cooldown = Clock.day + cfg().contact_cooldown_days
 			contact.emit(n)
 			return
@@ -132,6 +140,16 @@ func _arrive(n: Dictionary) -> void:
 	if n.get("treasure", false):
 		_say(n, "The treasure galleon %s has reached Havana safely." % n.enemy.name, true)
 		remove(n)
+		return
+	if n.has("escort"):  # the merchant you were seeing safely to port
+		var text := Contracts.escort_arrived(n.escort, world.ship.state)
+		if text != "":
+			news.emit("The %s has made %s safely. %s" % [n.enemy.name, Ports.port(n.dest).name, text])
+		remove(n)
+		return
+	if n.has("expedition"):  # off your town: she waits for the day of the assault
+		n.home = n.expedition
+		_new_goal(n)
 		return
 	if n.kind == "merchant":
 		if not n.has("voyage"):  # a contract's ship; a voyage's cargo reaches the market on the economy's schedule
@@ -144,6 +162,12 @@ func _arrive(n: Dictionary) -> void:
 
 func _new_goal(n: Dictionary) -> void:
 	var goal: Vector2
+	if n.has("hunting"):  # raiders after a particular ship: they follow her
+		var prey := find(n.hunting)
+		if not prey.is_empty():
+			_set_course(n, prey.pos)
+			return
+		n.erase("hunting")
 	if n.has("captain_id") and Bonds.level(world.ship.state, n.captain_id) <= -3 and rng.randf() < 0.7:
 		n.route = terrain.find_path(n.pos, world.ship.position)  # a blood feud: they come looking for you
 		if not n.route.is_empty():
@@ -182,19 +206,114 @@ func _set_course(n: Dictionary, goal: Vector2) -> void:
 func daily() -> void:
 	for n in npcs.duplicate():
 		n.age += 1
-		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.get("treasure", false):  # contract targets and named captains stay
+		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.get("treasure", false) and not n.has("expedition") and not n.has("escort"):  # contract targets and named captains stay
 			remove(n)
+		elif n.has("expedition") and Bases.bases.get(n.expedition, {}).get("raid", {}).get("npc", "") != n.id:
+			remove(n)  # the expedition is over, one way or the other
 	if count("pirate") < int(round(cfg().pirates * Economy.model.world_mult("pirates"))):
 		spawn("pirate", "pirates")
 	for f in Career.nations():
 		if not _ports_of(f).is_empty() and npcs.filter(func(n): return n.kind == "navy" and n.enemy.faction == f).size() < cfg().navy_per_faction:
 			spawn("navy", f)
 	var s: Dictionary = world.ship.state
-	if Career.wanted(s) and count("hunter") < cfg().hunters_max and rng.randf() < cfg().hunter_spawn_chance:
-		var worst: String = Career.nations().reduce(func(a, b): return a if s.relations[a] < s.relations[b] else b)
-		var h := spawn("hunter", worst)
-		_say(h, "Word in the taverns: a %s pirate hunter, the %s, has sailed to bring you in." % [Data.table("factions")[worst].adjective, h.enemy.name], true)
+	var price := Career.bounty_total(s)
+	var per: float = Data.rules.career.bounty.per_hunter
+	if (Career.hunted(s) or Career.wanted(s)) and count("hunter") < cfg().hunters_max + int(price / per) and rng.randf() < cfg().hunter_spawn_chance * (1.0 + price / per):
+		var worst := Career.bounty_by(s)
+		if worst == "":
+			worst = Career.nations().reduce(func(a, b): return a if s.relations[a] < s.relations[b] else b)
+		var h := spawn("hunter", worst, "", Career.hunter_ship(s))
+		_say(h, "Word in the taverns: a %s pirate hunter, the %s (%s), has sailed to collect the %d gold on your head." % [
+			Data.table("factions")[worst].adjective, h.enemy.name, Data.table("ships")[h.enemy.type].name.to_lower(), s.get("bounty", {}).get(worst, 0.0)], true)
+	if npcs.filter(func(n): return n.enemy.kind == "smuggler").size() < cfg().smugglers:
+		_spawn_trader("smuggler")
+	if npcs.filter(func(n): return n.enemy.kind == "coaster").size() < cfg().coasters:
+		_spawn_trader("coaster")
+	if not _ports_of("spain").is_empty() and npcs.filter(func(n): return n.enemy.kind == "guarda_costa").size() < cfg().guarda_costas:
+		spawn("navy", "spain", "guarda_costa")
+	_expeditions()
 	_meetings()
+
+
+## A smuggler runs a Spanish port's forbidden goods in from a foreign island; a coaster carries a port's own goods
+## to a neighbour. Both sail like merchants, and what they carry lands in the market they're bound for.
+func _spawn_trader(kind: String) -> void:
+	var origin := ""
+	var dest := ""
+	var cargo := {}
+	if kind == "smuggler":
+		var markets: Array = Ports.state.keys().filter(func(id): return not Ports.state[id].laws.contraband.is_empty() and world.anchorages.has(id))
+		var homes: Array = Ports.state.keys().filter(func(id): return Ports.port(id).faction in ["dutch", "england"] and world.anchorages.has(id))
+		if markets.is_empty() or homes.is_empty():
+			return
+		dest = markets[rng.randi() % markets.size()]
+		homes = homes.filter(func(id): return Ports.port(id).faction != Ports.port(dest).faction)
+		if homes.is_empty():
+			return
+		origin = homes[rng.randi() % homes.size()]
+		var goods: Array = Ports.state[dest].laws.contraband
+		cargo[goods[rng.randi() % goods.size()]] = 1
+	else:
+		var ports: Array = Ports.state.keys().filter(func(id): return Ports.port(id).faction != "pirates" and world.anchorages.has(id))
+		if ports.size() < 2:
+			return
+		origin = ports[rng.randi() % ports.size()]
+		var here: Vector2 = world.anchorages[origin]
+		ports = ports.filter(func(id): return id != origin and not Factions.at_war(Ports.port(id).faction, Ports.port(origin).faction))
+		if ports.is_empty():
+			return
+		ports.sort_custom(func(a, b): return world.anchorages[a].distance_to(here) < world.anchorages[b].distance_to(here))
+		for p in ports:  # the nearest neighbour she can actually sail to
+			if not _route(origin, p).is_empty():
+				dest = p
+				break
+		if dest == "":
+			return
+		var makes: Array = Economy.produces(origin)
+		if not makes.is_empty():
+			cargo[makes[rng.randi() % makes.size()]] = 1
+	if _route(origin, dest).is_empty():
+		return
+	var f: String = Ports.port(origin).faction
+	var e := Encounters.generate(f, rng, kind)
+	var room: float = ShipStats.effective(e.type, e.upgrades).cargo * rng.randf_range(0.4, 0.9)
+	e.cargo = {}
+	for g in cargo:
+		e.cargo[g] = maxi(1, int(room / Market.weight(g)))
+	var n := _add("merchant", e, world.anchorages[origin], Data.table("factions")[f].flag)
+	n.origin = origin
+	n.dest = dest
+	n.route = _route(origin, dest)
+
+
+## Expeditions to retake your towns sail from their nation's nearest port some days before they're due:
+## catch one at sea and beat it, and that attempt is over.
+func _expeditions() -> void:
+	var lead: float = Data.rules.sieges.hold.expedition.lead_days
+	for id in Bases.bases:
+		var b: Dictionary = Bases.bases[id]
+		var r: Dictionary = b.raid
+		if not b.has("town") or r.get("kind", "") != "expedition" or r.has("npc") or r.day - Clock.day > lead or not world.anchorages.has(id):
+			continue
+		var from: String = b.town.from
+		var homes: Array = (_ports_of(from) if from != "pirates" else Ports.state.keys().filter(func(p): return Ports.port(p).get("fence", false)))
+		homes = homes.filter(func(p): return p != id and not Bases.bases.has(p) and world.anchorages.has(p) and not _route(p, id).is_empty())
+		r.npc = ""
+		if homes.is_empty():
+			continue  # nowhere to sail from: it comes anyway, unseen
+		var here: Vector2 = world.anchorages[id]
+		homes.sort_custom(func(a, c): return world.anchorages[a].distance_to(here) < world.anchorages[c].distance_to(here))
+		var ships: Array = Data.rules.sieges.hold.expedition.ships
+		var kind := "pirate" if from == "pirates" else "navy"
+		var e := Encounters.generate(from, rng, kind, ships[mini(int(b.town.get("failed", 0)), ships.size() - 1)])
+		e.label = "the expedition to retake %s" % b.name
+		var n := _add(kind, e, world.anchorages[homes[0]], Data.table("factions")[from].flag)
+		n.expedition = id
+		n.origin = homes[0]
+		n.dest = id
+		n.route = _route(homes[0], id)
+		r.npc = n.id
+		_say(n, "Word from %s: the %s has sailed to retake %s. Catch her at sea and the attempt is over." % [Ports.port(homes[0]).name, e.name, b.name], true)
 
 
 ## Pirates fall on merchants and navies run down pirates. Where you can see, it's a fight that lasts a while,
@@ -212,6 +331,7 @@ func _meetings() -> void:
 					p.enemy.cargo[g] = p.enemy.cargo.get(g, 0) + m.enemy.cargo[g]
 				_say(m, "Pirates took the %s merchantman %s; her cargo never reached %s." % [
 					Data.table("factions")[m.enemy.faction].adjective, m.enemy.name, Ports.port(m.dest).name])
+				_fame(p, 2)
 				if m.has("voyage"):
 					Economy.lose_voyage(m.voyage, "pirates")
 				remove(m)
@@ -232,7 +352,7 @@ func _start_fight(a: Dictionary, v: Dictionary) -> void:
 	a.cooldown = 0.0
 	v.cooldown = 0.0
 	var where := Geo.compass_name(Geo.bearing(a.pos - world.ship.position))
-	alert.emit("Gunfire to the %s! The %s %s has fallen on the %s %s. (Sail closer to take a hand.)" % [where, a.enemy.label, a.enemy.name, v.enemy.label, v.enemy.name])
+	alert.emit("Gunfire to the %s! The %s %s has fallen on the %s %s. (Click one of them to take a hand.)" % [where, a.enemy.label, a.enemy.name, v.enemy.label, v.enemy.name])
 
 
 ## Fights whose time is up end on their own.
@@ -256,6 +376,7 @@ func resolve_fight(a: Dictionary) -> Dictionary:
 	var l: Dictionary = v if a_wins else a
 	AtSea.hurt(w.enemy, rng.randf_range(0.15, 0.4))
 	w.cooldown = 0.0  # come up on the winner now, and she's in no state to run far
+	_fame(w, int(Data.table("bonds").growth.fight_won))
 	var pos: Vector2 = (a.pos + v.pos) / 2.0
 	if a_wins and l.kind == "merchant":
 		for g in l.enemy.cargo:
@@ -276,6 +397,14 @@ func resolve_fight(a: Dictionary) -> Dictionary:
 		if not inst.is_empty():
 			world.finds.spawn(inst, pos, 0.0)
 	return w
+
+
+## A named captain's name grows with every ship they take.
+func _fame(n: Dictionary, amount: int) -> void:
+	if n.has("captain_id"):
+		var text := Bonds.grow(n.captain_id, amount)
+		if text != "":
+			news.emit(text)
 
 
 func _say(n: Dictionary, text: String, always := false) -> void:
@@ -356,8 +485,9 @@ static func _along(start: Vector2, path: PackedVector2Array, f: float) -> Array:
 	return [prev, PackedVector2Array()]
 
 
-func spawn(kind: String, f: String) -> Dictionary:
-	var e := Encounters.generate(f, rng, kind)
+## kind: how she sails (merchant, navy, pirate, hunter); ekind: what she is, if not that (a guarda costa sails as a navy).
+func spawn(kind: String, f: String, ekind := "", type := "") -> Dictionary:
+	var e := Encounters.generate(f, rng, ekind if ekind != "" else kind, type)
 	var flag: String = Data.table("factions")[f].flag
 	if kind == "pirate" and rng.randf() < Data.rules.flags.npc_false_flag_chance:
 		var nat: Array = Career.nations()
@@ -382,6 +512,22 @@ func spawn_captain(id: String) -> Dictionary:
 	n.captain_id = id
 	n.home = c.haunt
 	_new_goal(n)
+	return n
+
+
+## A merchant you're hired to escort, and the raiders who'll be after her: they wait along her course.
+func spawn_escort(e: Dictionary, origin: String, dest: String, contract_id: String, raiders: int) -> Dictionary:
+	var n := _add("merchant", e, world.anchorages[origin], Data.table("factions")[e.faction].flag)
+	n.escort = contract_id
+	n.origin = origin
+	n.dest = dest
+	n.route = _route(origin, dest)
+	for i in raiders:
+		var r := spawn("pirate", "pirates")
+		var at: Array = _along(world.anchorages[origin], n.route, rng.randf_range(0.35, 0.7))
+		r.pos = terrain.nearest_sea(at[0] + Vector2(rng.randf_range(-60, 60), rng.randf_range(-60, 60)))
+		r.hunting = n.id
+		r.route = PackedVector2Array()
 	return n
 
 
@@ -465,7 +611,7 @@ func _update_sprites(player_pos: Vector2) -> void:
 		if visible:
 			var sp: Node2D = _sprites[n.id]
 			sp.position = n.pos
-			sp.rotation = deg_to_rad(n.heading)
+			sp.rotation = lerp_angle(sp.rotation, deg_to_rad(n.heading), 0.12)  # she comes about, she doesn't snap
 			sp.set_state(1.0, 1.0, 2)
 	queue_redraw()
 

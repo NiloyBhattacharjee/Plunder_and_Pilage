@@ -116,6 +116,9 @@
   "bounty_per_notoriety": 12,
   "price_cut": 0.05,
   "neutral_easy_target": 10,
+  "_growth": "Named captains grow: fame from every ship they take (fight_won; a merchant taken out of sight, 2), from beating you (beat_player) and a little each month. Fame buys a bigger ship (ships: [fame, type], in order) and every stat_every points a stat or skill +1. Dead captains are replaced: new_captain_chance a month while the roster is short.",
+  "growth": {"fight_won": 6, "beat_player": 12, "monthly": [0, 3], "stat_every": 15, "new_captain_chance": 0.3,
+             "ships": [[35, "brigantine"], [55, "brig"], [75, "frigate"]]},
   "captains": {
     "count": 8,
     "pirates": 5,

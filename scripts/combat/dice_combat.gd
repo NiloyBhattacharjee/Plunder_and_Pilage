@@ -695,16 +695,51 @@ func _act(i: int, post: String, id: String) -> void:
 			if c.success:
 				s.sails = minf(s.stats.sails, s.sails + Dice.roll(rng, cfg().rigging_sails[0], cfg().rigging_sails[1]) + Dice.mod(value(s.party[post], "carpentry")))
 			_note(i, post, "%s: %s. Sails %d." % [who, a.name, s.sails], c)
-		"tend":
+		"tend", "saw":
 			c = _roll(i, post, a)
 			if c.success:
-				var n := clampf((Dice.roll(rng, 1, cfg().tend[1]) + Dice.mod(value(s.party[post], "medicine"))) * (2 if _has_perk(i, post, "sawbones") else 1), 0.0, s.casualties)
+				var n := clampf((Dice.roll(rng, 1, cfg().tend[1]) + Dice.mod(value(s.party[post], "medicine"))) * (2 if _has_perk(i, post, "sawbones") else 1)
+					* (cfg().saw_mult if id == "saw" else 1.0), 0.0, s.casualties)
 				s.crew += n
 				s.casualties -= n
-				s.morale += 2
-				_note(i, post, "%s: %s. %d men back at their stations." % [who, a.name, n], c)
+				s.morale += 2 if id == "tend" else cfg().saw_morale  # the screams carry up through the hatches
+				_note(i, post, "%s: %s. %d men back at their stations.%s" % [who, a.name, n, "" if id == "tend" else " Morale %d." % s.morale], c)
 			else:
 				_note(i, post, "%s: %s." % [who, a.name], c)
+		"officers":
+			var hurt: Array = s.party.keys().filter(func(p): return s.party[p].get("wounded", false))
+			if hurt.is_empty():
+				_note(i, post, "%s: %s. Nobody needs it." % [who, a.name])
+				return
+			c = _roll(i, post, a)
+			if c.success:
+				var p: String = "captain" if "captain" in hurt else hurt[0]
+				s.party[p].wounded = false
+				if p == "captain":
+					s.captain_wounded = false
+				_note(i, post, "%s: %s. %s is back on their feet." % [who, a.name, s.party[p].name], c)
+			else:
+				_note(i, post, "%s: %s. Not yet." % [who, a.name], c)
+		"remount":
+			var down: int = int(s.stats.guns) - s.guns_working
+			if down <= 0:
+				_note(i, post, "%s: %s. Every gun is in its place." % [who, a.name])
+				return
+			c = _roll(i, post, a)
+			if c.success:
+				var n := mini(down, Dice.roll(rng, cfg().remount[0], cfg().remount[1]) + maxi(0, Dice.mod(value(s.party[post], "carpentry"))))
+				s.guns_working += n
+				_note(i, post, "%s: %s. %d gun%s back in action." % [who, a.name, n, "" if n == 1 else "s"], c)
+			else:
+				_note(i, post, "%s: %s." % [who, a.name], c)
+		"quarter":
+			c = _contest(i, post, a)
+			var honour := int(clampf(s.get("honour", 0) / cfg().quarter_honour_div, 0.0, 10.0))
+			if c.success:
+				_hit_morale(o, c.margin * cfg().quarter_per_margin + honour + _boost * 3)
+			_note(i, post, "%s: %s. %s" % [who, a.name, ("Men are looking at their boats and their colours (morale %d)." % t.morale) if c.success else "Their officers shout you down."], c)
+			if c.success:
+				_hit_weak(o, a.hits)
 
 
 func _opposes(o: int, id: String) -> bool:
@@ -1057,9 +1092,10 @@ func ai_orders(i: int) -> Dictionary:
 				else:
 					pick = "read_wind" if can.has("read_wind") else ""
 			"carpenter":
-				pick = "plug" if s.leak > 0 or s.fire > 0 or s.hull < s.hull_start * 0.7 else ("rigging" if can.has("rigging") else "plug")
+				pick = "plug" if s.leak > 0 or s.fire > 0 or s.hull < s.hull_start * 0.7 else ("remount" if s.guns_working < int(s.stats.guns) * 0.7
+					else ("rigging" if can.has("rigging") else "plug"))
 			"surgeon":
-				pick = "tend"
+				pick = "officers" if s.captain_wounded else ("saw" if s.casualties > s.crew * 0.2 else "tend")
 		if pick != "" and can.has(pick):
 			out[post] = pick
 	return out

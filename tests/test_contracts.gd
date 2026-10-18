@@ -187,3 +187,85 @@ func test_contracts_survive_save_and_load():
 	assert_eq(back.ship, c.ship)
 	assert_eq(world.shipping.find(back.npc).enemy.contract, c.id)
 	DirAccess.remove_absolute(PATH)
+
+
+func test_an_escort_pays_when_she_makes_port_and_raiders_hunt_her():
+	var c := job("escort_convoy", Contracts.employer("port_royal", "merchant"))
+	assert_false(c.is_empty())
+	Contracts.accept(c, s)
+	var her: Dictionary = world.shipping.find(c.npc)
+	assert_eq(her.escort, c.id)
+	var raiders: Array = world.shipping.npcs.filter(func(n): return n.get("hunting", "") == c.npc)
+	assert_eq(raiders.size(), c.count, "raiders are waiting along her course")
+	world.shipping._arrive(her)
+	assert_eq(c.status, "done")
+	assert_true(world.shipping.find(c.npc).is_empty())
+
+
+func test_a_lost_escort_fails():
+	var c := job("escort_convoy", Contracts.employer("port_royal", "merchant"))
+	Contracts.accept(c, s)
+	world.shipping.remove(world.shipping.find(c.npc))  # the raiders had her
+	Contracts.daily(s)
+	assert_false(c in Contracts.active)
+
+
+func test_a_blockade_counts_days_on_station_and_starves_the_town():
+	s.career.marque = "england"
+	var c := job("blockade_port", gov())
+	Contracts.accept(c, s)
+	world.ship.anchored_at = ""
+	world.ship.position = Contracts._pos(c.port) + Vector2(20, 0)
+	var hunger: float = PortLife.situation(c.port).hunger
+	for i in c.count:
+		Contracts.daily(s)
+	assert_eq(c.status, "done")
+	assert_lt(Economy.model.world_mult("imports:" + c.port), 1.0, "nothing goes in")
+
+
+func test_taking_a_town_completes_the_job_only_the_way_they_wanted():
+	var broker := Contracts.employer("nassau", "broker")
+	s.relations.pirates = 50
+	People.person(broker).relations[s.captain] = 20
+	var c := job("sack_town", broker)
+	Contracts.accept(c, s)
+	for i in 80:
+		s.crew.append(People.add(People.generate({})))
+	Sieges.ransom(s, c.port)
+	assert_false(c in Contracts.active, "ransom isn't what they paid for")
+	var d := job("sack_town", broker)
+	Contracts.accept(d, s)
+	Sieges.sack(s, d.port)
+	assert_eq(d.status, "done")
+
+
+func test_a_kidnapped_grandee_must_be_handed_over():
+	var broker := Contracts.employer("nassau", "broker")
+	s.relations.pirates = 50
+	var c := job("kidnap_noble", broker)
+	Contracts.accept(c, s)
+	var ship: Dictionary = world.shipping.find(c.npc)
+	Contracts.on_battle(s, ship.enemy, "enemy_struck", ship.pos)
+	assert_eq(c.status, "done")
+	assert_true(s.hostages.any(func(h): return h.id == c.hostage))
+	s.hostages.clear()  # ransomed them yourself instead
+	Contracts.daily(s)
+	assert_false(c in Contracts.active)
+	assert_eq(People.person(broker).last_job.how, "failed", "and the broker remembers")
+
+
+func test_how_the_last_job_ended_decides_the_next():
+	s.career.marque = "england"
+	var g := gov()
+	assert_true(Contracts.make("a_second_chance", g, s).is_empty(), "nothing to make amends for")
+	var c := job("dispatches", g)
+	Contracts.accept(c, s)
+	Contracts.abandon(c, s)
+	assert_false(Contracts.make("a_second_chance", g, s).is_empty(), "now there is")
+	var b := job("blockade_port", g)
+	Contracts.accept(b, s)
+	Contracts._complete(b, s)
+	Contracts.collect(b, s)
+	var next := job("storm_the_starved", g)
+	assert_false(next.is_empty())
+	assert_eq(next.port, b.port, "take the town you starved")

@@ -40,6 +40,8 @@ static func offices(port_id: String) -> Array:
 	var p := Ports.port(port_id)
 	var o: Dictionary = cfg().offices
 	var list: Array = (o.pirates if p.faction == "pirates" else (o.small if p.size == "small" else o.default)).duplicate()
+	if Bases.is_town(port_id):  # yours: your manager governs, and only the broker keeps their trade
+		list = []
 	if p.has("broker") and not "broker" in list:
 		list.append("broker")
 	return list
@@ -47,6 +49,8 @@ static func offices(port_id: String) -> Array:
 
 ## Whoever holds this office now, met for the first time when you ask. "" if the port has no such office.
 func official(port_id: String, role: String) -> String:
+	if Bases.is_town(port_id) and role == "governor":
+		return Bases.bases[port_id].manager
 	if not role in offices(port_id):
 		return ""
 	if not officials.has(port_id):
@@ -163,8 +167,10 @@ func target_laws(port_id: String) -> Dictionary:
 
 
 ## The live laws follow the powerful: tariff, pirate policy and pardons at once, customs vigilance gradually
-## (so a seizure still keeps the customs house alert for a while).
+## (so a seizure still keeps the customs house alert for a while). A town you hold keeps your laws.
 func apply_laws(port_id: String, at_once := false) -> void:
+	if Bases.is_town(port_id):
+		return
 	var t := target_laws(port_id)
 	var laws: Dictionary = Ports.state[port_id].laws
 	var base: float = Ports.port(port_id).laws.vigilance
@@ -188,6 +194,8 @@ func law_text(port_id: String) -> String:
 func monthly() -> void:
 	var c := cfg()
 	for port_id in Ports.state:
+		if Bases.is_town(port_id):
+			continue
 		var base: Dictionary = c.influence[Ports.port(port_id).faction]
 		var p := power(port_id)
 		for g in p:
@@ -518,7 +526,7 @@ func leadership_vote(s: Dictionary) -> String:
 	if mine > theirs:
 		council_leader = "player"
 		s.reputation.fear += 2
-		return "The council elects you its leader, %d to %d. %s will not take it well." % [mine, theirs, lead.name]
+		return "The council elects you its leader, %d to %d. %s will not take it well.%s" % [mine, theirs, lead.name, _take_nassau(s)]
 	lead.relations[s.captain] = lead.relations.get(s.captain, 0) - 20
 	return "The council stands by %s, %d to %d. You've made an enemy of the leader." % [lead.name, theirs, mine]
 
@@ -534,10 +542,33 @@ func challenge(s: Dictionary) -> String:
 		s.reputation.fear += 4
 		lead.relations[s.captain] = -60
 		lead.history.append("Beaten in a duel for the council's leadership, %s." % Clock.date_string())
-		return "Steel on the beach at dawn. %s yields, bleeding, and the council is yours.\n%s" % [lead.name, roll]
+		return "Steel on the beach at dawn. %s yields, bleeding, and the council is yours.%s\n%s" % [lead.name, _take_nassau(s), roll]
 	var t := People.wound(cap)
 	s.relations.pirates = s.relations.get("pirates", 0) - 5
 	return "%s beats you on the beach, and the council laughs. You'll carry it: %s.\n%s" % [lead.name, Data.table("traits")[t].name.to_lower() if t != "" else "a cut and a lesson", roll]
+
+
+## A town has been taken and held: its officials are out (the broker stays in business). The governor won't forget.
+func depose(s: Dictionary, port_id: String) -> void:
+	var held: Dictionary = officials.get(port_id, {})
+	for role in held.keys():
+		if role == "broker" or not People.chars.has(held[role]):
+			continue
+		var old := People.person(held[role])
+		old.history.append("Turned out of %s when %s took it, %s." % [Ports.port(port_id).name, ShipStats.captain(s).name, Clock.date_string()])
+		old.port = ""
+		old.role = "former_" + role
+		if role == "governor" and Bonds.level(s, held[role]) > -1:
+			Bonds.start_rivalry(s, held[role], 1, "you took their town")
+		held.erase(role)
+	Contracts.offers.erase(port_id)
+
+
+## Leading the council makes Nassau yours to run, if you've room for another base. England has long claimed it.
+func _take_nassau(s: Dictionary) -> String:
+	if Bases.bases.has("nassau") or Bases.bases.size() >= Data.rules.bases.max:
+		return ""
+	return " " + Bases.hold_town(s, "nassau", 0, int(Data.rules.sieges.hold.council_men), "england")
 
 
 func save_state() -> Dictionary:

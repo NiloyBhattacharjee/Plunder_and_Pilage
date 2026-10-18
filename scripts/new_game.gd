@@ -22,11 +22,11 @@ static func build_points(b: Dictionary) -> Dictionary:
 
 static func build(cfg: Dictionary) -> Dictionary:
 	People.reset()
+	Bases.reset()
 	Ports.reset()
 	Factions.reset()
 	Politics.reset()
 	Bonds.reset()
-	Bases.reset()
 	Contracts.reset()
 	Events.reset()
 	var bg: Dictionary = Data.table("backgrounds")[cfg.background]
@@ -93,6 +93,8 @@ static func build(cfg: Dictionary) -> Dictionary:
 	Crew.ensure(state)
 	state.secrets = []
 	state.bonds = {}
+	state.ironman = cfg.get("ironman", false)
+	state.tutorial = cfg.get("tutorial", false)
 	return {"state": state, "start_port": start_port}
 
 

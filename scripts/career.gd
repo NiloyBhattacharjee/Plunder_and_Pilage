@@ -30,6 +30,59 @@ static func wanted(s: Dictionary) -> bool:
 	return s.career.pirate and s.reputation.notoriety >= cfg().notoriety_wanted
 
 
+# ---- the price on your head ------------------------------------------------------------
+## Each nation you've wronged puts up gold for you: piracy against them raises it, a sack raises it a lot,
+## their pardon clears it, and it fades slowly. Pirate hunters come for it, in bigger ships as it grows.
+
+static func add_bounty(s: Dictionary, f: String, gold: float) -> void:
+	if f == "" or f == "pirates" or gold <= 0.0:
+		return
+	if not s.has("bounty"):
+		s.bounty = {}
+	s.bounty[f] = s.bounty.get(f, 0.0) + gold
+
+
+static func bounty_total(s: Dictionary) -> float:
+	return s.get("bounty", {}).values().reduce(func(a, x): return a + x, 0.0)
+
+
+## The nation that wants you most, or "".
+static func bounty_by(s: Dictionary) -> String:
+	var best := ""
+	for f in s.get("bounty", {}):
+		if best == "" or s.bounty[f] > s.bounty[best]:
+			best = f
+	return best
+
+
+static func hunted(s: Dictionary) -> bool:
+	return bounty_total(s) >= cfg().bounty.hunt_from
+
+
+## The ship a hunter brings: the bigger the price, the bigger the ship.
+static func hunter_ship(s: Dictionary) -> String:
+	var type := ""
+	for tier in cfg().bounty.ships:
+		if bounty_total(s) >= tier[0]:
+			type = tier[1]
+	return type
+
+
+static func bounty_text(s: Dictionary) -> String:
+	if bounty_total(s) < 1.0:
+		return "No price on your head."
+	var parts: Array = s.bounty.keys().filter(func(f): return s.bounty[f] >= 1.0).map(func(f): return "%s %d" % [fname(f), s.bounty[f]])
+	return "A price of %d gold on your head (%s).%s" % [bounty_total(s), ", ".join(parts),
+		" Pirate hunters are out for it." if hunted(s) else ""]
+
+
+static func bounty_daily(s: Dictionary) -> void:
+	for f in s.get("bounty", {}).keys():
+		s.bounty[f] *= 1.0 - float(cfg().bounty.decay_per_day)
+		if s.bounty[f] < 1.0:
+			s.bounty.erase(f)
+
+
 static func rank_name(s: Dictionary) -> String:
 	return cfg().ranks[s.career.rank].name
 
@@ -81,6 +134,7 @@ static func on_attack(s: Dictionary, enemy: Dictionary) -> Array:
 	s.relations[enemy.faction] -= hit
 	if verdict.legal:
 		s.relations[s.career.marque] += int(c.lawful_raid_issuer_bonus)
+		Factions.incident(s.career.marque, enemy.faction, Data.rules.diplomacy.incident.marque_raid)  # their privateer, our ships
 		return msgs
 	for f in nations():
 		if f != enemy.faction:
@@ -92,6 +146,7 @@ static func on_attack(s: Dictionary, enemy: Dictionary) -> Array:
 		msgs.append("There's no going back: every navy now counts you a pirate.")
 	s.career.pirate = true
 	s.reputation.notoriety += int(c.notoriety_piracy) + int(Data.table("encounters")[enemy.kind].notoriety)
+	add_bounty(s, enemy.faction, c.bounty.per_attack + c.bounty.per_notoriety * Data.table("encounters")[enemy.kind].notoriety)
 	s.relations.pirates += int(c.pirate_relation_gain)
 	return msgs
 
@@ -200,6 +255,7 @@ static func pardon(s: Dictionary, f: String, free := false, port_id := "") -> Ar
 	s.gold -= cost
 	s.career.pirate = false
 	s.career.pardoned_by.append(f)
+	s.get("bounty", {}).erase(f)
 	s.reputation.notoriety = int(s.reputation.notoriety * p.notoriety_mult)
 	s.relations[f] = maxi(s.relations[f], 0)
 	s.relations.pirates -= int(p.pirate_relation_hit)
@@ -228,7 +284,9 @@ static func port_access(s: Dictionary, port_id: String) -> Dictionary:
 	var pa: Dictionary = Data.rules.port_access
 	var reason := ""
 	var tolerant: bool = Ports.state[port_id].laws.get("pirates", 0.0) > 0.4  # the townsfolk rule here, and pirates spend money
-	if EconomyEffects.active(s, "closed_ports", port_id) != null:
+	if Bases.bases.has(port_id):
+		reason = ""  # your own town
+	elif EconomyEffects.active(s, "closed_ports", port_id) != null:
 		reason = "The harbour is closed to you after what happened."
 	elif s.get("blind_eye", {}).get(port_id, 0.0) > Clock.day or Bonds.port_open(s, port_id):
 		reason = ""  # the harbour master owes you
@@ -279,8 +337,10 @@ static func npc_hostile(s: Dictionary, enemy: Dictionary, rng: RandomNumberGener
 			var easy: int = Data.table("bonds").neutral_easy_target if Bonds.neutral(s) else 0
 			return s.relations.get("pirates", 0) < Data.rules.encounters.friendly_pirate_relation + easy
 		"warship":
-			if enemy.kind == "hunter" and wanted(s):
+			if enemy.kind == "hunter" and (wanted(s) or s.get("bounty", {}).get(enemy.faction, 0.0) >= cfg().bounty.hunt_from):
 				return true
+			if enemy.kind == "guarda_costa" and shown != "spain" and (carries_spanish_contraband(s) or rng.randf() < cfg().guarda_search):
+				return true  # they stop and search every foreign hull in Spanish waters
 			if EconomyEffects.active(s, "hostile", enemy.faction) != null:
 				return true  # they've been fitted out against you
 			if enemy.faction == "spain" and shown != "spain" and carries_spanish_contraband(s):

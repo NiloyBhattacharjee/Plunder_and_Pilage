@@ -69,6 +69,39 @@ func _make_captain(f: String) -> String:
 	return People.add(c)
 
 
+## A captain's name grows: from prizes taken, fights won, and from beating you. Fame buys a bigger ship
+## (growth.ships) and every growth.stat_every points makes them a little better at the trade.
+## Returns news worth telling when they move up to a bigger ship, else "".
+func grow(id: String, amount: int) -> String:
+	if not People.chars.has(id) or amount <= 0:
+		return ""
+	var c := People.person(id)
+	var gr: Dictionary = cfg().growth
+	var before: int = c.get("fame", 0)
+	c.fame = mini(100, before + amount)
+	for i in int(c.fame / gr.stat_every) - int(before / gr.stat_every):
+		var k: String = ["gunnery", "seamanship", "swordplay", "authority", "intimidation"][rng.randi() % 5]
+		if k in People.STATS:
+			c.stats[k] = mini(20, c.stats[k] + 1)
+		else:
+			c.skills[k] = mini(20, c.skills[k] + 1)
+	var ladder: Array = gr.ships
+	var best: String = c.ship_type
+	for tier in ladder:
+		if c.fame >= tier[0] and _ship_rank(tier[1]) > _ship_rank(best):
+			best = tier[1]
+	if best == c.ship_type:
+		return ""
+	c.ship_type = best
+	c.history.append("Took a %s and made her the new %s, %s." % [Data.table("ships")[best].name.to_lower(), c.ship, Clock.date_string()])
+	return "News from the havens: %s has taken a %s and sails her now as the %s. Their name is growing." % [c.name, Data.table("ships")[best].name.to_lower(), c.ship]
+
+
+func _ship_rank(type: String) -> int:
+	var order: Array = cfg().growth.ships.map(func(t): return t[1])
+	return order.find(type) if type in order else -1
+
+
 static func pair_key(a: String, b: String) -> String:
 	return a + "|" + b if a < b else b + "|" + a
 
@@ -470,6 +503,17 @@ func monthly(s: Dictionary) -> Array:
 		if lvl == 3:  # a blood feud: they spread your name and pay for your head
 			s.reputation.notoriety += 2
 			msgs.append("%s is spreading your name in every tavern and paying for news of your course." % name_of(key))
+	var gr: Dictionary = c.growth
+	for id in roster():  # the season's prizes, out of your sight
+		var news := grow(id, rng.randi_range(int(gr.monthly[0]), int(gr.monthly[1])))
+		if news != "":
+			msgs.append(news)
+	if roster().size() < int(c.captains.count) and rng.randf() < gr.new_captain_chance:  # the dead are replaced
+		var f: String = "pirates" if rng.randf() < 0.6 else Career.nations()[rng.randi() % Career.nations().size()]
+		var id := _make_captain(f)
+		captains.append(id)
+		People.person(id).fame = rng.randi_range(5, 20)
+		msgs.append("A new name in the taverns: %s, captain of the %s, out of %s." % [People.person(id).name, People.person(id).ship, Ports.port(People.person(id).haunt).name])
 	for i in 3:  # NPCs make friends and enemies of their own
 		var r := roster()
 		if r.size() < 2:
@@ -509,6 +553,9 @@ func on_battle(s: Dictionary, enemy: Dictionary, outcome: String, attacked: bool
 	elif lvl == 0:
 		msgs.append(start_rivalry(s, id, 2, "you fought"))
 		lvl = level(s, id)
+	if outcome in ["player_struck", "player_sunk"]:
+		var news := grow(id, int(cfg().growth.beat_player))
+		msgs.append("%s will dine out on beating you.%s" % [c.name, " " + news if news != "" else ""])
 	if outcome in ["enemy_struck", "enemy_sunk"]:
 		var fame: int = cfg().fame_per_level * maxi(1, -lvl)
 		s.reputation.notoriety += fame

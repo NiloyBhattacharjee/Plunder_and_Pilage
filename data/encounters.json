@@ -144,5 +144,108 @@
       "gunners": 0.4,
       "marines": 0.25
     }
+  },
+  "smuggler": {
+    "label": "smuggler",
+    "behaviour": "merchant",
+    "weight": 0,
+    "ships": [
+      "sloop",
+      "schooner"
+    ],
+    "crew_fraction": [
+      0.6,
+      0.9
+    ],
+    "morale": 45,
+    "cargo_fraction": [
+      0.6,
+      1.0
+    ],
+    "gold": [
+      150,
+      700
+    ],
+    "skill": [
+      5,
+      9
+    ],
+    "prisoner_willingness": 0.5,
+    "relation_hit": 3,
+    "notoriety": 1,
+    "roles": {
+      "sailors": 0.6,
+      "gunners": 0.25,
+      "marines": 0.15
+    }
+  },
+  "coaster": {
+    "label": "coaster",
+    "behaviour": "merchant",
+    "weight": 0,
+    "ships": [
+      "sloop"
+    ],
+    "crew_fraction": [
+      0.3,
+      0.5
+    ],
+    "morale": 30,
+    "cargo_fraction": [
+      0.3,
+      0.7
+    ],
+    "gold": [
+      20,
+      150
+    ],
+    "skill": [
+      2,
+      5
+    ],
+    "prisoner_willingness": 0.4,
+    "relation_hit": 8,
+    "notoriety": 2,
+    "roles": {
+      "sailors": 0.85,
+      "gunners": 0.1,
+      "marines": 0.05
+    }
+  },
+  "guarda_costa": {
+    "label": "guarda costa",
+    "faction": "spain",
+    "behaviour": "warship",
+    "weight": 0,
+    "ships": [
+      "sloop",
+      "brigantine",
+      "brig"
+    ],
+    "crew_fraction": [
+      0.9,
+      1.0
+    ],
+    "morale": 70,
+    "cargo_fraction": [
+      0.0,
+      0.2
+    ],
+    "gold": [
+      100,
+      500
+    ],
+    "skill": [
+      6,
+      10
+    ],
+    "prisoner_willingness": 0.2,
+    "relation_hit": 12,
+    "notoriety": 3,
+    "roles": {
+      "sailors": 0.3,
+      "gunners": 0.3,
+      "marines": 0.4
+    }
   }
 }

@@ -4,6 +4,7 @@ extends CanvasLayer
 
 signal message(text: String)
 signal closed
+signal ending(id: String)  # the player chose how it ends (Endings)
 
 var ship: Node2D
 var docked := false  # in port or at your own base: the barber and tailor are open
@@ -41,6 +42,7 @@ func refresh() -> void:
 	_build_people()
 	_build_fleet()
 	_build_ledger()
+	_build_log()
 
 
 func _build_captain(cap: Dictionary) -> void:
@@ -65,6 +67,8 @@ func _build_captain(cap: Dictionary) -> void:
 	UIKit.label(box, "Standing: " + ", ".join(s.relations.keys().map(func(f): return "%s %+d" % [Data.table("factions")[f].name, s.relations[f]])))
 	UIKit.label(box, "Career: %s.%s" % [Career.status_text(s), "  The Crown is owed %d." % s.career.crown_debt if s.career.crown_debt > 0 else ""],
 		"Privateers raid their nation's enemies lawfully and pay the Crown a share. Pirates take what they like, and every navy hunts them once they're wanted.")
+	UIKit.label(box, Career.bounty_text(s), "Piracy against a nation, and above all a sack, puts a price on your head there. Their pirate hunters come for it, in bigger ships the bigger it grows. A pardon from that nation clears it; otherwise it fades slowly.",
+		Style.c("bad") if Career.hunted(s) else Style.c("dim"))
 	UIKit.label(box, Factions.war_summary(), "", Style.c("dim"))
 	var feelings: Array = s.crew.map(func(id): return People.person(id).relations.get(s.captain, 0))
 	var unhappy: int = feelings.filter(func(v): return v < 0).size()
@@ -75,9 +79,24 @@ func _build_captain(cap: Dictionary) -> void:
 		UIKit.label(box, "Hostages: " + ", ".join(s.hostages.map(func(h): return "%s (%s, %d gold)" % [
 			People.person(h.id).name, Data.table("factions")[h.faction].name, h.ransom])))
 	UIKit.label(box, "")
+	UIKit.label(box, "How it ends", "Some endings you earn and choose. Others choose you: the gallows, the sea, or a crew with no one left to lead it.", Style.c("header"))
+	for e in Endings.choices(s, docked):
+		var b := UIKit.button(box, "%s..." % e.name, func(): ending.emit(e.id), e.why if e.why != "" else e.text + "\nThis ends the game.")
+		b.disabled = e.why != ""
+	UIKit.label(box, "")
 	UIKit.label(box, "Log", "", Style.c("header"))
 	for line in cap.history:
 		UIKit.label(box, line, "", Style.c("dim"))
+
+
+## The ship's log: the line of captains and everything each of them did that's still remembered.
+func _build_log() -> void:
+	var box: VBoxContainer = %LogBox
+	UIKit.clear(box)
+	var s: Dictionary = ship.state
+	UIKit.label(box, "The log of the %s" % s.name, "", Style.c("header"))
+	for line in Endings.log_text(s, 1000).split("\n"):
+		UIKit.label(box, line, "", Style.c("dim") if line.begins_with("  ") else Color(0, 0, 0, 0))
 	if not s.captains.is_empty():
 		UIKit.label(box, "")
 		UIKit.label(box, "Captains of the %s" % s.name, "Everyone who has commanded this ship before you.", Style.c("header"))

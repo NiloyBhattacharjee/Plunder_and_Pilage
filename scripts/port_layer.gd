@@ -51,6 +51,11 @@ func _draw() -> void:
 		var off: Array = port.get("label_offset", [24, 5])  # optional, for ports too close together; clear of the town
 		var text_pos := pos + Vector2(off[0], off[1]) * s
 		var label: String = port.name
+		var held: Dictionary = Bases.bases.get(id, {})
+		if not held.is_empty():
+			label += " (yours)"
+			if not held.raid.is_empty() and held.raid.day - Clock.day <= 20:
+				label += " - EXPEDITION COMING"
 		if trade_good == "@standing" and not ship_state.is_empty():
 			var acc := Career.port_access(ship_state, id)
 			label += "  %+d%s" % [ship_state.relations.get(port.faction, 0), "" if acc.open else ", CLOSED"]
@@ -65,7 +70,7 @@ func _draw() -> void:
 		var pole := pos + Vector2(11, -14) * k  # a pennant in the nation's colours
 		draw_line(pole, pole + Vector2(0, -9) * k, Style.c("chart_ink"), 1.0 * k)
 		draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -9) * k, pole + Vector2(7, -7) * k, pole + Vector2(0, -5) * k]),
-			Color(Data.table("factions")[port.faction].color))
+			Style.c("wax") if not held.is_empty() else Color(Data.table("factions")[port.faction].color))
 		draw_string_outline(Style.font("pixel"), text_pos, label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("chart_paper_light"))
 		draw_string(Style.font("pixel"), text_pos, label,

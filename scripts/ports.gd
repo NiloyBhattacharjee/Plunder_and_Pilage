@@ -10,6 +10,7 @@ extends Node
 var rng := RandomNumberGenerator.new()
 var state := {}
 var known := {}
+var owners := {}   # port id -> faction: towns that have changed hands in a war (Factions)
 
 
 func _ready() -> void:
@@ -21,6 +22,8 @@ func _ready() -> void:
 func reset() -> void:
 	state = {}
 	known = {}
+	_restore_owners()
+	owners = {}
 	Economy.reset()
 	for id in Data.table("ports"):
 		var p := port(id)
@@ -31,6 +34,34 @@ func reset() -> void:
 
 func port(id: String) -> Dictionary:
 	return Data.table("ports")[id]
+
+
+## A town changes hands: the new nation's flag, laws and officials. The static port data's faction is changed in
+## place (and its first owner kept in orig_faction), so everything that asks a port's faction sees the new one.
+func change_owner(id: String, f: String) -> void:
+	var p := port(id)
+	if not p.has("orig_faction"):
+		p.orig_faction = p.faction
+	p.faction = f
+	owners[id] = f
+	for other in Data.table("ports"):  # the laws of the nation's other towns
+		var o: Dictionary = Data.table("ports")[other]
+		if other != id and o.get("orig_faction", o.faction) == f:
+			state[id].laws = o.laws.duplicate(true)
+			state[id].laws.vigilance = p.laws.vigilance
+			break
+	Politics.officials.erase(id)
+	Politics.influence.erase(id)
+	Politics.apply_laws(id, true)
+	Contracts.offers.erase(id)
+
+
+func _restore_owners() -> void:
+	for id in Data.table("ports"):
+		var p: Dictionary = Data.table("ports")[id]
+		if p.has("orig_faction"):
+			p.faction = p.orig_faction
+			p.erase("orig_faction")
 
 
 func price(id: String, good: String, buying: bool, spread_mult := 1.0) -> float:
@@ -518,13 +549,19 @@ func rumour(here: String, day: int, false_chance := 0.0) -> String:
 
 
 func save_state() -> Dictionary:
-	return {"rng": str(rng.state), "state": state, "known": known}
+	return {"rng": str(rng.state), "state": state, "known": known, "owners": owners}
 
 
 func load_state(d: Dictionary) -> void:
 	rng.state = int(d.rng)
 	state = d.state
 	known = d.known
+	_restore_owners()
+	owners = d.get("owners", {})
+	for id in owners:
+		var p := port(id)
+		p.orig_faction = p.faction
+		p.faction = owners[id]
 
 
 static func _name(good: String) -> String:

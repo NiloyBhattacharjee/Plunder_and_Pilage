@@ -68,8 +68,14 @@ func test_plantations_grow_and_distilleries_make_rum():
 	b.gold = 500.0
 	for i in 10:
 		Bases.daily(s, "")
+	assert_eq(b.storage.get("tobacco", 0.0), 0.0, "five men keep the base; nobody works the fields")
+	b.garrison = 5 + Bases.hands_needed(b)
+	b.storage.molasses = 3.0
+	for i in 10:
+		Bases.daily(s, "")
 	assert_gt(b.storage.get("rum", 0.0), 0.0)
 	assert_gt(b.storage.get("tobacco", 0.0), 0.0)
+	assert_eq(b.storage.molasses, 0.0, "molasses brought in goes to the stills first")
 
 
 func test_an_unpaid_hungry_garrison_turns():

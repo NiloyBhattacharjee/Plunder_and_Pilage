@@ -5,7 +5,9 @@ extends CanvasLayer
 
 signal message(text: String)
 signal closed
-signal life_event(event_id: String)  # a happening's event: the world map runs it, then brings you back here
+signal life_event(event_id: String)
+signal siege(port_id: String)   # lay siege to the town: the world map runs it
+signal govern(port_id: String)  # a town you hold: its base screen  # a happening's event: the world map runs it, then brings you back here
 
 var port_id := ""
 var ship: Node2D
@@ -73,7 +75,7 @@ func close() -> void:
 func refresh() -> void:
 	var p := Ports.port(port_id)
 	var laws: Dictionary = Ports.state[port_id].laws
-	%Title.text = "%s  (%s)" % [p.name, Data.table("factions")[p.faction].name]
+	%Title.text = "%s  (%s)" % [p.name, Data.table("factions")[p.faction].name if not Bases.bases.has(port_id) else "yours"]
 	var law_text := "No contraband laws." if laws.contraband.is_empty() else "Contraband: %s. Customs vigilance %d%%." % [
 		", ".join(laws.contraband.map(func(g): return Data.table("goods")[g].name)), int(laws.vigilance * 100)]
 	law_text += "  Stolen goods sell at %s here." % ("nearly full price through the fence (it has %d gold to spare)" % Ports.state[port_id].fence_cash
@@ -81,12 +83,12 @@ func refresh() -> void:
 	if not laws.get("enumerated", []).is_empty():
 		law_text += "  %s go only in %s ships." % [", ".join(laws.enumerated.map(func(g): return Data.table("goods")[g].name)), Data.table("factions")[p.faction].adjective]
 	var gov := Politics.official(port_id, "governor")
-	law_text += "  " + Politics.law_text(port_id)
+	law_text += "  " + ("Your laws: no duty, nothing forbidden, pirates welcome." if Bases.is_town(port_id) else Politics.law_text(port_id))
 	var fleet := Economy.fleet_text(port_id)
 	if fleet != "":
 		law_text += "
 " + fleet
-	%Info.text = "%s\n%s\n%s\nGold %d   Hold %d / %d tons" % ["Governor: " + People.person(gov).name if gov != "" else "Ruled by the council of captains",
+	%Info.text = "%s\n%s\n%s\nGold %d   Hold %d / %d tons" % ["Your town, run by %s" % (People.person(gov).name if gov != "" else "nobody yet") if Bases.is_town(port_id) else ("Governor: " + People.person(gov).name if gov != "" else "Ruled by the council of captains"),
 		p.description, law_text, ship.state.gold, Market.cargo_used(ship.state.cargo), ship.capacity()]
 	_build_town()
 	_build_market()
@@ -337,10 +339,22 @@ func _build_governor() -> void:
 	var s: Dictionary = ship.state
 	var p := Ports.port(port_id)
 	var f: String = p.faction
-	UIKit.label(box, "Governor %s" % (People.person(Politics.official(port_id, "governor")).name if f != "pirates" else ""), "", Style.c("header"))
+	var gov := Politics.official(port_id, "governor")
+	UIKit.label(box, "Governor %s" % (People.person(gov).name if gov != "" else ("" if f == "pirates" else "(none: appoint a manager)")), "", Style.c("header"))
 	UIKit.label(box, "Your standing with %s: %+d.  You are: %s." % [Career.fname(f), s.relations.get(f, 0), Career.status_text(s)],
 		"Standing changes prices here (x%.2f), who will deal with you, and whether the harbour stays open." % Career.price_mult(s, port_id))
 	UIKit.label(box, Factions.war_summary(), "", Style.c("dim"))
+	if Bases.bases.has(port_id):
+		UIKit.label(box, "")
+		UIKit.label(box, "You hold %s. Its taxes, garrison, buildings and defences are yours to run." % p.name, "", Style.c("good"))
+		UIKit.button(box, "Govern the town", func():
+			close()
+			govern.emit(port_id), "Garrison, treasury, buildings, stores and shipyard, as at any of your bases.").size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		return
+	var why_siege := Sieges.problem(s, port_id)
+	UIKit.button(box, "Lay siege to %s" % p.name, func():
+		close()
+		siege.emit(port_id), why_siege if why_siege != "" else SiegeFlow.preview(port_id)).disabled = why_siege != ""
 	if f != "pirates" and not disguised:
 		var brow := UIKit.row(box)
 		UIKit.label(brow, "Your bond with %s: %s.  " % [Career.fname(f), Bonds.level_name("f:" + f, Bonds.level(s, "f:" + f))], "Beyond standing: a nation can be your ally, or your patron.")

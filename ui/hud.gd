@@ -267,7 +267,7 @@ func _process(_delta: float) -> void:
 	_show_chip("sails", "%d%%" % sail_pct, "Sails %d of %d." % [s.sails, st.sails] + ("\n" + ship.speed_text if not ship.route.is_empty() else ""),
 		Style.c("bad") if sail_pct < 50 else Color(0, 0, 0, 0))
 	var rep: Dictionary = s.reputation
-	_show_chip("notoriety", "%d" % rep.notoriety, "Notoriety %d: how widely your name is known.\nHonour %+d, fear %+d.\n%s" % [rep.notoriety, rep.honour, rep.fear, Career.status_text(s)],
+	_show_chip("notoriety", "%d" % rep.notoriety, "Notoriety %d: how widely your name is known.\nHonour %+d, fear %+d.\n%s\n%s" % [rep.notoriety, rep.honour, rep.fear, Career.status_text(s), Career.bounty_text(s)],
 		Style.c("bad") if Career.wanted(s) else Color(0, 0, 0, 0))
 	_show_chip("contracts", "%d" % Contracts.active.size(), "Contracts:\n" + ("\n".join(Contracts.active.map(func(c): return Contracts.summary(c))) if not Contracts.active.is_empty() else "None."),
 		Color(0, 0, 0, 0), not Contracts.active.is_empty())

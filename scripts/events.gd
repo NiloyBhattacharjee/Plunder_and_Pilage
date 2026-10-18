@@ -21,7 +21,7 @@ const VERBS := {  # verb: [min args, max args]
 	"favour": [2, 2], "secret": [1, 3], "influence": [3, 3], "stir": [1, 1], "scandal": [1, 1], "council_vote": [2, 2], "join_council": [0, 0],
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
 	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
-	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1],
+	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1], "bounty": [2, 2],
 	"patrols": [2, 2], "town": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
@@ -333,6 +333,10 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"rivals": return Bonds.rivals(s).size()
 		"neutral": return Bonds.neutral(s)
 		"bases": return Bases.bases.size()
+		"towns": return Bases.bases.keys().filter(func(id): return Bases.is_town(id)).size()
+		"own_town": return ctx.port != "" and Bases.is_town(ctx.port)  # you hold the town you're in
+		"sacked": return ctx.port != "" and flags.has("sacked_" + ctx.port)  # you sacked the town you're in
+		"bounty": return Career.bounty_total(s)
 		"at_base": return ctx.get("base", "") != ""
 		"secrets": return s.get("secrets", []).size()
 		"council_member": return s.get("council_member", false)
@@ -362,7 +366,7 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"in_town": return PortLife.captain_here(ctx.get("port", "")) == id  # drinking in this port's tavern
 		if head in People.STATS or head in People.SKILLS:
 			return People.value(c, head)
-	elif Ports.state.has(id):
+	elif Ports.state.has(id) and not (Bases.bases.has(id) and head in BASE_KEYS):  # a town you hold is a base too
 		match head:
 			"faction": return Ports.port(id).faction
 			"fence": return Ports.port(id).get("fence", false)
@@ -382,6 +386,8 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"garrison": return b.garrison
 			"built": return rest in b.buildings
 			"managed": return b.manager != ""
+			"town": return b.has("town")
+			"taxes": return b.get("taxes", "")
 			"manager_opinion": return People.person(b.manager).relations.get(ctx.s.captain, 0) if b.manager != "" else 0
 	elif Data.table("goods").has(id):
 		match head:
@@ -744,8 +750,19 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			if not Bases.bases.has(a[1]):
 				return ""
 			var name: String = Bases.bases[a[1]].name
-			Bases.bases.erase(a[1])
+			Bases.lose(a[1])
 			return "%s is lost to you" % name
+		"bounty":  # a price on your head: `bounty spain +500`, `bounty port -50%`
+			var bf := _faction(a[1], ctx)
+			var cur: float = s.get("bounty", {}).get(bf, 0.0)
+			var amt := float(a[2].trim_suffix("%"))
+			if a[2].ends_with("%"):
+				amt = cur * amt / 100.0
+			if amt >= 0.0:
+				Career.add_bounty(s, bf, amt)
+			elif s.has("bounty") and s.bounty.has(bf):
+				s.bounty[bf] = maxf(0.0, cur + amt)
+			return "The price on your head in %s: %d gold" % [Career.fname(bf), s.get("bounty", {}).get(bf, 0.0)]
 		"own_ship":
 			return Bonds.former_officer(s, _who(a[1], ctx, vars), int(a[2]))
 		"join_council":
@@ -935,9 +952,10 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
 	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base",
-	"town", "life"]
-const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality"]
-const CAND_KEYS := ["in_town", "loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
+	"town", "life", "towns", "own_town", "sacked", "bounty"]
+const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality", "taxes"]
+const BASE_KEYS := ["loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes"]
+const CAND_KEYS := ["in_town", "loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
 	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held"]
 
 

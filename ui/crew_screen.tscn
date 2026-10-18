@@ -117,6 +117,16 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="Log" type="ScrollContainer" parent="Panel/VBox/Tabs"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 7
+
+[node name="LogBox" type="VBoxContainer" parent="Panel/VBox/Tabs/Log"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="Footer" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
 

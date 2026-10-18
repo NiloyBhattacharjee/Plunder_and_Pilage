@@ -1,0 +1,283 @@
+{
+  "_comment": "Taking towns and what comes after: towns that remember a sack, towns you hold, the price on your head, and the wars between nations. Also finds, contract and bond events to deepen thin categories.",
+
+  "sacked_town_remembers": {
+    "title": "{port} remembers",
+    "text": "The last time you were in {port}, you took everything that wasn't nailed down. Doors close as you walk up from the quay. A child points at you, and is pulled indoors.",
+    "where": "port", "weight": 30, "cooldown": 90,
+    "conditions": ["sacked"],
+    "choices": [
+      {"text": "Pay for the church roof you burned (300 gold)", "conditions": ["gold >= 300"], "outcomes": ["gold -300", "honour +3", "relation port +5", "bounty port -25%"], "result": "The priest takes your money without a word. But the word gets round."},
+      {"text": "Walk tall: let them be afraid", "outcomes": ["fear +2", "notoriety +2", "relation port -3"], "result": "Nobody meets your eye. That's how you like it."},
+      {"text": "Do your business and go", "outcomes": [], "result": "You don't linger."}
+    ]
+  },
+  "sacked_town_knife": {
+    "title": "A knife in the dark",
+    "text": "In an alley off the square in {port}, a man steps out of a doorway with a knife and your name on his lips. You took his house, his savings and his brother.",
+    "where": "port", "weight": 14, "cooldown": 120,
+    "conditions": ["sacked"],
+    "choices": [
+      {"text": "Fight", "check": {"who": "captain", "skill": "swordplay", "dc": 12}, "outcomes": ["fear +1"], "result": "It's over quickly. You leave him in the gutter for the watch.", "fail_outcomes": ["wound captain", "fear +1"], "fail_result": "You drive him off, but not before the blade finds your ribs."},
+      {"text": "Talk him down", "check": {"who": "captain", "skill": "charisma", "dc": 15}, "outcomes": ["honour +2"], "result": "He weeps, and drops the knife, and you leave him a purse he'll never forgive you for.", "fail_outcomes": ["wound captain"], "fail_result": "He isn't listening."}
+    ]
+  },
+  "sacked_town_rebuilds": {
+    "title": "Scaffolding in {port}",
+    "text": "{port} is rebuilding: fresh timber on the burned houses, new stone on the bastion you breached. The governor's agents are buying everything and paying in promises.",
+    "where": "port", "weight": 12, "once": true,
+    "conditions": ["sacked", "cargo.naval_stores >= 1"],
+    "choices": [
+      {"text": "Sell them your naval stores at a hard price", "outcomes": ["cargo naval_stores -all", "gold +400", "relation port +3"], "result": "They pay. They hate paying you, but they pay."},
+      {"text": "Give it: let them see you're more than a raider", "outcomes": ["cargo naval_stores -all", "honour +3", "relation port +8", "bounty port -30%"], "result": "The talk in the square is different the next morning."}
+    ]
+  },
+  "survivor_of_the_sack": {
+    "title": "Nothing left to lose",
+    "text": "{hand} lost everything when you sacked {port}: shop, family, name. Now {hand} wants a berth aboard the ship that did it. \"You're the only ones who'll be hiring someone like me.\"",
+    "where": "port", "weight": 10, "once": true,
+    "conditions": ["sacked"],
+    "roles": {"hand": {"from": "new", "traits": ["bloodthirsty"]}},
+    "choices": [
+      {"text": "Sign {hand} on", "outcomes": ["hire {hand}"], "result": "{hand} signs the articles without reading them."},
+      {"text": "No. Not after what you did here.", "outcomes": ["honour +1"], "result": "{hand} spits on the quay and walks away."}
+    ]
+  },
+  "ballad_of_the_sack": {
+    "title": "A song about you",
+    "text": "In a waterfront tavern a fiddler plays a new ballad: the sacking of a town, a captain who laughed at the walls, the gold carried off by the boatload. It's about you.",
+    "where": "port", "weight": 8, "cooldown": 200,
+    "conditions": ["fear >= 15", "port_faction == pirates"],
+    "choices": [
+      {"text": "Buy the fiddler a drink, and the room", "conditions": ["gold >= 60"], "outcomes": ["gold -60", "notoriety +4", "morale +5 20"], "result": "By the end of the night the crew are singing it themselves."},
+      {"text": "Stop the song", "outcomes": ["fear +1"], "result": "The fiddler stops. The room goes quiet. That says enough."}
+    ]
+  },
+
+  "town_petition": {
+    "title": "A petition from {base}",
+    "text": "The burghers of {base} send you a petition, forty names in a careful hand: your taxes are ruining them. Lower them, they beg, or there will be trouble they can't answer for.",
+    "where": "any", "weight": 14, "cooldown": 60,
+    "roles": {"base": {"from": "base", "where": ["town", "taxes == heavy"]}},
+    "choices": [
+      {"text": "Ease their burden for a season", "outcomes": ["base_loyalty {base} +15", "base_gold {base} -25%", "honour +1"], "result": "Bells ring in {base}. The treasury is lighter."},
+      {"text": "They'll pay and like it", "outcomes": ["base_loyalty {base} -8", "fear +1"], "result": "The petition is nailed to the church door, with your answer under it."},
+      {"text": "Hang the ringleaders", "outcomes": ["base_loyalty {base} -20", "fear +3", "honour -3"], "result": "Three bodies swing in the square. Nobody else signs anything."}
+    ]
+  },
+  "town_priest_preaches": {
+    "title": "From the pulpit",
+    "text": "The priest at {base} preaches every Sunday that the town groans under a pirate's yoke and that God will deliver it. The church is full.",
+    "where": "any", "weight": 10, "cooldown": 90,
+    "roles": {"base": {"from": "base", "where": ["town"]}},
+    "choices": [
+      {"text": "Make a gift to the church (200 gold)", "conditions": ["gold >= 200"], "outcomes": ["gold -200", "base_loyalty {base} +12"], "result": "Next Sunday's sermon is about rendering unto Caesar."},
+      {"text": "Have the priest arrested", "outcomes": ["base_loyalty {base} -15", "fear +2"], "result": "The church is empty next Sunday. The streets are not."},
+      {"text": "Let them preach", "outcomes": ["base_loyalty {base} -5"], "result": "Words are only words. For now."}
+    ]
+  },
+  "town_merchants_loan": {
+    "title": "The merchants of {base}",
+    "text": "The richest merchants of {base} come with an offer: a loan to your treasury, in return for a free hand in the harbour. They'd like your protection, and your blind eye.",
+    "where": "any", "weight": 10, "cooldown": 120,
+    "roles": {"base": {"from": "base", "where": ["town"]}},
+    "choices": [
+      {"text": "Take their gold", "outcomes": ["base_gold {base} +600", "base_loyalty {base} +5", "notoriety +2"], "result": "The treasury fills. The merchants smile a great deal."},
+      {"text": "Their harbour is your harbour", "outcomes": ["base_loyalty {base} -5"], "result": "They bow and leave, and talk among themselves."}
+    ]
+  },
+  "town_old_governor_plots": {
+    "title": "Letters from the old regime",
+    "text": "Your people in {base} intercept letters from the governor you turned out, promising pardons to anyone who opens the gates to the next expedition.",
+    "where": "any", "weight": 10, "cooldown": 120,
+    "roles": {"base": {"from": "base", "where": ["town"]}},
+    "choices": [
+      {"text": "Find the traitors", "check": {"who": "captain", "skill": "intimidation", "dc": 13}, "outcomes": ["base_loyalty {base} +5", "fear +2"], "result": "Four men confess. The rest of the town takes note.", "fail_outcomes": ["base_loyalty {base} -10"], "fail_result": "You arrest the wrong people, and everyone knows it."},
+      {"text": "Pay the garrison a bonus to stay loyal (150 gold)", "conditions": ["gold >= 150"], "outcomes": ["gold -150", "base_loyalty {base} +10"], "result": "Loyalty, bought by the month."},
+      {"text": "Ignore it", "outcomes": ["base_loyalty {base} -12"], "result": "The letters keep coming."}
+    ]
+  },
+  "town_fever": {
+    "title": "Fever in the garrison",
+    "text": "Yellow jack has come to {base}. The garrison is dying in the barracks, and the townsfolk keep their doors shut.",
+    "where": "any", "weight": 8, "cooldown": 150,
+    "conditions": ["month >= 6", "month <= 10"],
+    "roles": {"base": {"from": "base", "where": ["town", "garrison >= 10"]}},
+    "choices": [
+      {"text": "Send for a physician and pay what it costs (250 gold)", "conditions": ["gold >= 250"], "outcomes": ["gold -250", "base_garrison {base} -2"], "result": "The physician is expensive and mostly useless, but fewer die."},
+      {"text": "Let it run its course", "outcomes": ["base_garrison {base} -6", "base_loyalty {base} -5"], "result": "They bury six of your men in the churchyard."}
+    ]
+  },
+  "town_smugglers_harbour": {
+    "title": "Smugglers at {base}",
+    "text": "Dutch and English sloops want to use the harbour of {base} to run goods into the Spanish Main. They'll pay for the anchorage, and for your silence.",
+    "where": "any", "weight": 10, "cooldown": 120,
+    "roles": {"base": {"from": "base", "where": ["town"]}},
+    "choices": [
+      {"text": "Open the harbour to them", "outcomes": ["base_gold {base} +400", "relation spain -5", "notoriety +1"], "result": "Your harbour is the busiest it's been in years, by night."},
+      {"text": "Turn them away", "outcomes": ["relation spain +2"], "result": "They sail on to someone less particular."}
+    ]
+  },
+  "town_raise_militia": {
+    "title": "A militia for {base}",
+    "text": "The townsfolk of {base} like your rule well enough to fight for it. Some of the younger ones offer to drill as a militia, if you can spare the powder.",
+    "where": "any", "weight": 10, "cooldown": 150,
+    "conditions": ["cargo.gunpowder >= 10"],
+    "roles": {"base": {"from": "base", "where": ["town", "loyalty >= 55"]}},
+    "choices": [
+      {"text": "Arm them", "outcomes": ["cargo gunpowder -10", "base_garrison {base} +12", "base_loyalty {base} +5"], "result": "Twelve volunteers drill in the square every morning."},
+      {"text": "Townsfolk with muskets? No.", "outcomes": [], "result": "They go home disappointed."}
+    ]
+  },
+  "town_conscripts": {
+    "title": "Not enough men on the walls",
+    "text": "The garrison of {base} is stretched thin, and the expedition is coming. You could press townsfolk into service.",
+    "where": "any", "weight": 10, "cooldown": 90,
+    "roles": {"base": {"from": "base", "where": ["town", "garrison <= 20"]}},
+    "choices": [
+      {"text": "Press them", "outcomes": ["base_garrison {base} +10", "base_loyalty {base} -15", "fear +1"], "result": "Ten sullen townsmen on the walls, watching your men more than the sea."},
+      {"text": "Pay volunteers (200 gold)", "conditions": ["gold >= 200"], "outcomes": ["gold -200", "base_garrison {base} +6"], "result": "Six men take your coin and a musket."},
+      {"text": "Trust the walls", "outcomes": [], "result": "The walls have held before."}
+    ]
+  },
+
+  "your_face_on_the_wall": {
+    "title": "Wanted",
+    "text": "Nailed to the customs house door in {port}: a bill with a crude likeness of you and the sum of the price on your head. A small crowd is reading it, and one of them glances your way.",
+    "where": "port", "weight": 14, "cooldown": 60,
+    "conditions": ["bounty >= 800", "not own_town", "port_faction != pirates"],
+    "choices": [
+      {"text": "Tear it down", "outcomes": ["fear +1", "notoriety +2"], "result": "You tear it down in front of them. Nobody tries anything."},
+      {"text": "Pull your hat low and get back to the ship", "outcomes": ["time 1"], "result": "You do your business at night."},
+      {"text": "Ask the crowd if it's a good likeness", "check": {"who": "captain", "skill": "charisma", "dc": 13}, "outcomes": ["notoriety +3", "fear +1"], "result": "They laugh. By morning the story is all over the harbour.", "fail_outcomes": ["fight hunter port"], "fail_result": "Someone has gone for the watch, and someone else for a pirate hunter in the roads."}
+    ]
+  },
+  "judas_in_the_crew": {
+    "title": "The price of a captain",
+    "text": "{hand} has been asking ashore what the price on your head is worth, and who pays it. Your quartermaster thinks {hand} means to collect.",
+    "where": "any", "weight": 12, "cooldown": 120,
+    "conditions": ["bounty >= 1000"],
+    "roles": {"hand": {"from": "crew", "where": ["trait.greedy"]}},
+    "choices": [
+      {"text": "Buy {hand}'s loyalty (100 gold)", "conditions": ["gold >= 100"], "outcomes": ["gold -100", "opinion {hand} +15"], "result": "{hand} takes the money and swears it was all talk."},
+      {"text": "Put {hand} ashore", "outcomes": ["leave {hand}"], "result": "{hand} is left on the quay with a sea chest and a grudge."},
+      {"text": "Make an example", "outcomes": ["kill {hand}", "fear +3", "opinion crew -3"], "result": "The crew watch {hand} go over the side. Nobody asks about the price on your head again."}
+    ]
+  },
+  "a_clerk_with_a_pen": {
+    "title": "Papers can be lost",
+    "text": "A clerk from the Admiralty court in {port}, nervous and in debt, says the warrants against you could be misfiled. For a consideration.",
+    "where": "port", "weight": 10, "cooldown": 150,
+    "conditions": ["bounty >= 600", "port_faction != pirates"],
+    "choices": [
+      {"text": "Pay the clerk (400 gold)", "conditions": ["gold >= 400"], "outcomes": ["gold -400", "bounty port -40%"], "result": "A few warrants go into the fire. The price on your head here is smaller."},
+      {"text": "Refuse", "outcomes": [], "result": "The clerk scuttles off."}
+    ]
+  },
+  "hunter_hails": {
+    "title": "A hunter's courtesy",
+    "text": "A warship runs down on you under a {nation_adj} commission and hails: surrender and you'll be tried fairly, fight and you'll hang from your own yard.",
+    "where": "sea", "weight": 10, "cooldown": 90,
+    "conditions": ["bounty >= 1500"],
+    "roles": {"nation": {"from": "nation", "where": ["standing < -20"]}},
+    "choices": [
+      {"text": "Answer with a broadside", "outcomes": ["fight hunter {nation} attack"], "result": "Your guns give the answer."},
+      {"text": "Crowd on sail and run", "check": {"who": "post.boatswain", "skill": "seamanship", "dc": 13}, "outcomes": [], "result": "You lose them by dusk.", "fail_outcomes": ["fight hunter {nation} flee"], "fail_result": "She's faster."}
+    ]
+  },
+
+  "message_from_a_survivor": {
+    "find": "bottle",
+    "title": "A message in a bottle",
+    "text": "A stoppered bottle bobbing in the swell. Inside, in a shaky hand: the crew of a sloop taken by {rival}, and where {rival} careens and how the ship lies when the guns are ashore.",
+    "roles": {"rival": {"from": "rival"}},
+    "choices": [
+      {"text": "Keep it", "outcomes": ["intel {rival}"], "result": "Now you know {rival}'s ship as well as {rival} does."}
+    ]
+  },
+  "castaways_from_a_raid": {
+    "find": "castaway",
+    "title": "Men on a sandbar",
+    "text": "Half a dozen men on a sandbar, waving shirts. Townsmen, they say, run out of their homes when the {nation_adj} took their town, and left to die.",
+    "roles": {"nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Take them aboard and sign them on", "outcomes": ["crew +4", "honour +1"], "result": "They have no money and no home, and nothing against you."},
+      {"text": "Leave them water and sail on", "outcomes": ["water -5", "honour +1"], "result": "They'll live, maybe."},
+      {"text": "Sail on", "outcomes": ["honour -1"], "result": "Their shouts follow you for a long time."}
+    ]
+  },
+  "smugglers_jettison": {
+    "find": "wreckage",
+    "title": "Floating bales",
+    "text": "Bales of cloth and casks of wine in the water, still dry inside their tarred wrappings: some smuggler dumped them to outrun a guarda costa.",
+    "choices": [
+      {"text": "Fish them out", "outcomes": ["loot cloth 8", "loot wine 4", "time 1"], "result": "A day's work with boathooks, and a profit."},
+      {"text": "Leave them: the guarda costa will be about", "outcomes": [], "result": "You keep an eye to windward and sail on."}
+    ]
+  },
+
+  "escort_master_balks": {
+    "title": "The master wants to run",
+    "text": "The master of the ship you're escorting signals sails to windward. The master means to run for the nearest port and wait out the danger. Your contract says otherwise.",
+    "where": "sea", "weight": 25, "cooldown": 30,
+    "conditions": ["contract.escort_convoy"],
+    "choices": [
+      {"text": "Order her to hold her course", "check": {"who": "captain", "skill": "authority", "dc": 11}, "outcomes": [], "result": "The flags come down. She holds her course, sulking.", "fail_outcomes": ["time 2"], "fail_result": "She runs anyway, and it costs you two days to get her moving again."},
+      {"text": "Go and look at the sails yourself", "outcomes": ["fight pirate pirates attack"], "result": "They're raiders. Better you than her."}
+    ]
+  },
+  "blockade_fishermen": {
+    "title": "Fishing boats",
+    "text": "A dozen fishing boats come out of the harbour you're blockading, flying white rags. The fishermen beg to work their grounds: the town is hungry.",
+    "where": "sea", "weight": 25, "cooldown": 20,
+    "conditions": ["contract.blockade_port"],
+    "choices": [
+      {"text": "Let them fish", "outcomes": ["honour +2"], "result": "They wave as they pass. The town eats a little better tonight."},
+      {"text": "Turn them back", "outcomes": ["fear +1", "honour -1"], "result": "A shot across the bows of the leading boat, and they turn."},
+      {"text": "Take their catch for your own crew", "outcomes": ["food +20", "honour -2"], "result": "Fresh fish for your people. The fishermen row home with nothing."}
+    ]
+  },
+  "a_family_outbids": {
+    "title": "A better offer",
+    "text": "An agent with a soft voice and a heavy purse finds you in the tavern. The family of one of your prisoners will pay more than anyone else, they say, and ask no questions about whom you'd promised them to.",
+    "where": "port", "weight": 12, "cooldown": 90,
+    "conditions": ["hostages >= 1"],
+    "choices": [
+      {"text": "Hear the offer", "outcomes": ["notoriety +1"], "result": "It's a good offer. You'll need to ransom them in a port of their nation, and break any promise you made."},
+      {"text": "Send the agent away", "outcomes": ["honour +1"], "result": "A deal is a deal."}
+    ]
+  },
+
+  "rival_challenges": {
+    "title": "{rival} calls you out",
+    "text": "{rival} has been telling every tavern from here to Nassau that you're a coward who runs from a fair fight. Now a challenge comes: sword against sword, on the beach, before witnesses.",
+    "where": "port", "weight": 10, "cooldown": 150,
+    "conditions": ["port_faction == pirates"],
+    "roles": {"rival": {"from": "rival"}},
+    "choices": [
+      {"text": "Accept", "check": {"who": "captain", "skill": "swordplay", "dc": 14}, "outcomes": ["fear +3", "notoriety +4", "opinion crew +5"], "result": "{rival} goes down in the surf. The crowd roars your name.", "fail_outcomes": ["wound captain", "notoriety -3", "opinion crew -4"], "fail_result": "You're carried off the beach. {rival} isn't."},
+      {"text": "Send your quartermaster to laugh at them", "outcomes": ["opinion crew -2"], "result": "Some think it's clever. Some think it's cowardice."},
+      {"text": "Offer {rival} a truce over a bottle", "check": {"who": "captain", "skill": "charisma", "dc": 15}, "outcomes": ["peace {rival}"], "result": "Two bottles later, you're not friends, but you're not enemies.", "fail_outcomes": ["rivalry {rival} 1"], "fail_result": "{rival} throws the bottle at you."}
+    ]
+  },
+  "ally_proposes_a_cruise": {
+    "title": "A cruise together",
+    "text": "{ally} proposes a cruise in company: two ships off the Spanish Main for a month, prizes shared fairly. It would mean leaving your other business for a while.",
+    "where": "port", "weight": 10, "cooldown": 180,
+    "roles": {"ally": {"from": "ally"}},
+    "choices": [
+      {"text": "Agreed", "check": {"who": "captain", "skill": "seamanship", "dc": 11}, "outcomes": ["time 20", "gold +700", "bond {ally} +1", "opinion crew +3"], "result": "Three prizes in twenty days. {ally} is as good as their word.", "fail_outcomes": ["time 20", "gold +150", "hull -10"], "fail_result": "Twenty days of foul weather and empty seas, and one leaky prize."},
+      {"text": "Not now", "outcomes": ["strain {ally}"], "result": "{ally} shrugs, but remembers."}
+    ]
+  },
+
+  "talk_of_war": {
+    "title": "Talk of war",
+    "text": "The taverns of {port} talk of nothing but the coming war: insults at sea, ships taken, an ambassador recalled. Privateering commissions will soon be had for the asking.",
+    "where": "port", "weight": 6, "cooldown": 120,
+    "conditions": ["honest"],
+    "choices": [
+      {"text": "Listen, and remember", "outcomes": ["flag war_talk 60"], "result": "When it comes, you'll be ready."}
+    ]
+  }
+}

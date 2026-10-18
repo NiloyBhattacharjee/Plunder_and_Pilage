@@ -72,7 +72,7 @@
     "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.6}
   },
   "maracaibo": {
-    "name": "Maracaibo", "faction": "spain", "lat": 10.654, "lon": -71.64, "size": "small",
+    "name": "Maracaibo", "faction": "spain", "lat": 10.654, "lon": -71.64, "size": "small", "anchor": [10.95, -71.55],
     "governor": "Don Gaspar de Lugo",
     "description": "Sacked twice in living memory. Rich in cocoa, behind a shallow bar that big ships cannot cross.",
     "population": 3000, "tags": ["plantation"],

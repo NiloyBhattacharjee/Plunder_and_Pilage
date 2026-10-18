@@ -98,14 +98,22 @@ func test_deep_keels_cannot_follow_into_shallows():
 	assert_ne(g.at(hunter.pos), TerrainGrid.SHALLOW, "the frigate stops at the edge of the shallows")
 
 
-func test_contact_signal_when_close():
+func test_contact_only_with_ships_you_chase_or_that_chase_you():
 	var m := merchant()
 	world.ship.anchored_at = ""
 	world.ship.position = m.pos
 	watch_signals(world.shipping)
 	world.shipping.contact.disconnect(world._on_contact)
 	world.shipping._contacts(world.ship)
-	assert_signal_emitted(world.shipping, "contact")
+	assert_signal_not_emitted(world.shipping, "contact", "a merchant passing by goes on her way")
+	world.chase_id = m.id
+	world.shipping._contacts(world.ship)
+	assert_signal_emit_count(world.shipping, "contact", 1, "one you ran down stops")
+	world.chase_id = ""
+	m.cooldown = 0.0
+	m.chasing = true
+	world.shipping._contacts(world.ship)
+	assert_signal_emit_count(world.shipping, "contact", 2, "and one that came after you")
 
 
 func test_shipping_survives_save_and_load():
@@ -120,3 +128,29 @@ func test_shipping_survives_save_and_load():
 	assert_eq(world.shipping.npcs.size(), count)
 	assert_eq(world.shipping.npcs[0].pos, first_pos)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://ship_test.json"))
+
+
+func test_smugglers_and_coasters_carry_real_cargo():
+	world.shipping._spawn_trader("smuggler")
+	world.shipping._spawn_trader("coaster")
+	var sm: Dictionary = world.shipping.npcs.filter(func(n): return n.enemy.kind == "smuggler")[0]
+	assert_eq(sm.kind, "merchant", "she sails like a merchant")
+	assert_true(sm.enemy.cargo.keys()[0] in Ports.state[sm.dest].laws.contraband, "bound to run forbidden goods in")
+	var co: Dictionary = world.shipping.npcs.filter(func(n): return n.enemy.kind == "coaster")[0]
+	assert_false(co.route.is_empty(), "%s to %s" % [co.origin, co.dest])
+
+
+func test_an_expedition_sails_to_retake_your_town():
+	var s: Dictionary = world.ship.state
+	for i in 40:
+		s.crew.append(People.add(People.generate({})))
+	Sieges.hold(s, "maracaibo")
+	Bases.bases.maracaibo.raid.day = Clock.day + 3
+	world.shipping._expeditions()
+	var ex: Array = world.shipping.npcs.filter(func(n): return n.get("expedition", "") == "maracaibo")
+	assert_eq(ex.size(), 1)
+	assert_eq(Bases.bases.maracaibo.raid.npc, ex[0].id)
+	Bases.expedition_beaten("maracaibo")
+	world.shipping.daily()
+	assert_true(world.shipping.npcs.filter(func(n): return n.get("expedition", "") == "maracaibo").is_empty(), "beaten: she's gone from the map")
+	Bases.lose("maracaibo")

@@ -42,8 +42,11 @@ func _on_day(d: int) -> void:
 		model.sample_week()
 
 
-## Duty on a legal trade in this good here: the nation's customs plus the port's own tariff. Smugglers pay none.
+## Duty on a legal trade in this good here: the nation's customs plus the port's own tariff. Smugglers pay none,
+## and nor do you in a town you hold.
 func duty(id: String, good: String) -> float:
+	if Bases.is_town(id):
+		return 0.0
 	var laws: Dictionary = Ports.state[id].laws
 	if good in laws.contraband:
 		return 0.0

@@ -5,7 +5,11 @@ extends Node
 ## and visible bases get raided: be there to fight, or trust the walls. Tables: data/coves.json, data/buildings.json.
 ##   bases[cove]: {name, buildings: [ids], building: {id, left} or {}, garrison, manager, storage: {good: qty},
 ##                 stolen: {good: qty}, gold, visibility, loyalty, recruits, prizes: [], hostages: [{..., day}],
-##                 raid: {day, kind, faction, captain, warned} or {}, unpaid}
+##                 raid: {day, kind, faction, captain, warned} or {}, unpaid,
+##                 town: {from, since, failed (expeditions beaten)} and taxes ("light"/"fair"/"heavy") for a town you hold}
+## A town taken and held (scripts/sieges.gd) is a base too, keyed by its port id: it pays taxes, needs no hiding,
+## keeps your laws (no duties, no contraband, pirates welcome) and has no officials but your manager, and its old
+## masters send ever stronger expeditions to take it back. A base whose loyalty collapses rises against you.
 
 signal news(text: String)
 
@@ -28,6 +32,9 @@ static func cfg() -> Dictionary:
 
 
 static func cove(id: String) -> Dictionary:
+	if Data.table("ports").has(id):  # a town you hold
+		var p: Dictionary = Data.table("ports")[id]
+		return {"name": p.name, "lat": p.lat, "lon": p.lon, "shelter": 0, "soil": true, "water": true, "description": p.description}
 	return Data.table("coves")[id]
 
 
@@ -86,12 +93,107 @@ func claim(s: Dictionary, id: String) -> String:
 	if why != "":
 		return why
 	s.gold -= cfg().claim_cost
-	bases[id] = {"name": cove(id).name, "buildings": [], "building": {}, "garrison": 0, "manager": "", "storage": {"food": 0.0, "water": 0.0},
-		"stolen": {}, "gold": 0.0, "visibility": float(cfg().visibility_start), "loyalty": float(cfg().loyalty_start), "recruits": 0.0,
-		"prizes": [], "hostages": [], "raid": {}, "unpaid": 0.0, "leave_until": 0.0}
+	bases[id] = _new_base(id, [], float(cfg().visibility_start), float(cfg().loyalty_start))
 	send_garrison(s, id, int(cfg().claim_garrison))
 	ShipStats.captain(s).history.append("Founded a base at %s, %s." % [cove(id).name, Clock.date_string()])
 	return "%s is yours. %d hands stay behind to clear the ground." % [cove(id).name, cfg().claim_garrison]
+
+
+func _new_base(id: String, buildings: Array, visibility: float, loyalty: float) -> Dictionary:
+	return {"name": cove(id).name, "buildings": buildings, "building": {}, "garrison": 0, "manager": "", "storage": {"food": 0.0, "water": 0.0},
+		"stolen": {}, "gold": 0.0, "visibility": visibility, "loyalty": loyalty, "recruits": 0.0,
+		"prizes": [], "hostages": [], "raid": {}, "unpaid": 0.0, "leave_until": 0.0}
+
+
+## A town taken and held: its wharves, warehouses and guns already standing. garrison: hands left ashore;
+## extra: men who come with it (Nassau's council). from: who will come to take it back (its old masters).
+func hold_town(s: Dictionary, id: String, garrison: int, extra := 0, from := "") -> String:
+	var h: Dictionary = Data.rules.sieges.hold
+	var b := _new_base(id, h.buildings[Ports.port(id).size].duplicate(), 100.0, float(h.loyalty))
+	b.town = {"from": from if from != "" else Ports.port(id).faction, "since": Clock.day, "failed": 0}
+	b.taxes = "fair"
+	bases[id] = b
+	Ports.state[id].laws = h.laws.duplicate(true)  # your laws now
+	Politics.depose(s, id)
+	b.raid = _expedition(id)
+	b.garrison = extra
+	send_garrison(s, id, garrison)
+	return "%s is yours. %d men hold the walls; it pays its taxes to you now. %s will want it back." % [b.name, b.garrison,
+		Career.fname(b.town.from) if b.town.from != "pirates" else "The Brethren"]
+
+
+func _expedition(id: String) -> Dictionary:
+	var b: Dictionary = bases[id]
+	var d: Array = Data.rules.sieges.hold.expedition_days
+	return {"day": Clock.day + rng.randf_range(d[0], d[1]), "warned": true, "captain": "", "kind": "expedition", "faction": b.town.from,
+		"label": "a %s expedition to retake %s" % [Data.table("factions")[b.town.from].adjective, b.name]}
+
+
+func is_town(id: String) -> bool:
+	return bases.has(id) and bases[id].has("town")
+
+
+## Each expedition beaten makes the next one stronger, and a big town draws a big one.
+func expedition_strength(id: String) -> int:
+	var e: Dictionary = Data.rules.sieges.hold.expedition
+	return int(cfg().raiders.expedition.strength) + int(e.per_failure) * int(bases[id].town.get("failed", 0)) + int(e.size[Ports.port(id).size])
+
+
+func expedition_men(id: String) -> int:
+	var e: Dictionary = Data.rules.sieges.hold.expedition
+	return int(cfg().raiders.expedition.men * (1.0 + e.men_per_failure * bases[id].town.get("failed", 0)) * (1.0 + e.size[Ports.port(id).size] * 0.5))
+
+
+## The expedition was caught and beaten at sea: the next one will be a while coming, and stronger.
+func expedition_beaten(id: String) -> String:
+	if not is_town(id):
+		return ""
+	var b: Dictionary = bases[id]
+	b.town.failed = int(b.town.get("failed", 0)) + 1
+	b.loyalty = minf(100.0, b.loyalty + 10)
+	b.raid = _expedition(id)
+	return "The expedition to retake %s is broken at sea. %s will send another, stronger, in about %d days." % [b.name,
+		Career.fname(b.town.from) if b.town.from != "pirates" else "The Brethren", int(b.raid.day - Clock.day)]
+
+
+static func taxes(id: String) -> float:
+	return Ports.port(id).population / 1000.0 * Data.rules.sieges.hold.tax_per_1000
+
+
+## What the town pays you a day now: its size, what you ask, and how loyal it is.
+func tax_income(id: String) -> float:
+	var b: Dictionary = bases[id]
+	return taxes(id) * Data.rules.sieges.hold.taxes[b.get("taxes", "fair")].mult * b.loyalty / 100.0
+
+
+func set_taxes(id: String, level: String) -> String:
+	bases[id].taxes = level
+	return "Taxes at %s are %s now." % [bases[id].name, Data.rules.sieges.hold.taxes[level].name.to_lower()]
+
+
+## Where a base's loyalty is heading, every part of it: [[label, amount]]. It drifts toward the sum.
+func loyalty_parts(id: String) -> Array:
+	var c := cfg()
+	var b: Dictionary = bases[id]
+	var man := People.person(b.manager) if b.manager != "" and People.chars.has(b.manager) else {}
+	var parts := []
+	if b.has("town"):
+		var h: Dictionary = Data.rules.sieges.hold
+		var t := PortLife.situation(id)
+		parts.append(["A conquered town", float(h.loyalty)])
+		parts.append(["%s taxes" % h.taxes[b.get("taxes", "fair")].name, float(h.taxes[b.get("taxes", "fair")].loyalty)])
+		parts.append(["Order in the streets %d" % t.order, (t.order - 50.0) * h.order])
+		if t.hunger > 0:
+			parts.append(["Hunger %d" % t.hunger, t.hunger * h.hunger])
+	else:
+		parts.append(["Your men", float(c.loyalty_start)])
+	if man.is_empty():
+		parts.append(["Nobody in charge", -20.0])
+	else:
+		parts.append(["%s's authority" % man.name, (People.value(man, "authority") - 8) * 2.0])
+	if has(b, "tavern"):
+		parts.append(["The tavern", 10.0])
+	return parts
 
 
 # ---- the people at a base ---------------------------------------------------------------
@@ -304,16 +406,20 @@ func daily(s: Dictionary, here: String) -> Dictionary:
 				msgs.append("The %s is launched at %s. She's waiting at the dock for a crew." % [b.keel.name, b.name])
 				b.erase("keel")
 		# production
-		var crewed: bool = b.garrison >= 5
+		if b.has("town"):
+			b.gold += tax_income(id)
 		for bid in b.buildings:
 			var bd := building(bid)
-			if crewed and bd.has("produces"):
+			var work := worked(b, bid)
+			if work > 0.0 and bd.has("produces"):
 				for g in bd.produces:
 					if stored(b) + Market.weight(g) <= capacity(b):
-						b.storage[g] = b.storage.get(g, 0.0) + bd.produces[g] * (1.0 + (People.value(man, "trade") * c.manager_trade_per_point if not man.is_empty() else 0.0))
-			if crewed and bd.has("converts") and b.storage.get(bd.converts.from, 0.0) >= bd.converts.per_day:
-				b.storage[bd.converts.from] -= bd.converts.per_day
-				b.storage[bd.converts.to] = b.storage.get(bd.converts.to, 0.0) + bd.converts.per_day
+						b.storage[g] = b.storage.get(g, 0.0) + bd.produces[g] * work * (1.0 + (People.value(man, "trade") * c.manager_trade_per_point if not man.is_empty() else 0.0))
+			if work > 0.0 and bd.has("converts"):
+				var from := _stock_of(b, bd.converts.from, bd.converts.per_day * work)
+				if from != "":
+					b.storage[from] -= bd.converts.per_day * work
+					b.storage[bd.converts.to] = b.storage.get(bd.converts.to, 0.0) + bd.converts.per_day * work
 			if bd.has("recruits_per_day"):
 				b.recruits = minf(c.recruits_cap, b.recruits + bd.recruits_per_day)
 			b.visibility += bd.visibility
@@ -324,15 +430,13 @@ func daily(s: Dictionary, here: String) -> Dictionary:
 		var paid := minf(cost, b.gold)
 		b.gold -= paid
 		var unpaid := paid < cost
-		var eat: float = b.garrison * c.food_per_man
+		var eat: float = b.garrison * c.food_per_man if not b.has("town") else 0.0  # a town's garrison buys in the market
 		var hungry: bool = b.storage.get("food", 0.0) < eat or (not cove(id).water and b.storage.get("water", 0.0) < eat)
 		b.storage.food = maxf(0.0, b.storage.get("food", 0.0) - eat)
 		if not cove(id).water:
 			b.storage.water = maxf(0.0, b.storage.get("water", 0.0) - eat)
 		# loyalty and its consequences
-		var target: float = c.loyalty_start + (People.value(man, "authority") - 8) * 2.0 if not man.is_empty() else c.loyalty_start - 20.0
-		if has(b, "tavern"):
-			target += 10.0
+		var target: float = loyalty_parts(id).reduce(func(a, p): return a + p[1], 0.0)
 		b.loyalty = lerpf(b.loyalty, target, c.loyalty_drift)
 		if unpaid:
 			b.loyalty += c.loyalty_unpaid
@@ -343,6 +447,10 @@ func daily(s: Dictionary, here: String) -> Dictionary:
 			b.garrison -= 1
 			if rng.randf() < 0.2:
 				msgs.append("Men are deserting the garrison at %s%s." % [b.name, " (unpaid)" if unpaid else (" (hungry)" if hungry else "")])
+		if b.loyalty < c.rebel_below and rng.randf() < c.rebel_chance:
+			msgs.append(rebellion(s, id))
+			if not bases.has(id):
+				continue
 		# visibility: activity gives it away; quiet and shelter hide it
 		b.visibility += b.garrison * c.visibility_per_man - c.visibility_decay * (1.0 + cove(id).shelter * 0.25)
 		b.visibility = clampf(b.visibility, 0.0, 100.0)
@@ -355,7 +463,9 @@ func daily(s: Dictionary, here: String) -> Dictionary:
 				msgs.append("The ransom for %s arrives at %s: %d gold, into the treasury." % [People.person(h.id).name, b.name, paid_r])
 				People.remove(h.id)
 		# raids
-		if b.raid.is_empty():
+		if b.raid.is_empty() and b.has("town"):  # a held town is no secret: its old masters keep coming
+			b.raid = _expedition(id)
+		elif b.raid.is_empty():
 			var chance: float = b.visibility * c.raid_per_visibility + Bonds.rivals(s, 2).size() * c.raid_rival_bonus + (c.raid_wanted_bonus if Career.wanted(s) else 0.0)
 			if rng.randf() < chance:
 				b.raid = _raider(s, id)
@@ -367,6 +477,78 @@ func daily(s: Dictionary, here: String) -> Dictionary:
 			else:
 				msgs.append(resolve_raid(s, id, 0))
 	return {"messages": msgs, "battle": battle}
+
+
+## How much of a building's work gets done (0 to 1): it needs the base manned (5 men), and fields and stills
+## share the hands beyond that: with half the hands they need, they make half as much.
+func worked(b: Dictionary, bid: String) -> float:
+	if b.garrison < 5:
+		return 0.0
+	if building(bid).get("hands", 0) <= 0:
+		return 1.0
+	return clampf((b.garrison - 5) / float(maxi(1, hands_needed(b))), 0.0, 1.0)
+
+
+func hands_needed(b: Dictionary) -> int:
+	return b.buildings.reduce(func(a, x): return a + int(building(x).get("hands", 0)), 0)
+
+
+## The first of a building's inputs there's enough of in store, or "".
+func _stock_of(b: Dictionary, from: Variant, qty: float) -> String:
+	for g in (from if from is Array else [from]):
+		if b.storage.get(g, 0.0) >= qty:
+			return g
+	return ""
+
+
+## A base is gone. A town goes back under its old laws and gets new officials from its old masters.
+func lose(id: String) -> void:
+	var town := is_town(id)
+	bases.erase(id)
+	if town:
+		Ports.state[id].laws = Ports.port(id).laws.duplicate(true)
+		Politics.officials.erase(id)
+		Politics.apply_laws(id, true)
+	if id == "nassau":
+		Politics.council_leader = Politics.council_members()[0]
+
+
+## Loyalty has collapsed and the base rises: the garrison (and the manager's nerve) against the angry.
+## A town's people throw open the gates; a cove's garrison takes the base and its stores for themselves.
+func rebellion(s: Dictionary, id: String) -> String:
+	var b: Dictionary = bases[id]
+	var town: bool = b.has("town")
+	var rebels: float = Ports.port(id).population / float(cfg().town_rebels_per) * (1.0 - PortLife.situation(id).order / 100.0) if town else b.garrison * 0.5
+	var loyal: float = b.garrison if town else b.garrison * 0.5
+	var ours := [["%d loyal men against %d" % [loyal, rebels], int(clampf(round(log(maxf(1.0, loyal) / maxf(1.0, rebels)) / log(2.0) * 3.0), -8, 6))]]
+	var man := People.person(b.manager) if b.manager != "" and People.chars.has(b.manager) else {}
+	if not man.is_empty():
+		ours.append(["%s's grip" % man.name, Dice.mod(People.value(man, "intimidation"))])
+	if has(b, "fort"):
+		ours.append(["The fort", 2])
+	var check := Dice.contest(rng, "Put down the rising at %s" % b.name, ours, [["Their anger", int((cfg().rebel_below - b.loyalty) / 3.0) + 2]])
+	if check.success:
+		b.garrison = maxi(0, b.garrison - rng.randi_range(1, 5))
+		b.loyalty = minf(100.0, b.loyalty + 20)
+		s.reputation.fear += 1
+		if town:
+			PortLife.nudge(id, "order", 15)
+		return "%s rose against you, and was put down%s. Fear holds it, for now." % [b.name, " by %s" % man.name if not man.is_empty() else ""]
+	var text := ""
+	if town:
+		text = "%s has risen against you. The townsfolk open the gates, your garrison runs for the boats, and %s flag goes back up over the fort." % [
+			b.name, ("the " + Data.table("factions")[b.town.from].adjective) if b.town.from != "pirates" else "the black"]
+		if not man.is_empty():
+			s.crew.append(b.manager)
+	else:
+		text = "The garrison at %s has mutinied and taken the base and everything in it for themselves." % b.name
+		if not man.is_empty():  # whoever ran it sails off as a rival
+			s.crew.append(b.manager)
+			text += " " + Bonds.former_officer(s, b.manager, -1)
+	ShipStats.captain(s).history.append("Lost %s to a rising, %s." % [b.name, Clock.date_string()])
+	lose(id)
+	news.emit(text)
+	return text
 
 
 func _raider(s: Dictionary, id: String) -> Dictionary:
@@ -391,12 +573,17 @@ func _raider(s: Dictionary, id: String) -> Dictionary:
 func defence_parts(s: Dictionary, id: String) -> Array:
 	var b: Dictionary = bases[id]
 	var r: Dictionary = b.raid if not b.raid.is_empty() else {"kind": "pirate", "warned": false}
-	var men: int = cfg().raiders[r.kind].men
+	var men: int = expedition_men(id) if r.kind == "expedition" and b.has("town") else cfg().raiders[r.kind].men
 	var parts := [["Garrison of %d" % b.garrison, int(clampf(round(log(maxf(1.0, b.garrison) / men) / log(2.0) * 3.0), -8, 6))]]
 	for bid in ["battery", "fort", "watchtower"]:
 		if has(b, bid):
 			parts.append([building(bid).name, int(building(bid).defence)])
-	parts.append(["Hidden and hard to reach", int(cove(id).shelter)])
+	if b.has("town"):
+		var walls: int = Data.rules.sieges.size[Ports.port(id).size].walls
+		if walls > 0:
+			parts.append(["Town walls", walls])
+	else:
+		parts.append(["Hidden and hard to reach", int(cove(id).shelter)])
 	if b.manager != "" and People.chars.has(b.manager):
 		parts.append(["%s in command" % People.person(b.manager).name, Dice.mod(People.value(People.person(b.manager), "intimidation"))])
 	if r.warned:
@@ -416,18 +603,24 @@ func resolve_raid(s: Dictionary, id: String, bonus: int) -> String:
 	var ours := defence_parts(s, id)
 	if bonus != 0:
 		ours.append(["Your ship's fight", bonus])
-	var check := Dice.contest(rng, "Defend %s" % b.name, ours, [["Raiders", int(cfg().raiders[r.kind].strength)]])
+	var theirs: int = expedition_strength(id) if r.kind == "expedition" and b.has("town") else int(cfg().raiders[r.kind].strength)
+	var check := Dice.contest(rng, "Defend %s" % b.name, ours, [["Raiders", theirs]])
 	if check.success:
 		s.reputation.fear += 1
 		b.loyalty = minf(100.0, b.loyalty + 10)
 		b.garrison = maxi(0, b.garrison - rng.randi_range(0, 3))
+		if r.kind == "expedition" and b.has("town"):
+			b.town.failed = int(b.town.get("failed", 0)) + 1
+			return "The expedition against %s is beaten off. They'll be back, and stronger." % b.name
 		return "The raid on %s is beaten off: %s goes away empty-handed." % [b.name, r.label]
-	if -check.margin >= cfg().lost_margin or b.garrison <= 3:
+	if b.has("town") or -check.margin >= cfg().lost_margin or b.garrison <= 3:
 		var text := "%s has fallen to %s. The stores are lost, the buildings burned, the garrison scattered." % [b.name, r.label]
+		if b.has("town"):
+			text = "%s has fallen to %s. Your garrison is marched off in chains, and the old flag flies over the fort again." % [b.name, r.label]
 		if b.manager != "" and People.chars.has(b.manager):
 			People.person(b.manager).history.append("Lost %s to raiders, %s." % [b.name, Clock.date_string()])
 			s.crew.append(b.manager)  # they make it back to the ship somehow
-		bases.erase(id)
+		lose(id)
 		news.emit(text)
 		return text
 	var lost: Array = b.buildings.filter(func(x): return x != "dock")

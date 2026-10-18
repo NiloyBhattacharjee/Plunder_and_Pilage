@@ -3,8 +3,11 @@ extends Node
 ## brokers in the havens and free ports hire pirates and smugglers. Templates live in data/contracts.json.
 ## Employers are ordinary characters (the People model). Their trust in you is their relation to your captain,
 ## so bigger jobs unlock as it grows, and a new captain starts from scratch.
-## Three objectives cover every template: raid (take ships of a nation near a port), intercept (a named ship
-## sailing the map), deliver (dispatches or contraband to a port). Some employers lie about pay; some jobs are traps.
+## Objectives: raid (take ships of a nation near a port), intercept (a named ship sailing the map), deliver
+## (dispatches or contraband to a port), escort (see a merchant safely to port, with raiders after her), blockade
+## (keep station off a port for so many days: the town goes hungry), siege (take a town: scripts/sieges.gd), and
+## kidnap (take a named ship and the grandee aboard her, and hand them over). Some employers lie about pay; some
+## jobs are traps. Employers remember how your last job for them ended (last_job), and some jobs follow from it.
 
 signal changed
 
@@ -84,6 +87,7 @@ func offers_at(port_id: String, s: Dictionary) -> Array:
 				continue
 			var ids: Array = Data.table("contracts").keys().filter(func(k): return not k.begins_with("_") and template(k).employer == role)
 			ids.shuffle()
+			ids.sort_custom(func(a, b): return template(a).has("after") and not template(b).has("after"))  # what follows from your last job comes first
 			var want := rng.randi_range(cfg().offers_per_employer[0], cfg().offers_per_employer[1])
 			for id in ids:
 				if o.list.filter(func(c): return c.employer == emp).size() >= want:
@@ -100,6 +104,10 @@ func make(tid: String, emp_id: String, s: Dictionary) -> Dictionary:
 	var t := template(tid)
 	var e := People.person(emp_id)
 	var f := employer_faction(e)
+	var last: Dictionary = e.get("last_job", {})
+	if t.has("after") and (last.is_empty() or not last.how in t.after.how
+			or (not t.after.get("templates", []).is_empty() and not last.template in t.after.templates)):
+		return {}  # a job that only follows from how the last one ended
 	var tier := 0
 	for i in t.tiers.size():
 		if trust(emp_id, s) >= t.tiers[i].trust:
@@ -136,8 +144,25 @@ func make(tid: String, emp_id: String, s: Dictionary) -> Dictionary:
 		"deliver":
 			if not _plan_delivery(c, t, e):
 				return {}
+		"kidnap":
+			if not _plan_intercept(c, t, td):
+				return {}
+			var n := People.generate({"mix": Data.rules.people.recruit_mix[c.target], "pool": "official"})
+			c.noble = n.name
+		"escort":
+			if not _plan_escort(c, t, td, e):
+				return {}
+		"blockade", "siege":
+			var towns: Array = _ports_of(c.target).filter(func(id): return not Bases.bases.has(id) and (t.objective == "blockade" or not "capital" in Ports.port(id).tags))
+			if towns.is_empty():
+				return {}
+			c.port = _pick(towns)
+			c.how = t.get("how", [])
+	if t.get("same_port", false) and last.get("port", "") != "" and Ports.state.has(last.port) and Ports.port(last.port).faction == c.target \
+			and not Bases.bases.has(last.port):
+		c.port = last.port  # where the last job left off
 	c.lied = rng.randf() < lie_chance(t, e)
-	c.trap = rng.randf() < trap_chance(t, e)
+	c.trap = rng.randf() < trap_chance(t, e) + (cfg().grudge_trap if last.get("how", "") == "demanded" else 0.0)
 	c.name = _fill(t.name, c)
 	c.description = _fill(t.description, c)
 	next_id += 1
@@ -170,6 +195,26 @@ func _plan_intercept(c: Dictionary, t: Dictionary, td: Dictionary) -> bool:
 	return true
 
 
+## A merchant of the employer's nation to see safely to a far port; c.count raiders will be after her.
+func _plan_escort(c: Dictionary, t: Dictionary, td: Dictionary, e: Dictionary) -> bool:
+	c.port = e.port
+	var dests: Array = Ports.state.keys().filter(func(id): return id != c.port and Ports.port(id).faction != "pirates" and not Factions.at_war(c.faction, Ports.port(id).faction))
+	if shipping != null:
+		dests = dests.filter(func(id): return not shipping._route(c.port, id).is_empty())
+	if dests.is_empty() or c.faction == "pirates":
+		return false
+	dests.sort_custom(func(a, b): return _pos(a).distance_to(_pos(c.port)) > _pos(b).distance_to(_pos(c.port)))
+	c.dest = _pick(dests.slice(0, 3))
+	var enemy := Encounters.generate(c.faction, rng, "merchant", _pick(td.ships))
+	c.good = _pick(t.cargo)
+	enemy.cargo = {c.good: maxi(1, int(ShipStats.effective(enemy.type, enemy.upgrades).cargo * 0.8 / Market.weight(c.good)))}
+	c.enemy = enemy
+	c.ship = enemy.name
+	c.captain = enemy.captain.name
+	c.target = "pirates"
+	return true
+
+
 func _plan_delivery(c: Dictionary, t: Dictionary, e: Dictionary) -> bool:
 	if t.cargo[0] in ["dispatches", "parcel"]:
 		var dests := _ports_of(c.faction).filter(func(id): return id != e.port)
@@ -191,7 +236,7 @@ func _fill(text: String, c: Dictionary) -> String:
 	return text.format({
 		"target": Data.table("factions")[c.target].adjective if c.target != "" else "",
 		"ship": c.ship, "captain": c.captain, "count": c.count, "qty": c.qty,
-		"port": Ports.port(c.port).name if c.port != "" else "", "dest": Ports.port(c.dest).name if c.dest != "" else "",
+		"port": Ports.port(c.port).name if c.port != "" else "", "dest": Ports.port(c.dest).name if c.dest != "" else "", "noble": c.get("noble", ""),
 		"good": Data.table("goods")[c.good].name.to_lower() if Data.table("goods").has(c.good) else c.good,
 	})
 
@@ -234,7 +279,7 @@ func accept(c: Dictionary, s: Dictionary, free_tons := 9999.0) -> String:
 	active.append(c)
 	var text := "Contract taken: %s. %d days." % [c.name, c.days]
 	match c.objective:
-		"intercept":
+		"intercept", "kidnap":
 			var enemy: Dictionary = c.enemy
 			if c.trap:  # the promised ship is a warship flying the same name
 				var bait := enemy
@@ -244,6 +289,11 @@ func accept(c: Dictionary, s: Dictionary, free_tons := 9999.0) -> String:
 			enemy.contract = c.id
 			c.npc = shipping.spawn_target(c.kind, enemy, c.port, c.dest).id
 			c.erase("enemy")
+		"escort":
+			var raiders: int = c.count + (1 if c.trap else 0)  # someone sold her sailing date
+			c.npc = shipping.spawn_escort(c.enemy, c.port, c.dest, c.id, raiders).id
+			c.erase("enemy")
+			text += " The %s sails from %s for %s as soon as you're ready: stay close to her." % [c.ship, Ports.port(c.port).name, Ports.port(c.dest).name]
 		"deliver":
 			if c.has("deposit"):
 				s.gold -= c.deposit
@@ -273,6 +323,20 @@ func on_battle(s: Dictionary, enemy: Dictionary, outcome: String, pos: Vector2) 
 					msgs.append(_complete(c, s))
 				elif outcome == "enemy_sunk":
 					msgs.append(fail(c, s, "the %s went down with what you were sent for" % c.ship))
+			"kidnap":
+				if enemy.get("contract", "") != c.id:
+					continue
+				if outcome == "enemy_struck":
+					var n := People.generate({"mix": Data.rules.people.recruit_mix[c.target], "pool": "official"})
+					n.name = c.noble
+					n.age = maxi(n.age, 25)
+					n.history.append("Taken from the %s, %s." % [c.ship, Clock.date_string()])
+					c.hostage = People.add(n)
+					s.hostages.append({"id": c.hostage, "faction": c.target, "ransom": int(c.reward * cfg().kidnap_ransom)})
+					msgs.append("%s is your prisoner. Hand them over at %s, or ransom them yourself for more and break your word." % [c.noble, Ports.port(c.employer_port).name])
+					msgs.append(_complete(c, s))
+				elif outcome == "enemy_sunk":
+					msgs.append(fail(c, s, "%s went down with the %s" % [c.noble, c.ship]))
 			"raid":
 				if won and enemy.faction == c.target and pos.distance_to(_pos(c.port)) <= cfg().region_nm * Geo.px_per_nm():
 					c.progress += 1
@@ -293,9 +357,41 @@ func daily(s: Dictionary) -> Array:
 			continue
 		if Clock.day > c.deadline:
 			msgs.append(fail(c, s, "time ran out"))
-		elif c.objective == "intercept" and shipping != null and shipping.find(c.npc).is_empty():
+		elif c.objective in ["intercept", "kidnap"] and shipping != null and shipping.find(c.npc).is_empty():
 			msgs.append(fail(c, s, "the %s made port before you found her" % c.ship if c.kind == "merchant" else "the %s is gone" % c.ship))
+		elif c.objective == "escort" and shipping != null and shipping.find(c.npc).is_empty():
+			msgs.append(fail(c, s, "the %s never made %s" % [c.ship, Ports.port(c.dest).name]))
+		elif c.objective == "blockade" and shipping != null and shipping.world != null:
+			var w: Node = shipping.world
+			if w.ship.anchored_at == "" and w.ship.position.distance_to(_pos(c.port)) <= cfg().lurk_nm * Geo.px_per_nm():
+				c.progress += 1  # nothing goes in or out: the town eats its stores
+				Economy.model.set_world("imports:" + c.port, cfg().blockade_imports, 2)
+				Economy.model.set_world("sailings:" + c.port, cfg().blockade_imports, 2)
+				PortLife.nudge(c.port, "hunger", cfg().blockade_hunger)
+				if c.progress >= c.count:
+					msgs.append(_complete(c, s))
+	for c in active.duplicate():  # a grandee you were to hand over, ransomed or lost instead
+		if c.status == "done" and c.objective == "kidnap" and not s.hostages.any(func(h): return h.id == c.get("hostage", "")):
+			msgs.append(fail(c, s, "you didn't hand %s over" % c.noble))
 	return msgs
+
+
+## A town has fallen to you (Sieges): sacked, ransomed or held. Jobs to take it are done, if it went their way.
+func on_town_taken(s: Dictionary, port_id: String, how: String) -> Array:
+	var msgs := []
+	for c in active.duplicate():
+		if c.status == "active" and c.objective == "siege" and c.port == port_id:
+			if c.how.is_empty() or how in c.how:
+				msgs.append(_complete(c, s))
+			else:
+				msgs.append(fail(c, s, "you were to %s it" % " or ".join(c.how)))
+	return msgs
+
+
+## The merchant you were escorting has made port.
+func escort_arrived(id: String, s: Dictionary) -> String:
+	var c := find(id)
+	return _complete(c, s) if not c.is_empty() and c.status == "active" else ""
 
 
 func _complete(c: Dictionary, s: Dictionary) -> String:
@@ -311,6 +407,7 @@ func _complete(c: Dictionary, s: Dictionary) -> String:
 ## Failing or walking away costs you with the employer and their nation.
 func fail(c: Dictionary, s: Dictionary, why: String) -> String:
 	active.erase(c)
+	_remember(c, "failed")
 	_add_trust(c.employer, s, -int(cfg().fail_trust))
 	s.relations[c.faction] = s.relations.get(c.faction, 0) - int(cfg().fail_standing)
 	if c.npc != "" and shipping != null:  # the target sails on as an ordinary ship
@@ -365,6 +462,16 @@ func collect(c: Dictionary, s: Dictionary, demand := false) -> String:
 	var pay := offered_pay(c)
 	var gain := int(t.success.trust)
 	var text := ""
+	if c.objective == "kidnap":  # hand them over
+		var i := -1
+		for k in s.hostages.size():
+			if s.hostages[k].id == c.get("hostage", ""):
+				i = k
+		if i < 0:
+			return "You no longer hold %s." % c.noble
+		s.hostages.remove_at(i)
+		People.person(c.hostage).history.append("Handed over to %s, %s." % [e.name, Clock.date_string()])
+	_remember(c, "demanded" if c.lied and demand else ("short" if c.lied else "clean"))
 	if c.lied and demand:
 		var roll := Dice.contest(rng, "Demand full payment", demand_parts(s),
 			[["%s's authority" % e.name, Dice.mod(People.value(e, "authority"))]])
@@ -398,6 +505,7 @@ func betray(c: Dictionary, s: Dictionary, port_id: String) -> String:
 	var b: Dictionary = cfg().betray
 	var pay := int(c.reward * b.mult)
 	active.erase(c)
+	_remember(c, "betrayed")
 	s.gold += pay
 	People.person(c.employer).relations[s.captain] = -100
 	var text := "The governor of %s pays %d for a look at the seals. " % [Ports.port(port_id).name, pay]
@@ -414,6 +522,13 @@ func abandon(c: Dictionary, s: Dictionary) -> String:
 	return fail(c, s, "you gave it up")
 
 
+## The employer remembers how it ended: clean, short (they paid short and you let it go), demanded (you leaned
+## on them), failed or betrayed. Templates with "after" follow from it.
+func _remember(c: Dictionary, how: String) -> void:
+	if People.chars.has(c.employer):
+		People.person(c.employer).last_job = {"template": c.template, "how": how, "port": c.port, "day": Clock.day}
+
+
 # ---- describing jobs -----------------------------------------------------------
 
 ## A rough measure of danger: the target's strength against yours.
@@ -423,8 +538,12 @@ func risk(c: Dictionary, s: Dictionary) -> String:
 			if c.good in ["dispatches", "parcel"]:
 				return "Low"
 			return "%d%% seizure at %s" % [int(seizure_risk(c) * 100 / (cfg().trap_seizure_mult if c.trap else 1.0)), Ports.port(c.dest).name]
-		"raid":
+		"raid", "blockade":
 			return "Moderate"
+		"siege":
+			return "High: a town's walls"
+		"escort":
+			return "%d raider%s after her" % [c.count, "" if c.count == 1 else "s"]
 	var e: Dictionary = c.get("enemy", {})
 	if e.is_empty():
 		return "?"
@@ -449,8 +568,10 @@ func details(c: Dictionary, s: Dictionary) -> String:
 		var f: String = c.target if k == "target" else k
 		lines.append("   and %s %+d." % [Data.table("factions")[f].name, t.success.relations[k]])
 	lines.append("Failure: trust -%d, standing with %s -%d." % [cfg().fail_trust, fname, cfg().fail_standing])
-	if c.objective in ["raid", "intercept"]:
+	if c.objective in ["raid", "intercept", "kidnap", "siege"]:
 		lines.append(Career.judge_attack(s, c.target).why)
+	if t.has("after"):
+		lines.append("Offered because of how your last job for %s ended." % e.name)
 	var known := People.known_traits(e).filter(func(tr): return cfg().lie_traits.has(tr) or cfg().trap_traits.has(tr) or tr == cfg().honest_trait)
 	if not known.is_empty():
 		lines.append("%s is known to be %s." % [e.name, ", ".join(known.map(func(tr): return Data.table("traits")[tr].name.to_lower()))])
@@ -462,7 +583,7 @@ func summary(c: Dictionary) -> String:
 	if c.status == "done":
 		return "%s: done, collect at %s" % [c.name, Ports.port(c.pay_port).name]
 	var left := int(ceil(c.deadline - Clock.day))
-	var prog := " %d/%d," % [c.progress, c.count] if c.objective == "raid" else ""
+	var prog := " %d/%d%s," % [c.progress, c.count, " days" if c.objective == "blockade" else ""] if c.objective in ["raid", "blockade"] else ""
 	return "%s:%s %d days left" % [c.name, prog, left]
 
 
@@ -475,7 +596,13 @@ func hints() -> Array:
 		match c.objective:
 			"raid":
 				out.append({"pos": _pos(c.port), "radius": cfg().region_nm * Geo.px_per_nm(), "label": c.name})
-			"intercept":
+			"blockade":
+				out.append({"pos": _pos(c.port), "radius": cfg().lurk_nm * Geo.px_per_nm(), "label": c.name})
+			"siege":
+				out.append({"pos": _pos(c.port), "radius": 12.0, "label": c.name})
+			"escort":
+				out.append({"from": _pos(c.port), "to": _pos(c.dest), "label": "The %s's course" % c.ship})
+			"intercept", "kidnap":
 				if c.kind == "merchant":
 					out.append({"from": _pos(c.port), "to": _pos(c.dest), "label": "The %s's course" % c.ship})
 				else:

@@ -15,6 +15,8 @@ var _nick: OptionButton
 var _title: Label
 var _page: PanelContainer
 var _sheet: VBoxContainer
+var _ironman := CheckBox.new()
+var _hints := CheckBox.new()
 
 
 func _ready() -> void:
@@ -31,6 +33,14 @@ func _ready() -> void:
 	%Start.pressed.connect(_captain_page)
 	%Continue.pressed.connect(func(): _go({"load": true}))
 	%Continue.disabled = not FileAccess.file_exists(SaveGame.QUICKSAVE)
+	_hints.text = "First-voyage hints"
+	_hints.button_pressed = true
+	_hints.tooltip_text = "A short word the first time you meet each part of the game."
+	_ironman.text = "Ironman"
+	_ironman.tooltip_text = "One save, written for you in every port. No reloading, and when the story ends, the save goes with it."
+	for box in [_hints, _ironman]:  # beside the start button
+		%Start.get_parent().add_child(box)
+		%Start.get_parent().move_child(box, %Start.get_index())
 	_random_name()
 	ship_edit.text = Data.rules.ship_names[randi() % Data.rules.ship_names.size()]
 	_describe()
@@ -77,7 +87,8 @@ func _start() -> void:
 	var b := _build.duplicate(true)
 	b.portrait = _cap.portrait
 	_go({"name": _full_name(), "nationality": nation_pick.get_selected_metadata(),
-		"background": bg_pick.get_selected_metadata(), "ship_name": ship_edit.text.strip_edges(), "build": b})
+		"background": bg_pick.get_selected_metadata(), "ship_name": ship_edit.text.strip_edges(), "build": b,
+		"ironman": _ironman.button_pressed, "tutorial": _hints.button_pressed})
 
 
 # ---- the captain: looks and build --------------------------------------------------
