@@ -43,9 +43,7 @@ func refresh() -> void:
 	var b: Dictionary = Bases.bases[base_id]
 	var s: Dictionary = ship.state
 	%Title.text = "%s  (%s)" % [b.name, "your town" if b.has("town") else "your base"]
-	var upkeep: float = b.garrison * Data.rules.bases.garrison_wage
-	for bid in b.buildings:
-		upkeep += Bases.building(bid).upkeep
+	var upkeep := Bases.upkeep(b)
 	var raid := ""
 	if not b.raid.is_empty() and b.raid.warned:
 		raid = "\nRAID COMING: %s, in about %d days." % [b.raid.label, maxi(0, int(b.raid.day - Clock.day))]
@@ -68,7 +66,7 @@ func _build_cove(b: Dictionary, s: Dictionary) -> void:
 		var who: String = Career.fname(b.town.from) if b.town.from != "pirates" else "the Brethren"
 		UIKit.label(box, "Taxes about %s a day.   Next expedition in about %d days (%+d, %d men)." % [Market.fmt(Bases.tax_income(base_id)), maxi(0, int(b.raid.get("day", Clock.day) - Clock.day)),
 			Bases.expedition_strength(base_id), Bases.expedition_men(base_id)],
-			"Taxes go into the treasury, times the town's loyalty. Your town charges you no duty, and keeps your laws: no contraband, pirates welcome.\nA town is no secret: %s keeps sending expeditions to take it back, each one stronger than the last (%d beaten so far). They sail %d days before they're due: catch one at sea and beat it, and that attempt is over. Lose a defence ashore and the town is lost." % [
+			"Taxes go into the treasury, times the town's loyalty. Your town charges you no duty, and keeps your laws: no contraband, and the Rule and Harbour you set below.\nA town is no secret: %s keeps sending expeditions to take it back, each one stronger than the last (%d beaten so far). They sail %d days before they're due: catch one at sea and beat it, and that attempt is over. Lose a defence ashore and the town is lost." % [
 				who, b.town.get("failed", 0), Data.rules.sieges.hold.expedition.lead_days], Style.c("header"))
 		var trow := UIKit.row(box)
 		UIKit.label(trow, "Taxes:  ", "Heavier taxes fill the treasury and empty the town's goodwill. A town whose loyalty falls below %d may rise against you." % R.rebel_below)
@@ -77,6 +75,16 @@ func _build_cove(b: Dictionary, s: Dictionary) -> void:
 			var tb := UIKit.button(trow, tx.name, func(): _act(func(): return Bases.set_taxes(base_id, level)),
 				"%s a day at this loyalty; loyalty %+d." % [Market.fmt(Bases.taxes(base_id) * tx.mult * b.loyalty / 100.0), tx.loyalty])
 			tb.disabled = b.get("taxes", "fair") == level
+		for slot in Civics.slots("town"):  # your laws: one choice in each, changed once a month at most
+			var sd: Dictionary = Civics.table()._slots[slot]
+			var crow := UIKit.row(box)
+			UIKit.label(crow, "%s:  " % sd.name, sd.description)
+			for id in Civics.options(slot):
+				var why := Civics.problem(b, id)
+				var cb := UIKit.button(crow, Civics.table()[id].name, func(): _act(func(): return Civics.adopt(s, ship.stats, b, id, Bases.rng, base_id)),
+					Civics.describe(id) + ("
+" + why if why != "" else ""))
+				cb.disabled = why != ""
 	else:
 		UIKit.label(box, "Visibility %d%%   (raid risk about %.1f%% a day)" % [b.visibility, chance * 100],
 			"How easy the base is to find. Every building, every man ashore, every visit and every sale gives it away a little; quiet days and a well-hidden cove (shelter %d) let it fade.\nRivals in a feud and a price on your head make raids likelier." % Bases.cove(base_id).shelter, Style.c("header"))

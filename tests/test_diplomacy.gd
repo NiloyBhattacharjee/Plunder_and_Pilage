@@ -16,6 +16,7 @@ func after_each():
 	Clock.day = 0.0
 	Data.rules.diplomacy.capture_chance = 0.06
 	Data.rules.diplomacy.return_on_peace = 0.5
+	Data.rules.diplomacy.invasion.strength = 8
 	Ports.reset()
 	Factions.reset()
 
@@ -42,8 +43,14 @@ func test_a_privateers_raids_set_nations_against_each_other():
 func test_towns_change_hands_in_a_war_and_maybe_back_at_the_peace():
 	Data.rules.diplomacy.capture_chance = 1.0
 	Data.rules.diplomacy.return_on_peace = 1.0
+	Data.rules.diplomacy.invasion.strength = 60  # nothing stands against it
 	Factions.declare("england", "spain", "")
 	Factions._campaign(["england", "spain"])
+	assert_eq(Factions.invasions.size(), 2, "a squadron fits out on each side")
+	assert_true(Factions.taken.is_empty(), "nothing falls until the squadron gets there")
+	for x in Factions.invasions:
+		x.due = Clock.day
+	Factions._invasions_due()
 	assert_false(Factions.taken.is_empty())
 	var t: Dictionary = Factions.taken.filter(func(x): return x.by == "england")[0]
 	assert_eq(Ports.port(t.port).faction, "england", "the flag over the fort")
@@ -56,3 +63,16 @@ func test_towns_change_hands_in_a_war_and_maybe_back_at_the_peace():
 	Factions._make_peace(["england", "spain"])
 	assert_eq(Ports.port(t.port).faction, "spain", "handed back by the treaty")
 	assert_false(Factions.at_war("england", "spain"))
+
+
+func test_a_squadron_caught_at_sea_saves_the_town():
+	Data.rules.diplomacy.capture_chance = 1.0
+	Factions.declare("england", "spain", "")
+	Factions._campaign(["england", "spain"])
+	var x: Dictionary = Factions.invasions.filter(func(i): return i.by == "spain")[0]
+	var before: int = s.relations.england
+	assert_string_contains(Factions.invasion_beaten(x.port, s), "broken")
+	assert_gt(s.relations.england, before, "the English are grateful")
+	x.due = Clock.day
+	Factions._invasions_due()
+	assert_eq(Ports.port(x.port).faction, "england", "the attack never came")

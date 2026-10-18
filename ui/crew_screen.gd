@@ -334,6 +334,15 @@ func _build_mood(box: Node) -> void:
 		"Taken from every strongbox, ransom, prize sale and sale of stolen goods. A fair share is %d%%; greedy hands care most." % int(Data.rules.crew.fair_share * 100))
 	UIKit.button(row, "-5%", func(): _articles(a.pay, a.crew_share - 0.05), "Less for the crew, more for you. They'll resent it." + vote_note)
 	UIKit.button(row, "+5%", func(): _articles(a.pay, a.crew_share + 0.05), "More for the crew." + vote_note)
+	for slot in Civics.slots("ship"):  # the rest of the articles: one choice in each, changed once a month at most
+		var sd: Dictionary = Civics.table()._slots[slot]
+		var crow := UIKit.row(box)
+		UIKit.label(crow, "%s:" % sd.name, sd.description + vote_note, Style.c("header"))
+		for id in Civics.options(slot):
+			var why := Civics.problem(s, id)
+			var cb := UIKit.button(crow, Civics.table()[id].name, func(): _civic(id), Civics.describe(id) + ("
+" + why if why != "" else "") + vote_note)
+			cb.disabled = why != ""
 	var u: Dictionary = s.unrest
 	if u.stage > 0:
 		var who := ("%s is behind it" % People.person(u.leader).name) if u.known and u.leader != "" else "Someone is stirring them up; you don't know who"
@@ -346,6 +355,12 @@ func _build_mood(box: Node) -> void:
 			"The sick still eat but can't work: the ship sails as if short-handed. A good surgeon saves lives and speeds recovery; rest in port helps most.\nScurvy comes with long voyages, the flux with short supplies, yellow fever in the summer months.",
 			Style.c("bad"))
 	UIKit.label(box, "")
+
+
+func _civic(id: String) -> void:
+	%Status.text = Civics.adopt(ship.state, ship.stats, ship.state, id, People.rng)
+	message.emit(%Status.text)
+	refresh()
 
 
 func _articles(pay: String, share: float) -> void:

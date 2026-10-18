@@ -64,6 +64,9 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
   Each port has a `population`, `tags` (capital, plantation, free_port, pirate_haven, fair_town, garrison) and what it `make`s each day.
 - `economy.json`: the trade economy. Every port, every day: stock += production x season + imports - consumption - exports - spoilage, and the price follows stock against normal stock. Consumption per 1,000 people, tag multipliers, seasons, duties, spreads, and the outside trade that stands in for merchant traffic. `scripts/economy/economy_model.gd` is the model (no nodes, runs headless); the `Economy` autoload runs it on the clock.
 - Headless economy runs: `bin/Godot_v4.7.2-stable_win64_console.exe --headless --path . -s tools/economy_sim.gd -- --years 15 --seed 1` writes `tools/out/economy.csv` (port, good, week: stock, prices, flows) and prints health checks (prices pinned at a limit, widest swings, cheapest and dearest port per good).
+- Balance report: `bin/Godot_v4.7.2-stable_win64_console.exe --headless --path . -s tools/balance_sim.gd -- --runs 20 --years 50`
+  prints how often wars start and towns change hands, how fast the price on your head grows (`--attacks 3 --sack 12`), what each
+  held town earns at each tax level against its upkeep and its odds against expeditions, and the odds each town falls to an invasion.
 - Market events (shortages, gluts, poor harvests) are in `rules.json` under `market_events`; add more there.
 - `ships.json` (8 types, each with its own polar curve for points of sail), `upgrades.json` (effects use `set`, `add` and `mult` on any ship stat; `group` makes upgrades replace each other).
 - `history.json`: dated wars, peace treaties and pardons (1680 onwards). `scripts/factions.gd` applies them; `scripts/career.gd` judges every attack
@@ -101,7 +104,9 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
   follows taxes, order and hunger. Expeditions grow with each one beaten and sail from a real port: catch one at sea and it's over.
   Any base whose loyalty collapses may rise against you (`bases` `rebel_below`). Plantations and stills need hands from the garrison.
 - Wars of the moment (`scripts/factions.gd`, `rules.json` `diplomacy`): tension between nations drifts and rises with incidents
-  (privateer raids, false colours, sacks); at war, each side takes the other's smaller towns (`Ports.change_owner`), and the peace may hand them back.
+  (privateer raids, false colours, sacks); at war, each side sends invasion squadrons against the other's smaller towns: real ships
+  that sail from their nearest port ("ATTACK COMING" on the chart), which you can catch at sea to save the town (and win its
+  nation's thanks). If they get there, they roll against the fort, walls and garrison (`Ports.change_owner`); the peace may hand towns back.
 - The price on your head (`Career.add_bounty`, `rules.json` `career.bounty`): piracy and sacks raise it per nation; hunters come in
   bigger ships as it grows; that nation's pardon clears it. Named captains grow (`bonds.json` `growth`): fame from prizes and from
   beating you buys bigger ships; the dead are replaced. Smugglers, coasters and guarda costas sail too (`encounters.json`).
@@ -128,6 +133,12 @@ rum, disease (scurvy, flux, yellow fever; the sick can't work), friendships and 
 one stage a week (grumbling, round robin, weapons missing, black spot, mutiny), with events in `data/events/mutiny.json` for each stage.
 If the captain dies or is deposed, a pirate crew votes and anyone else follows the chain of command; a hard case can seize the ship by force.
 Name a successor in the crew screen to back them. Tuning in `rules.json` `crew`.
+
+Civics (`scripts/civics.gd`, `data/civics.json`) are standing choices with a price, one per slot, each changeable once a month.
+The ship's articles (crew screen): discipline (the lash, an easy ship), quarter (none given, fair dealing) and the maimed (a fund).
+A held town's laws (base screen): rule (martial law, a council of townsmen) and harbour (a free port, closed to the Brethren).
+Pirate crews vote on new articles; anyone else imposes them, and a harsher one is resented. Effects are read where each number is made:
+`Civics.bonus(holder, key)`. Add an option by adding an entry; add a new effect key by reading it where it applies.
 
 ## Saves
 

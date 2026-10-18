@@ -56,6 +56,8 @@ func _draw() -> void:
 			label += " (yours)"
 			if not held.raid.is_empty() and held.raid.day - Clock.day <= 20:
 				label += " - EXPEDITION COMING"
+		elif not Factions.invasion_at(id).is_empty():
+			label += " - %s ATTACK COMING" % Data.table("factions")[Factions.invasion_at(id).by].adjective.to_upper()
 		if trade_good == "@standing" and not ship_state.is_empty():
 			var acc := Career.port_access(ship_state, id)
 			label += "  %+d%s" % [ship_state.relations.get(port.faction, 0), "" if acc.open else ", CLOSED"]

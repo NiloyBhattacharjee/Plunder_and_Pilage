@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://bjlj2mtjwvh1m"
+path="res://.godot/imported/Blackmoor Tides Loop.ogg-20b79d6c72f70cf728206ea743fc9e06.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/audio/Blackmoor Tides Loop.ogg"
+dest_files=["res://.godot/imported/Blackmoor Tides Loop.ogg-20b79d6c72f70cf728206ea743fc9e06.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

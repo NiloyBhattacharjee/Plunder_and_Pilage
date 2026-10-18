@@ -56,6 +56,7 @@ func test_piracy_puts_a_price_on_your_head():
 	var hunter := Encounters.generate("spain", rng, "hunter")
 	s.reputation.notoriety = 0  # not wanted for notoriety: hunted for the money
 	assert_true(Career.npc_hostile(s, hunter, rng), "Spanish hunters come for the Spanish price")
+	Career.add_bounty(s, "spain", 5000)
 	assert_ne(Career.hunter_ship(s), "brigantine", "a big price brings a big ship")
 	assert_true(Events.flags.has("sacked_maracaibo"), "events remember the sack")
 

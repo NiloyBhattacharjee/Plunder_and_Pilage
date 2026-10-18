@@ -147,8 +147,7 @@ func _arrive(n: Dictionary) -> void:
 			news.emit("The %s has made %s safely. %s" % [n.enemy.name, Ports.port(n.dest).name, text])
 		remove(n)
 		return
-	if n.has("expedition"):  # off your town: she waits for the day of the assault
-		n.home = n.expedition
+	if n.has("expedition") or n.has("invasion"):  # off the town: she waits for the day of the assault
 		_new_goal(n)
 		return
 	if n.kind == "merchant":
@@ -206,10 +205,12 @@ func _set_course(n: Dictionary, goal: Vector2) -> void:
 func daily() -> void:
 	for n in npcs.duplicate():
 		n.age += 1
-		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.get("treasure", false) and not n.has("expedition") and not n.has("escort"):  # contract targets and named captains stay
+		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.get("treasure", false) and not n.has("expedition") and not n.has("escort") and not n.has("invasion"):  # contract targets and named captains stay
 			remove(n)
 		elif n.has("expedition") and Bases.bases.get(n.expedition, {}).get("raid", {}).get("npc", "") != n.id:
 			remove(n)  # the expedition is over, one way or the other
+		elif n.has("invasion") and Factions.invasion_at(n.invasion).get("npc", "") != n.id:
+			remove(n)  # the attack is over
 	if count("pirate") < int(round(cfg().pirates * Economy.model.world_mult("pirates"))):
 		spawn("pirate", "pirates")
 	for f in Career.nations():
@@ -232,6 +233,7 @@ func daily() -> void:
 	if not _ports_of("spain").is_empty() and npcs.filter(func(n): return n.enemy.kind == "guarda_costa").size() < cfg().guarda_costas:
 		spawn("navy", "spain", "guarda_costa")
 	_expeditions()
+	_invasions()
 	_meetings()
 
 
@@ -295,25 +297,50 @@ func _expeditions() -> void:
 		var r: Dictionary = b.raid
 		if not b.has("town") or r.get("kind", "") != "expedition" or r.has("npc") or r.day - Clock.day > lead or not world.anchorages.has(id):
 			continue
-		var from: String = b.town.from
-		var homes: Array = (_ports_of(from) if from != "pirates" else Ports.state.keys().filter(func(p): return Ports.port(p).get("fence", false)))
-		homes = homes.filter(func(p): return p != id and not Bases.bases.has(p) and world.anchorages.has(p) and not _route(p, id).is_empty())
-		r.npc = ""
-		if homes.is_empty():
-			continue  # nowhere to sail from: it comes anyway, unseen
-		var here: Vector2 = world.anchorages[id]
-		homes.sort_custom(func(a, c): return world.anchorages[a].distance_to(here) < world.anchorages[c].distance_to(here))
 		var ships: Array = Data.rules.sieges.hold.expedition.ships
-		var kind := "pirate" if from == "pirates" else "navy"
-		var e := Encounters.generate(from, rng, kind, ships[mini(int(b.town.get("failed", 0)), ships.size() - 1)])
-		e.label = "the expedition to retake %s" % b.name
-		var n := _add(kind, e, world.anchorages[homes[0]], Data.table("factions")[from].flag)
+		var n := _sail_against(b.town.from, id, ships[mini(int(b.town.get("failed", 0)), ships.size() - 1)], "the expedition to retake %s" % b.name)
+		r.npc = ""
+		if n.is_empty():
+			continue  # nowhere to sail from: it comes anyway, unseen
 		n.expedition = id
-		n.origin = homes[0]
-		n.dest = id
-		n.route = _route(homes[0], id)
 		r.npc = n.id
-		_say(n, "Word from %s: the %s has sailed to retake %s. Catch her at sea and the attempt is over." % [Ports.port(homes[0]).name, e.name, b.name], true)
+
+
+## Wartime squadrons sent to take a town (Factions.invasions): they sail lead_days before the attack is due.
+func _invasions() -> void:
+	var inv: Dictionary = Data.rules.diplomacy.invasion
+	for x in Factions.invasions:
+		if x.spawned or x.due - Clock.day > inv.lead_days or not world.anchorages.has(x.port):
+			continue
+		x.spawned = true
+		var n := _sail_against(x.by, x.port, inv.ships[Ports.port(x.port).size], "the %s squadron sent against %s" % [
+			Data.table("factions")[x.by].adjective, Ports.port(x.port).name])
+		if n.is_empty():
+			x.unseen = true  # nowhere to sail from: the attack comes anyway, unseen
+			continue
+		n.invasion = x.port
+		x.npc = n.id
+
+
+## A warship of nation f sailing from its nearest port to attack town `to`, announced in the taverns. {} if
+## no port of theirs has a route there.
+func _sail_against(f: String, to: String, type: String, label: String) -> Dictionary:
+	var homes: Array = (_ports_of(f) if f != "pirates" else Ports.state.keys().filter(func(p): return Ports.port(p).get("fence", false)))
+	homes = homes.filter(func(p): return p != to and not Bases.bases.has(p) and world.anchorages.has(p) and not _route(p, to).is_empty())
+	if homes.is_empty():
+		return {}
+	var here: Vector2 = world.anchorages[to]
+	homes.sort_custom(func(a, c): return world.anchorages[a].distance_to(here) < world.anchorages[c].distance_to(here))
+	var kind := "pirate" if f == "pirates" else "navy"
+	var e := Encounters.generate(f, rng, kind, type)
+	e.label = label
+	var n := _add(kind, e, world.anchorages[homes[0]], Data.table("factions")[f].flag)
+	n.origin = homes[0]
+	n.dest = to
+	n.route = _route(homes[0], to)
+	n.home = to  # once there, she waits off the town for the day of the attack
+	_say(n, "Word from %s: the %s, %s, has sailed. Catch her at sea and the attack is off." % [Ports.port(homes[0]).name, e.name, label], true)
+	return n
 
 
 ## Pirates fall on merchants and navies run down pirates. Where you can see, it's a fight that lasts a while,

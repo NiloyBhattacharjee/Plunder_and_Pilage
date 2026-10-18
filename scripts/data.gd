@@ -25,6 +25,7 @@ const SCHEMA := {
 	"coves": {"required": ["name", "lat", "lon", "shelter", "soil", "water", "description"]},
 	"buildings": {"required": ["name", "cost", "days", "upkeep", "needs", "visibility", "description"], "refs": {"needs": "buildings"}},
 	"perks": {"required": ["name", "needs", "description"]},
+	"civics": {"required": ["name", "slot", "description"]},
 	"contracts": {"required": ["name", "description", "employer", "needs", "objective", "days", "tiers", "success", "lie_chance", "trap_chance"]},
 }
 

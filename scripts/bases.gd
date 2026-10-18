@@ -112,6 +112,7 @@ func hold_town(s: Dictionary, id: String, garrison: int, extra := 0, from := "")
 	var b := _new_base(id, h.buildings[Ports.port(id).size].duplicate(), 100.0, float(h.loyalty))
 	b.town = {"from": from if from != "" else Ports.port(id).faction, "since": Clock.day, "failed": 0}
 	b.taxes = "fair"
+	b.town_buildings = b.buildings.duplicate()  # the town keeps these up itself
 	bases[id] = b
 	Ports.state[id].laws = h.laws.duplicate(true)  # your laws now
 	Politics.depose(s, id)
@@ -156,14 +157,25 @@ func expedition_beaten(id: String) -> String:
 		Career.fname(b.town.from) if b.town.from != "pirates" else "The Brethren", int(b.raid.day - Clock.day)]
 
 
+## A day's wages and upkeep. A town keeps up the wharves and walls it already had (b.town_buildings) itself.
+static func upkeep(b: Dictionary) -> float:
+	var cost: float = b.garrison * cfg().garrison_wage
+	for bid in b.buildings:
+		if not bid in b.get("town_buildings", []):
+			cost += building(bid).upkeep
+	return cost
+
+
+## A town's taxes at full loyalty, at fair rates: a share for its size, and more for its people.
 static func taxes(id: String) -> float:
-	return Ports.port(id).population / 1000.0 * Data.rules.sieges.hold.tax_per_1000
+	var h: Dictionary = Data.rules.sieges.hold
+	return float(h.tax_base[Ports.port(id).size]) + Ports.port(id).population / 1000.0 * h.tax_per_1000
 
 
 ## What the town pays you a day now: its size, what you ask, and how loyal it is.
 func tax_income(id: String) -> float:
 	var b: Dictionary = bases[id]
-	return taxes(id) * Data.rules.sieges.hold.taxes[b.get("taxes", "fair")].mult * b.loyalty / 100.0
+	return taxes(id) * Data.rules.sieges.hold.taxes[b.get("taxes", "fair")].mult * b.loyalty / 100.0 * maxf(0.0, 1.0 + Civics.bonus(b, "tax"))
 
 
 func set_taxes(id: String, level: String) -> String:
@@ -185,6 +197,7 @@ func loyalty_parts(id: String) -> Array:
 		parts.append(["Order in the streets %d" % t.order, (t.order - 50.0) * h.order])
 		if t.hunger > 0:
 			parts.append(["Hunger %d" % t.hunger, t.hunger * h.hunger])
+		parts.append_array(Civics.parts(b, "loyalty"))  # your laws
 	else:
 		parts.append(["Your men", float(c.loyalty_start)])
 	if man.is_empty():
@@ -424,9 +437,7 @@ func daily(s: Dictionary, here: String) -> Dictionary:
 				b.recruits = minf(c.recruits_cap, b.recruits + bd.recruits_per_day)
 			b.visibility += bd.visibility
 		# wages and food
-		var cost: float = b.garrison * c.garrison_wage
-		for bid in b.buildings:
-			cost += building(bid).upkeep
+		var cost := upkeep(b)
 		var paid := minf(cost, b.gold)
 		b.gold -= paid
 		var unpaid := paid < cost
@@ -518,7 +529,7 @@ func lose(id: String) -> void:
 func rebellion(s: Dictionary, id: String) -> String:
 	var b: Dictionary = bases[id]
 	var town: bool = b.has("town")
-	var rebels: float = Ports.port(id).population / float(cfg().town_rebels_per) * (1.0 - PortLife.situation(id).order / 100.0) if town else b.garrison * 0.5
+	var rebels: float = Ports.port(id).population / float(cfg().town_rebels_per) * (1.0 - PortLife.situation(id).order / 100.0) * maxf(0.0, 1.0 + Civics.bonus(b, "rebels")) if town else b.garrison * 0.5
 	var loyal: float = b.garrison if town else b.garrison * 0.5
 	var ours := [["%d loyal men against %d" % [loyal, rebels], int(clampf(round(log(maxf(1.0, loyal) / maxf(1.0, rebels)) / log(2.0) * 3.0), -8, 6))]]
 	var man := People.person(b.manager) if b.manager != "" and People.chars.has(b.manager) else {}
@@ -590,6 +601,8 @@ func defence_parts(s: Dictionary, id: String) -> Array:
 		parts.append(["Forewarned", 2])
 	if b.loyalty < 30:
 		parts.append(["A garrison with no heart for it", -3])
+	elif b.has("town") and b.loyalty >= Data.rules.sieges.hold.loyal_defence[0]:
+		parts.append(["The townsfolk stand with you", int(Data.rules.sieges.hold.loyal_defence[1])])
 	if not Bonds.allies(s, 3).is_empty():
 		parts.append(["Allies send help", 2])
 	return parts

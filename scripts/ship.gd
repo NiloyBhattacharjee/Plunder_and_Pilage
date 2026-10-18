@@ -24,6 +24,7 @@ var speed_text := ""
 var wind := {}
 var _last_storm := ""
 var _wake: Array = []  # recent positions, for the foam trail
+const TURN_RATE := 25.0  # per day: about half a second to come about at normal speed
 
 
 func _ready() -> void:
@@ -90,7 +91,7 @@ func _on_tick(dd: float) -> void:
 		if pk < speed_knots:
 			speed_knots = pk
 			speed_text += "\nHeld back by the prize %s: %.1f kn" % [prize.name, pk]
-	$Hull.rotation = deg_to_rad(heading)
+	$Hull.rotation = lerp_angle($Hull.rotation, deg_to_rad(heading), 1.0 - exp(-dd * TURN_RATE))  # she comes about, she doesn't snap
 
 	if terrain:
 		var here := terrain.at(position)
@@ -234,7 +235,7 @@ static func hardship(s: Dictionary, stats: Dictionary, port_id: String, rng: Ran
 			var chance: float = minf(h.desert_max_chance, unpaid_days * h.desert_per_unpaid_day) + low_morale
 			if c.relations.get(s.captain, 0) <= h.desert_grudge_threshold:
 				chance += h.desert_grudge_chance
-			if rng.randf() < chance * relief:
+			if rng.randf() < chance * relief * maxf(0.0, 1.0 + Civics.bonus(s, "desertion")):
 				gone.append(c.name)
 				_remove_hand(s, id)
 				Ports.state[port_id].sailors += 1

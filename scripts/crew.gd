@@ -87,6 +87,7 @@ static func morale(s: Dictionary, stats: Dictionary) -> Dictionary:
 		parts.append(["What they think of you", loyal])
 	for m in s.morale_mods:
 		parts.append([m.name, float(m.value)])
+	parts.append_array(Civics.parts(s, "morale"))  # the articles
 	parts.append_array(Bonds.morale_parts(s))
 	for pair in [["superstitious", "superstitious_morale"], ["devout", "devout_morale"]]:  # the figurehead
 		var v := ShipStats.look_effect(s, pair[1])
@@ -365,7 +366,7 @@ static func unrest_day(s: Dictionary, stats: Dictionary, rng: RandomNumberGenera
 			if p.id != u.leader and discontent(p, s, m) < 0.0 and rng.randf() < c.leave_chance:
 				u.support.erase(p.id)
 			continue
-		var chance: float = c.recruit_chance * People.value(lead, "charisma") / 10.0 * (2.0 if p.relations.get(u.leader, 0) >= c.friend else 1.0)
+		var chance: float = c.recruit_chance * People.value(lead, "charisma") / 10.0 * (2.0 if p.relations.get(u.leader, 0) >= c.friend else 1.0) 			* maxf(0.0, 1.0 + Civics.bonus(s, "unrest"))
 		if discontent(p, s, m) > c.discontent and rng.randf() < chance:
 			u.support.append(p.id)
 	if u.support.size() <= 1 and m >= c.unrest_morale + 10:

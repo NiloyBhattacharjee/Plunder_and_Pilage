@@ -8,6 +8,8 @@ Every third-party asset in the game is listed here. Only licences that allow com
 | IM FELL English (regular, italic) | `assets/ui/fonts/IMFellEnglish-*.ttf` | [Google Fonts](https://fonts.google.com/specimen/IM+Fell+English) | Igino Marini | SIL Open Font License 1.1 (`OFL-IMFell.txt`) |
 | Pirata One | `assets/ui/fonts/PirataOne-Regular.ttf` | [Google Fonts](https://fonts.google.com/specimen/Pirata+One) | Rodrigo Fuenzalida, Nicolas Massi | SIL Open Font License 1.1 (`OFL-PirataOne.txt`) |
 | Pixelify Sans | `assets/ui/fonts/PixelifySans.ttf` | [Google Fonts](https://fonts.google.com/specimen/Pixelify+Sans) | Stefie Justprince | SIL Open Font License 1.1 (`OFL-PixelifySans.txt`) |
+| Blackmoor Tides Loop (battle music) | `assets/audio/Blackmoor Tides Loop.ogg` | TODO | TODO | TODO |
+| Vandalorum tracks (map music) | `assets/audio/vandalorum_-_*.ogg` | TODO | Vandalorum | TODO |
 | GUT test framework (not shipped art) | `addons/gut/` | [bitwes/Gut](https://github.com/bitwes/Gut) | Butch Wesley | MIT |
 
 ## Our own placeholder art (CC0)

@@ -23,6 +23,7 @@ var _attacked := false
 @onready var port_layer: Node2D = $PortLayer
 var _overlays: Array = []  # the label layer, hidden with the world
 var _daylight: CanvasModulate
+var _music := AudioStreamPlayer.new()  # the Vandalorum tracks in assets/audio, shuffled; paused while a battle's on
 var _lights: Array = []    # towns' and your lantern's light at night
 var at_base := ""         # the cove you're anchored at, if any (a cove isn't a port: you count as at sea)
 var cove_anchors := {}    # cove id -> navigable anchorage
@@ -46,6 +47,10 @@ var finds: Finds          # things floating at sea to sail to
 
 func _ready() -> void:
 	_pixel_layers()
+	_music.process_mode = Node.PROCESS_MODE_ALWAYS  # so hiding the world doesn't cut it; _show_world pauses it instead
+	_music.finished.connect(_next_track)
+	add_child(_music)
+	_next_track()
 	EconomyEffects.player = ship.state if ship.state is Dictionary else {}
 	rng.randomize()
 	terrain = TerrainGrid.new(load("res://data/map/terrain.png").get_image(), int(Data.map.cell_px))
@@ -938,7 +943,11 @@ func start_combat(enemy: Dictionary, mode: String) -> void:
 	var resist = EconomyEffects.active(s, "merchant_resist")
 	if resist != null and enemy.kind == "merchant":
 		enemy.morale *= resist.value
-	var dread := ShipStats.look_effect(s, "enemy_morale") + Ambitions.bonus(s, "enemy_morale")  # black sails, a snarling figurehead, a fearsome name
+	var dread := ShipStats.look_effect(s, "enemy_morale") + Ambitions.bonus(s, "enemy_morale") + Civics.bonus(s, "enemy_morale")  # black sails, a snarling figurehead, a fearsome name, no quarter
+	if enemy.kind == "merchant":
+		dread += Civics.bonus(s, "merchant_morale")
+	s.reputation.honour += int(Civics.bonus(s, "honour_per_battle"))  # every fight is talked of in the taverns
+	s.reputation.fear += int(Civics.bonus(s, "fear_per_battle"))
 	if dread != 0.0:
 		enemy.morale += dread
 	if mode == "attack" and not Data.rules.flags.has(flag) and Career.false_colours(s):
@@ -975,6 +984,18 @@ func _show_world(on: bool) -> void:
 	for layer in _overlays:
 		layer.visible = on
 	process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+	_music.stream_paused = not on
+
+
+## Any file in assets/audio starting "vandalorum" is in the rotation; a random one, not the one just played.
+func _next_track() -> void:
+	var tracks := Array(ResourceLoader.list_directory("res://assets/audio/")).filter(func(f): return f.begins_with("vandalorum"))
+	if _music.stream and tracks.size() > 1:
+		tracks.erase(_music.stream.resource_path.get_file())
+	if tracks.is_empty():
+		return
+	_music.stream = load("res://assets/audio/" + tracks.pick_random())
+	_music.play()
 
 
 func _on_combat_finished(result: Dictionary) -> void:
@@ -1018,6 +1039,8 @@ func _settle_battle(result: Dictionary) -> void:
 				", and sends across a purse of %d gold" % thanks if thanks > 0 else "", Career.fname(f), int(AtSea.cfg().rescue_relation)])
 		_rescued = ""
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and not current_npc.is_empty():
+		if current_npc.has("invasion"):  # a wartime squadron, caught before it reached the town
+			hud.show_message(Factions.invasion_beaten(current_npc.invasion, s))
 		if current_npc.has("expedition"):  # caught at sea before it reached your town
 			hud.show_message(Bases.expedition_beaten(current_npc.expedition))
 			port_layer.queue_redraw()

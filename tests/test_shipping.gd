@@ -154,3 +154,17 @@ func test_an_expedition_sails_to_retake_your_town():
 	world.shipping.daily()
 	assert_true(world.shipping.npcs.filter(func(n): return n.get("expedition", "") == "maracaibo").is_empty(), "beaten: she's gone from the map")
 	Bases.lose("maracaibo")
+
+
+func test_a_wartime_squadron_sails_against_a_town():
+	Factions.declare("england", "spain", "")
+	Factions.invasions = [{"port": "portobelo", "by": "england", "from": "spain", "due": Clock.day + 5, "npc": "", "spawned": false}]
+	world.shipping._invasions()
+	var sq: Array = world.shipping.npcs.filter(func(n): return n.get("invasion", "") == "portobelo")
+	assert_eq(sq.size(), 1)
+	assert_eq(sq[0].enemy.faction, "england")
+	assert_false(sq[0].route.is_empty(), "under way from an English port")
+	Factions.invasion_beaten("portobelo", world.ship.state)
+	world.shipping.daily()
+	assert_true(world.shipping.npcs.filter(func(n): return n.get("invasion", "") == "portobelo").is_empty())
+	Factions.reset()

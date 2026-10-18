@@ -46,6 +46,11 @@ func start(player_data: Dictionary, enemy: Dictionary, mode: String, _wind_dir: 
 	add_child(stage)
 	stage.setup(battle, flags, [player_data.get("look", {}), enemy.get("look", {})], wind_strength)
 	_build_ui()
+	var music := AudioStreamPlayer.new()
+	music.stream = load("res://assets/audio/Blackmoor Tides Loop.ogg")
+	music.finished.connect(music.play)  # loop it; freed with the battle screen, so it stops when the battle ends
+	add_child(music)
+	music.play()
 	_log("[i]The %s %s. Find her weak points, break her, and make her strike.[/i]" % [enemy.label, enemy.name])
 	if not battle.sides[1].known.is_empty():
 		_log("What you know of her: %s." % ", ".join(battle.sides[1].known.map(func(w): return DiceCombat.weak_name(w).to_lower())))

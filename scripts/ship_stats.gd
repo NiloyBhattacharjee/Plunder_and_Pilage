@@ -103,7 +103,8 @@ static func spread_mult(state: Dictionary) -> float:
 static func daily_cost(state: Dictionary, stats: Dictionary) -> float:
 	var u: Dictionary = Data.rules.upkeep
 	var officers: int = state.officers.size()
-	return (state.crew.size() - officers) * u.wage_per_crew + officers * u.wage_per_crew * u.officer_wage_mult + stats.upkeep + Fleet.daily_cost(state)
+	var wages: float = ((state.crew.size() - officers) * u.wage_per_crew + officers * u.wage_per_crew * u.officer_wage_mult) * (1.0 + Civics.bonus(state, "wages"))
+	return wages + stats.upkeep + Fleet.daily_cost(state)
 
 
 static func upgrade_cost(u: String, type_id: String) -> int:

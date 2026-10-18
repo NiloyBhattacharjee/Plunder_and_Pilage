@@ -1,0 +1,58 @@
+{
+  "_comment": "Civics (scripts/civics.gd): standing choices with a price, Paradox style. Ship's articles live in the crew screen, a held town's laws in its base screen. Each slot holds one option; its default has no effects. A slot can change once every change_days. Pirate crews vote on new articles: benefit (-1..1) is how much the change favours them, against what it replaces. bonus keys: morale (crew), unrest (x on hands joining a ringleader), desertion (x on desertion in port), wages (x on crew wages), enemy_morale and merchant_morale (the enemy's at the start of a battle), honour_per_battle and fear_per_battle, loyalty (a town's), order (a town's streets, as in port life), tax (x on a town's taxes), rebels (x on the size of a rising). laws: set on the town's live laws while in force. relations: a one-off change of standing when adopted.",
+  "_slots": {
+    "discipline": {"name": "Discipline", "where": "ship", "default": "ship_law",
+                   "description": "How the ship keeps order between the captain's orders and the crew's tempers."},
+    "quarter":    {"name": "Quarter", "where": "ship", "default": "give_quarter",
+                   "description": "What happens to a ship that fights you and loses."},
+    "maimed":     {"name": "The maimed", "where": "ship", "default": "own_risk",
+                   "description": "What a hand is owed for an arm or a leg lost in the ship's service."},
+    "rule":       {"name": "Rule", "where": "town", "default": "old_customs",
+                   "description": "Who keeps the peace in the streets, and how."},
+    "harbour":    {"name": "Harbour", "where": "town", "default": "brethren_welcome",
+                   "description": "Who may anchor here, and what they pay."}
+  },
+  "_rules": {"change_days": 30, "imposed_morale": -8, "imposed_days": 30},
+
+  "ship_law":   {"name": "The articles' law", "slot": "discipline", "benefit": 0.0,
+                 "description": "Moses' law for theft, marooning for desertion, and nothing for the rest. What every crew expects."},
+  "the_lash":   {"name": "The lash", "slot": "discipline", "benefit": -0.6,
+                 "bonus": {"morale": -6, "unrest": -0.5, "desertion": 0.3},
+                 "description": "A flogging for any slackness. The crew hate it, and nobody dares listen to a ringleader."},
+  "easy_ship":  {"name": "An easy ship", "slot": "discipline", "benefit": 0.5,
+                 "bonus": {"morale": 5, "unrest": 0.6},
+                 "description": "Cards, rum and no floggings. A happy ship and an idle one: any loudmouth finds listeners."},
+
+  "give_quarter": {"name": "Quarter given", "slot": "quarter", "benefit": 0.0,
+                   "description": "Strike your colours and you'll be spared. The custom of the sea."},
+  "no_quarter":   {"name": "No quarter", "slot": "quarter", "benefit": 0.1,
+                   "bonus": {"enemy_morale": -12, "honour_per_battle": -1, "fear_per_battle": 1},
+                   "description": "Fight us and nobody lives. Crews strike sooner rather than face it, and the whole Caribbean hears of every fight."},
+  "fair_dealing": {"name": "Fair dealing", "slot": "quarter", "benefit": -0.1,
+                   "bonus": {"merchant_morale": -8, "honour_per_battle": 1, "wages": 0.05},
+                   "description": "Prisoners fed and set ashore at the next port, nobody tortured for the strongbox. Merchants know it and strike sooner; feeding them costs."},
+
+  "own_risk":     {"name": "At their own risk", "slot": "maimed", "benefit": 0.0,
+                   "description": "A hand who loses a limb gets the crew's pity and a berth as cook, if there's one free."},
+  "maimed_fund":  {"name": "A fund for the maimed", "slot": "maimed", "benefit": 0.6,
+                   "bonus": {"wages": 0.15, "morale": 3, "desertion": -0.4},
+                   "description": "Six hundred pieces of eight for a right arm, out of the common chest before any shares. Dear, and hands stay."},
+
+  "old_customs":    {"name": "The old customs", "slot": "rule",
+                     "description": "The town's own constables and courts, answering to you."},
+  "martial_law":    {"name": "Martial law", "slot": "rule",
+                     "bonus": {"order": 25, "loyalty": -10, "tax": -0.1, "rebels": -0.3},
+                     "description": "Patrols, a curfew and a gallows in the square. Quiet streets, sullen people, and trade suffers."},
+  "town_council":   {"name": "A council of townsmen", "slot": "rule",
+                     "bonus": {"loyalty": 12, "order": -10, "tax": -0.2},
+                     "description": "The merchants and planters run the town's affairs in your name, and keep a little of the taxes for their trouble."},
+
+  "brethren_welcome": {"name": "The Brethren welcome", "slot": "harbour", "laws": {"pirates": 1.0},
+                       "description": "Any pirate may drop anchor and spend their gold. The streets are rough for it."},
+  "free_port":        {"name": "A free port", "slot": "harbour", "laws": {"pirates": 1.0},
+                       "bonus": {"tax": 0.25, "order": -5},
+                       "description": "Light harbour dues and no questions asked. Traders crowd in, and so does everyone else."},
+  "closed_to_pirates": {"name": "Closed to the Brethren", "slot": "harbour", "laws": {"pirates": -0.3},
+                        "bonus": {"loyalty": 8}, "relations": {"pirates": -5},
+                        "description": "Respectable ships only. The townsfolk sleep easier; the Brethren call you a traitor."}
+}

@@ -3,7 +3,8 @@ extends Node
 ## data/history.json (the Nine Years' War, Utrecht, the King's Pardon...). The Brethren are at war with everyone.
 ## Between the dated wars the world moves on its own: tension between each pair of nations drifts month by month,
 ## and grows with incidents (your raids under one flag on another's ships, false colours, sacks). Past war_at it's
-## war, for a while; in a war each side may take the other's smaller towns, and the peace may hand them back.
+## war, for a while; in a war each side sends invasion squadrons against the other's smaller towns: real ships that
+## sail from their nearest port, which you can catch at sea. The peace may hand captured towns back.
 ## Tuning: rules.json "diplomacy".
 
 signal changed(text: String)
@@ -14,6 +15,7 @@ var applied: Array = []     # history event ids already applied
 var timed: Array = []       # [{pair, until "YYYY-MM-DD"}]: wars declared by events, with their end
 var tension := {}           # "a|b" -> 0..war_at: how close two nations are to war
 var taken: Array = []       # [{port, by, from}]: towns taken in the wars still going
+var invasions: Array = []   # [{port, by, from, due, npc, spawned}]: squadrons on their way to take a town
 var rng := RandomNumberGenerator.new()
 
 
@@ -22,6 +24,7 @@ func _ready() -> void:
 	reset()
 	Clock.day_passed.connect(func(_d):
 		apply_history()
+		_invasions_due()
 		if Clock.date().day == 1:
 			monthly())
 
@@ -32,6 +35,7 @@ func reset() -> void:
 	applied = []
 	timed = []
 	taken = []
+	invasions = []
 	tension = {}
 	for a in Career.nations():
 		for b in Career.nations():
@@ -155,32 +159,91 @@ func monthly() -> void:
 				Data.table("factions")[pair[0]].name, Data.table("factions")[pair[1]].name])
 
 
-## In a war, each side may take one of the other's smaller towns (never a capital, never one you hold).
+## In a war, each side may send a squadron against one of the other's smaller towns (never a capital, never one
+## you hold). It gathers for a while, sails lead_days before it's due (Shipping), and attacks on the day.
 func _campaign(pair: Array) -> void:
+	var inv: Dictionary = cfg().invasion
 	for i in 2:
 		var by: String = pair[i]
 		var from: String = pair[1 - i]
-		if rng.randf() >= cfg().capture_chance:
+		if rng.randf() >= cfg().capture_chance or invasions.any(func(x): return x.by == by):
 			continue
 		var towns: Array = Ports.state.keys().filter(func(id): return _takeable(id, from))
-		if towns.is_empty() or Contracts._ports_of(from).size() <= 1:
+		if towns.is_empty() or Contracts._ports_of(from).size() <= 1 or Contracts._ports_of(by).is_empty():
 			continue
 		var id: String = towns[rng.randi() % towns.size()]
-		Ports.change_owner(id, by)
-		taken.append({"port": id, "by": by, "from": from})
-		Economy.add_news("%s has fallen to the %s. The %s flag flies over the fort now." % [Ports.port(id).name, Data.table("factions")[by].adjective,
-			Data.table("factions")[by].adjective], id)
+		var due := Clock.day + rng.randf_range(inv.days[0], inv.days[1])
+		invasions.append({"port": id, "by": by, "from": from, "due": due, "npc": "", "spawned": false})
+		Economy.add_news("A %s squadron is fitting out to attack %s. They say it sails within the month." % [Data.table("factions")[by].adjective, Ports.port(id).name], id)
 
 
 static func _takeable(id: String, from: String) -> bool:
 	var p := Ports.port(id)
-	return p.faction == from and not "capital" in p.tags and p.size != "large" and not Bases.bases.has(id) and not Factions.taken.any(func(t): return t.port == id)  # not straight back again
+	return p.faction == from and not "capital" in p.tags and p.size != "large" and not Bases.bases.has(id) \
+		and not Factions.taken.any(func(t): return t.port == id) and not Factions.invasions.any(func(t): return t.port == id)
+
+
+func invasion_at(port_id: String) -> Dictionary:
+	for x in invasions:
+		if x.port == port_id:
+			return x
+	return {}
+
+
+## The squadron's day: its strength (and the state you've left it in) against the town's fort, walls and garrison.
+## A town you've taken meanwhile, a peace, or a squadron that never arrived calls it off.
+func _invasions_due() -> void:
+	for x in invasions.duplicate():
+		if Clock.day < x.due:
+			continue
+		invasions.erase(x)
+		var sea: Node = Contracts.shipping if is_instance_valid(Contracts.shipping) else null
+		var n: Dictionary = sea.find(x.npc) if sea != null and x.npc != "" else {}
+		if not n.is_empty():
+			sea.remove(n)
+		if Ports.port(x.port).faction != x.from or Bases.bases.has(x.port) or not at_war(x.by, x.from) or (x.spawned and n.is_empty() and not x.get("unseen", false)):
+			continue
+		var check := Dice.contest(rng, "The attack on %s" % Ports.port(x.port).name, invasion_parts(x, n), defence_parts(x.port))
+		var adj: String = Data.table("factions")[x.by].adjective
+		if check.success:
+			Ports.change_owner(x.port, x.by)
+			taken.append({"port": x.port, "by": x.by, "from": x.from})
+			Economy.add_news("%s has fallen to the %s squadron. The %s flag flies over the fort now." % [Ports.port(x.port).name, adj, adj], x.port)
+		else:
+			Economy.add_news("The %s attack on %s has been beaten off." % [adj, Ports.port(x.port).name], x.port)
+
+
+static func invasion_parts(x: Dictionary, n := {}) -> Array:
+	var parts := [["%s squadron" % Data.table("factions")[x.by].adjective, int(cfg().invasion.strength)]]
+	if not n.is_empty():
+		var st := ShipStats.effective(n.enemy.type, n.enemy.upgrades)
+		var state := int(round((float(n.enemy.hull) / float(st.hull) - 1.0) * 6.0))
+		if state != 0:
+			parts.append(["Battered on the way", state])
+	return parts
+
+
+static func defence_parts(port_id: String) -> Array:
+	var d := Sieges.defences(port_id)
+	return [["The fort", int(d.fort)], ["Walls", int(d.walls)], ["Garrison of %d" % d.garrison, int(d.garrison / 40)]]
+
+
+## You caught the squadron at sea and beat it: the attack is off, and the town's masters are grateful.
+func invasion_beaten(port_id: String, s: Dictionary) -> String:
+	var x := invasion_at(port_id)
+	if x.is_empty():
+		return ""
+	invasions.erase(x)
+	var rel := int(cfg().invasion.rescue_relation)
+	s.relations[x.from] = s.relations.get(x.from, 0) + rel
+	return "The squadron sent against %s is broken. %s owes you for it (standing +%d)." % [Ports.port(port_id).name, Career.fname(x.from), rel]
 
 
 ## Peace: the war is over, tempers cool, and the treaty may hand back what was taken.
 func _make_peace(pair: Array, quiet := false) -> void:
 	wars.erase(pair)
 	tension[_key(pair[0], pair[1])] = cfg().peace_tension
+	invasions = invasions.filter(func(x): return _pair(x.by, x.from) != pair)
 	for t in taken.duplicate():
 		if _pair(t.by, t.from) != pair:
 			continue
@@ -192,7 +255,7 @@ func _make_peace(pair: Array, quiet := false) -> void:
 
 
 func save_state() -> Dictionary:
-	return {"wars": wars, "pardons": pardons, "applied": applied, "timed": timed, "tension": tension, "taken": taken}
+	return {"wars": wars, "pardons": pardons, "applied": applied, "timed": timed, "tension": tension, "taken": taken, "invasions": invasions}
 
 
 func load_state(d: Dictionary) -> void:
@@ -202,6 +265,7 @@ func load_state(d: Dictionary) -> void:
 	timed = d.get("timed", [])
 	tension = d.get("tension", tension)
 	taken = d.get("taken", [])
+	invasions = d.get("invasions", [])
 
 
 static func _pair(a: String, b: String) -> Array:

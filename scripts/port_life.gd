@@ -84,6 +84,8 @@ static func situation(id: String) -> Dictionary:
 		"war": war, "lawless": lawless, "fleet": fleet, "food": food, "makes": makes, "needs": needs,
 		"plantation": "plantation" in p.get("tags", []), "contraband": not Ports.state[id].laws.contraband.is_empty(),
 		"vigilance": float(Ports.state[id].laws.vigilance) * 100.0}
+	if Bases.is_town(id):  # your laws keep the streets, or don't
+		out.order = clampf(out.order + Civics.bonus(Bases.bases[id], "order"), 0.0, 100.0)
 	var mods: Dictionary = _life(id).mods  # what's been done here lately
 	for k in mods:
 		if out.has(k):
