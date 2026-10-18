@@ -156,7 +156,7 @@
   "growth": {
     "xp_per_level": 20, "max_level": 20, "perk_every": 3, "max_skill": 20,
     "build": {"stat_base": 7, "skill_base": 3, "stat_points": 8, "skill_points": 12, "max_start": 15,
-              "extra_traits": 1, "flaw_points": 3, "flaws": ["cowardly", "drunkard", "seasick", "hated", "green", "gambler", "hot_headed"]},
+              "extra_traits": 1, "flaw_points": 3, "captain_skills": ["seamanship", "swordplay", "trade"], "flaws": ["cowardly", "drunkard", "seasick", "hated", "green", "gambler", "hot_headed"]},
     "looks_need_port": true
   },
 
@@ -168,6 +168,20 @@
     "trade_spread_reduction_per_point": 0.025,
     "experience_gain_chance_per_day": 0.006,
     "reveal_chance_per_day": 0.02,
+    "skill_effects": {
+      "_comment": "What each stat and skill does, shown in every stat tooltip (People.breakdown). Keep in step with the code that reads them.",
+      "authority": "Battle: Hold steady, and standing up to their captain's threats and offers. Crew morale. The ransom asked if you're taken. A base manager's authority keeps it safe.",
+      "charisma": "Battle: Rally the crew, Offer them quarter. Crew morale, recruiting in port, and how far a ringleader's word carries.",
+      "intimidation": "Battle: Show them no mercy, Demand their surrender. Pressing contracts, and a base manager's grip on the town.",
+      "experience": "Battle: who acts first each round.",
+      "seamanship": "Captain: ship speed, 1% per point above or below 10. Boatswain: manoeuvres in battle (closing, the weather gauge, running) and working a short crew.",
+      "navigation": "Navigator: fewer groundings in the shallows, and a little speed. With no navigator, the captain covers at half skill.",
+      "gunnery": "Master gunner: broadsides in battle (with the crew's gunnery) and the guns in a siege. With no gunner, the captain covers at half skill.",
+      "swordplay": "Captain: the duel with their captain when you board. Crew: their average swordplay carries boarding fights.",
+      "trade": "Haggling in port: the better of the captain's and quartermaster's Trade narrows the merchant's spread. A base manager's Trade lifts its output.",
+      "carpentry": "Carpenter: patching hull and sails at sea and in battle, remounting guns. A base manager's Carpentry speeds building. With no carpenter, the captain covers at half skill.",
+      "medicine": "Surgeon: tending the wounded in battle, saving the badly hurt afterwards, and nursing the sick. With no surgeon, the captain covers at half skill."
+    },
     "recruit_mix": {
       "england": {"english": 50, "irish": 15, "scottish": 15, "dutch": 5, "afro_caribbean": 15},
       "spain":   {"spanish": 65, "portuguese": 15, "afro_caribbean": 20},
@@ -439,6 +453,7 @@
       {"id": "powder", "text": "A powder flash tears through a gun crew!"},
       {"id": "colours", "text": "Her colours are shot away!"}
     ],
+    "crit_by_ammo": {"round": ["leak", "rudder", "gun", "fire", "powder"], "chain": ["mast", "mast", "rudder"], "grape": ["officer", "powder", "colours"]},
     "leak_per_round": 4, "fire_per_round": 6,
     "rally": [2, 8], "keep_order": 4, "intimidate_per_margin": 1.5, "duel_win_morale": 30, "duel_lose_morale": 20,
     "demand_dc_per_morale": 0.25, "demand_fear_per_point": 0.2,
@@ -458,13 +473,14 @@
     },
     "post_skills": {"captain": "authority", "quartermaster": "swordplay", "navigator": "navigation", "boatswain": "seamanship",
                     "master_gunner": "gunnery", "carpenter": "carpentry", "surgeon": "medicine"},
+    "support_posts": ["navigator", "carpenter", "surgeon"],
     "order": ["boatswain", "navigator", "master_gunner", "captain", "quartermaster", "carpenter", "surgeon"],
     "initiative_die": 8,
     "boost": {"start": 1, "max_points": 5, "max_spend": 3, "per_point": 2},
     "breaks": {
       "shields_base": 2, "hull_per_shield": 200, "shields_cap": 6,
       "light_hull": 160, "lofty_masts": 3, "crowded_crew": 2.0, "shaky_morale": 45, "few_marines": 0.15, "sluggish_knots": 0.5,
-      "max_weak": 3, "reeling": -4, "papers_intel_chance": 0.25, "damage_mult": 1.5, "morale": 8, "demand_dc": -5,
+      "max_weak": 3, "weak_crit": 0.5, "reeling": -4, "papers_intel_chance": 0.25, "damage_mult": 1.5, "morale": 8, "demand_dc": -5,
       "names": {"round": "Light timbers", "chain": "Lofty rig", "grape": "Crowded decks", "nerve": "Shaky nerve",
                 "steel": "Few fighting men", "helm": "Sluggish helm"},
       "tips": {"round": "Round shot", "chain": "Chain shot", "grape": "Grape shot", "nerve": "Threats (Show them no mercy)",

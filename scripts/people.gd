@@ -116,7 +116,33 @@ func breakdown(c: Dictionary, key: String) -> String:
 		lines.append("Something you don't know about them: %+d" % unknown)
 	if key in SKILLS and value(c, key) < 20:
 		lines.append("Progress to next level: %d / %d" % [c.xp.get(key, 0.0), xp_needed(c.skills[key])])
+	lines.append("")
+	lines.append(effect_text(key, value(c, key)))
 	return "\n".join(lines)
+
+
+## What a stat or skill does, and how much: "Charisma 12 is +1 on a d20 roll. Battle: Rally the crew..."
+func effect_text(key: String, score := -1) -> String:
+	var out := ""
+	if score >= 0:
+		out = "%s %d is %+d on a d20 roll. " % [SKILL_NAMES[key], score, Dice.mod(score)]
+	out += Data.rules.people.skill_effects[key]
+	var n := check_count(key)
+	return out + ("\nRolled in %d event choices." % n if n > 0 else "")
+
+
+var _checks := {}
+
+## How many event choices roll this stat or skill.
+func check_count(key: String) -> int:
+	if _checks.is_empty():
+		for id in Events.events:
+			for ch in Events.events[id].get("choices", []):
+				var k: String = ch.get("check", {}).get("skill", "")
+				if k != "":
+					_checks[k] = _checks.get(k, 0) + 1
+		_checks[""] = 0  # marks it counted, even with no events loaded
+	return _checks.get(key, 0)
 
 
 func xp_needed(level: int) -> int:

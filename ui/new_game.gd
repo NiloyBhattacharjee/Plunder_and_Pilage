@@ -150,13 +150,18 @@ func _build_sheet() -> void:
 	UIKit.label(_sheet, "Leadership: %d points left    Skills: %d points left" % [left.stats, left.skills],
 		"Spend every point: nothing carries over. Background bonuses are already in. Nothing can start above %d." % g.max_start, Style.c("header"))
 	var grid := UIKit.grid(_sheet, 4)
-	for k in People.STATS + People.SKILLS:
+	for k in People.STATS + g.captain_skills:
 		var pool := "stats" if k in People.STATS else "skills"
 		var v := NewGame.build_value(bg, _build, k)
-		UIKit.label(grid, People.SKILL_NAMES[k], "Base, plus %+d from your background." % (bg[pool].get(k, 0)))
+		var tip := "%s\n\nBase, plus %+d from your background." % [People.effect_text(k, v), bg[pool].get(k, 0)]
+		UIKit.label(grid, People.SKILL_NAMES[k], tip)
 		UIKit.button(grid, " - ", _spend.bind(pool, k, -1)).disabled = int(_build[pool].get(k, 0)) <= 0
-		UIKit.label(grid, str(v)).custom_minimum_size.x = 30
+		UIKit.label(grid, str(v), tip).custom_minimum_size.x = 30
 		UIKit.button(grid, " + ", _spend.bind(pool, k, 1)).disabled = left[pool] <= 0 or v >= int(g.max_start)
+	var officer: Array = People.SKILLS.filter(func(k): return not k in g.captain_skills)
+	UIKit.label(_sheet, "Your officers' work: " + ", ".join(officer.map(func(k): return "%s %d" % [People.SKILL_NAMES[k], NewGame.build_value(bg, _build, k)])),
+		"Hire a navigator, master gunner, carpenter and surgeon for these. Until you do, you cover the empty posts at half skill.\n\n"
+		+ "\n\n".join(officer.map(func(k): return "%s: %s" % [People.SKILL_NAMES[k], Data.rules.people.skill_effects[k]])), Style.c("dim"))
 	var traits := Data.table("traits")
 	var taken: Array = bg.traits + _build.traits + ([_build.flaw] if _build.flaw != "" else [])
 	UIKit.label(_sheet, "")
@@ -205,7 +210,7 @@ func _roll_pirate() -> void:
 	var g: Dictionary = Data.rules.growth.build
 	var bg: Dictionary = Data.table("backgrounds")[bg_pick.get_selected_metadata()]
 	for pool in ["stats", "skills"]:
-		var keys: Array = People.STATS if pool == "stats" else People.SKILLS
+		var keys: Array = People.STATS if pool == "stats" else g.captain_skills
 		var guard := 200
 		while NewGame.build_points(_build)[pool] > 0 and guard > 0:
 			guard -= 1

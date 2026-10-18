@@ -43,8 +43,26 @@ func test_hands_spend_their_own_points():
 	assert_eq(c.skills[best], mini(20, was + 2))
 
 
+func test_every_stat_says_what_it_does():
+	for k in People.STATS + People.SKILLS:
+		assert_true(Data.rules.people.skill_effects.has(k), "%s has no description" % k)
+	assert_gt(People.check_count("charisma"), 0)
+	for k in Data.rules.growth.build.captain_skills:
+		assert_has(People.SKILLS, k)
+
+
+func test_builder_spends_only_captain_skills():
+	var page: Control = load("res://ui/new_game.tscn").instantiate()
+	add_child_autofree(page)
+	page._captain_page()
+	page._roll_pirate()
+	assert_eq(NewGame.build_points(page._build).skills, 0, "every skill point spent")
+	for k in page._build.skills:
+		assert_has(Data.rules.growth.build.captain_skills, k)
+
+
 func test_point_buy_captain():
-	var b := {"stats": {"authority": 3}, "skills": {"gunnery": 4}, "traits": ["brave"], "flaw": "drunkard", "portrait": {"seed": 1, "pick": {"hat": ""}}}
+	var b := {"stats": {"authority": 3}, "skills": {"seamanship": 4}, "traits": ["brave"], "flaw": "drunkard", "portrait": {"seed": 1, "pick": {"hat": ""}}}
 	assert_eq(NewGame.build_points(b).stats, Data.rules.growth.build.stat_points - 3)
 	assert_eq(NewGame.build_points(b).skills, Data.rules.growth.build.skill_points + Data.rules.growth.build.flaw_points - 4)
 	var s: Dictionary = NewGame.build({"nationality": "english", "background": "ex_navy", "build": b}).state

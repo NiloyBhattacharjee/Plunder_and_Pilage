@@ -7,7 +7,9 @@ extends RefCounted
 ## a weak point strips shields, and at none she is Broken: she loses her turns this round and next, and takes
 ## half again the damage. Officers bank a boost point each round and spend up to three on one action.
 ## Conditions (the light, the weather, the place: night, fog, a dead calm, shoals, a fort's guns) change the odds
-## and can change during the fight. sides[0] is the player, sides[1] the enemy.
+## and can change during the fight. sides[0] is the player, sides[1] the enemy. You command the captain, boatswain,
+## gunner and (when boarding) the quartermaster. The carpenter, surgeon and navigator are support: they take no turn,
+## but work at the end of every round on both ships, by their skill.
 ## Actions are data (data/combat_actions.json); their effects are implemented here by id.
 
 var sides: Array = []
@@ -356,8 +358,9 @@ func turn() -> Dictionary:
 	return {}
 
 
-## Runs the turns at the front of the queue that aren't an officer's (allies, the melee, fire and leaks) and
-## passes over a Broken ship's turns. Returns the next officer's turn, or {} when the round is done.
+## Runs the turns at the front of the queue that aren't an officer's (allies, the melee, fire and leaks) or that
+## your quartermaster takes on their own, and passes over a Broken ship's turns. Returns the next officer's turn to
+## command, or {} when the round is done.
 func _front() -> Dictionary:
 	while result == "" and not queue.is_empty():
 		var t: Dictionary = queue[0]
@@ -371,8 +374,16 @@ func _front() -> Dictionary:
 			queue.pop_front()
 			_note(t.side, t.post, "%s is Broken: %s loses the turn." % ["Your ship" if t.side == 0 else "Their ship", sides[t.side].party[t.post].name])
 			continue
+		if is_auto(t):
+			act_ai()
+			continue
 		return t
 	return {}
+
+
+## Your quartermaster sees to the arms and to order below on their own until you board.
+func is_auto(t: Dictionary) -> bool:
+	return t.side == 0 and t.post == "quartermaster" and band < 3
 
 
 ## Turns that aren't an officer's happen only when they mean something: allies fire unless grappled,
@@ -401,24 +412,28 @@ func _run_special(t: Dictionary) -> void:
 ## The officer whose turn it is takes action `id` (or "" to pass), spending `boost` points.
 func act(id: String, boost := 0) -> void:
 	var t: Dictionary = queue.pop_front()
-	var m: Dictionary = sides[t.side].party[t.post]
+	_do(t.side, t.post, id, boost)
+	_check_end()
+
+
+func _do(side: int, post: String, id: String, boost: int) -> void:
+	var m: Dictionary = sides[side].party[post]
 	boost = clampi(boost, 0, mini(int(cfg().boost.max_spend), m.bp))
 	m.bp -= boost
 	m.boosted = boost > 0
-	_actor = t.side
+	_actor = side
 	_boost = boost
-	_actor_post = t.post
+	_actor_post = post
 	_actor_action = id
 	if id == "":
-		_note(t.side, t.post, "%s waits." % m.name)
+		_note(side, post, "%s waits." % m.name)
 	else:
-		orders[t.side][t.post] = id
-		_act(t.side, t.post, id)
+		orders[side][post] = id
+		_act(side, post, id)
 	_actor = -1
 	_boost = 0
 	_actor_post = ""
 	_actor_action = ""
-	_check_end()
 
 
 ## The enemy (or the autopilot) takes the current turn.
@@ -490,8 +505,21 @@ func fort() -> Dictionary:
 
 func end_round() -> void:
 	round_open = false
+	_support()
 	_morale_checks()
 	_check_end()
+
+
+## The support officers work once the round's turns are done: whatever their judgement says, on a ship not Broken.
+func _support() -> void:
+	for i in 2:
+		if is_broken(i):
+			continue
+		var picks := ai_orders(i)
+		for post in cfg().support_posts:
+			if picks.has(post) and result == "":
+				_do(i, post, picks[post], 0)
+				_check_end()
 
 
 ## Turn order: each officer's experience, the ship's speed and the weather gauge, and a die.
@@ -501,6 +529,8 @@ func _roll_order() -> Array:
 		var s: Dictionary = sides[i]
 		var ship: float = clampf((_speed(s) - _speed(sides[other(i)])) * cfg().speed_mod_per_knot, -2.0, 2.0) + (cfg().gauge_bonus if gauge == i else 0)
 		for post in s.party:
+			if post in cfg().support_posts:
+				continue
 			var init: int = rng.randi_range(1, int(cfg().initiative_die)) + Dice.mod(value(s.party[post], "experience")) + int(ship) + (3 if _has_perk(i, post, "quick") else 0)
 			rolled.append({"side": i, "post": post, "init": init + (0.5 if i == 0 else 0.0)})  # ties to the player
 		rolled.append({"side": i, "post": "@damage", "init": float(rng.randi_range(1, int(cfg().initiative_die)))})  # fire and leaks
@@ -811,7 +841,7 @@ func _broadside(i: int, post: String, id: String, a: Dictionary) -> void:
 		+ (hull_before - t.hull) / t.hull_start * 100.0 * cfg().morale_per_hull_pct + dmg * fx.morale)
 	var text := "%s: %s. %dd%d%s = %d damage: hull %d, sails %d, %d men down." % [who, a.name, n, die,
 		" + margin" if c.margin >= 2 else "", dmg, dmg * fx.hull, dmg * fx.sails, killed]
-	if c.crit:
+	if c.crit or (ammo in t.weak and rng.randf() < cfg().breaks.weak_crit):  # crits come mostly from weak points
 		text += " " + _crit(o, ammo)
 	_note(i, post, text, c)
 	_hit_weak(o, ammo)
@@ -891,12 +921,9 @@ static func _manned_guns(s: Dictionary) -> int:
 
 func _crit(o: int, ammo: String) -> String:
 	var t: Dictionary = sides[o]
-	var table: Array = cfg().crits
-	var pick: Dictionary = table[rng.randi() % table.size()]
-	if ammo == "chain" and rng.randf() < 0.5:
-		pick = table.filter(func(x): return x.id == "mast")[0]
-	elif ammo == "grape" and rng.randf() < 0.5:
-		pick = table.filter(func(x): return x.id == "officer")[0]
+	var ids: Array = cfg().crit_by_ammo[ammo]
+	var id: String = ids[rng.randi() % ids.size()]
+	var pick: Dictionary = cfg().crits.filter(func(x): return x.id == id)[0]
 	match pick.id:
 		"leak": t.leak += 1
 		"rudder": t.rudder += 1
@@ -1087,7 +1114,7 @@ func ai_orders(i: int) -> Dictionary:
 				pick = ("push" if stronger else "hold_rail") if band == 3 else ("arm" if not s.armed else "keep_order")
 			"navigator":
 				var hidden: Array = t.weak.filter(func(w): return not w in t.known)
-				if temper == "steady" and not hidden.is_empty() and can.has("study"):
+				if (temper == "steady" or i == 0) and not hidden.is_empty() and can.has("study"):
 					pick = "study"  # an old hand looks for the weak spot first
 				else:
 					pick = "read_wind" if can.has("read_wind") else ""

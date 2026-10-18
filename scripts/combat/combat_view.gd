@@ -270,7 +270,8 @@ func _refresh() -> void:
 
 func _build_order() -> void:
 	UIKit.clear(_order)
-	var r := UIKit.label(_order, "Round %d " % maxi(battle.round_no, 1), "Every officer on both ships acts once a round, fastest first: experience, the faster ship and the weather gauge, and a die.", Style.c("header"))
+	var r := UIKit.label(_order, "Round %d " % maxi(battle.round_no, 1), "Every officer on both ships acts once a round, fastest first: experience, the faster ship and the weather gauge, and a die.
+Carpenters, surgeons and navigators are support: they take no turn, but work at the end of every round.", Style.c("header"))
 	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for k in battle.queue.size():
 		_chip(battle.queue[k], 52 if k == 0 else 40)
@@ -377,7 +378,7 @@ func _build_card(i: int) -> void:
 	for w in s.weak:
 		var found: bool = w in s.known
 		if i == 1 and not found:
-			UIKit.label(weak, "[ ? ]  ", "A weak point you haven't found. Your navigator can study her through the glass, or you may find it by hitting it.", Style.c("dim"))
+			UIKit.label(weak, "[ ? ]  ", "A weak point you haven't found. Your navigator studies her through the glass on their own, or you may find it by hitting it. Hitting a weak point with the guns often does worse than damage: holed, dismasted, an officer down.", Style.c("dim"))
 		else:
 			UIKit.label(weak, "[ %s%s ]  " % [DiceCombat.weak_name(w), "*" if i == 0 and found else ""], "Struck by: %s." % tips[w], Style.c("header"))
 

@@ -83,11 +83,13 @@ func test_fights_end_and_merchants_usually_fall():
 
 func test_every_officer_gets_a_turn_in_order():
 	var b := battle("navy")
-	var t := b.turn()
+	b.begin_round()
 	assert_eq(b.round_no, 1)
 	var officers := func(q: Array) -> int: return q.filter(func(x): return not x.post.begins_with("@")).size()
-	assert_eq(officers.call(b.queue), b.sides[0].party.size() + b.sides[1].party.size())
+	var support := func(i: int) -> int: return b.sides[i].party.keys().filter(func(p): return p in DiceCombat.cfg().support_posts).size()
+	assert_eq(officers.call(b.queue), b.sides[0].party.size() + b.sides[1].party.size() - support.call(0) - support.call(1), "support officers take no turn")
 	assert_eq(officers.call(b.next_queue), officers.call(b.queue), "next round's order is known ahead")
+	var t := b.turn()
 	assert_has([0, 1], t.side)
 
 
@@ -285,3 +287,38 @@ func test_quarter_is_worth_more_from_an_honourable_captain():
 			b._act(0, "captain", "quarter")
 			(low if k == 0 else high).append(80.0 - b.sides[1].morale)
 	assert_gt(high.reduce(func(a, x): return a + x, 0.0), low.reduce(func(a, x): return a + x, 0.0))
+
+
+func test_carpenter_surgeon_and_navigator_work_in_support():
+	var b := battle("navy", "attack", 5)
+	for post in ["navigator", "carpenter", "surgeon", "quartermaster"]:
+		b.sides[0].party[post] = b.sides[1].party.get(post, b.sides[1].party.captain).duplicate(true)
+	b.band = 0
+	b.sides[1].party.erase("boatswain")  # keep her at long range, nobody boards
+	b.next_queue = b._roll_order()
+	b.sides[0].hull = 1000.0
+	for k in 40:
+		var t := b.turn()
+		if t.is_empty():
+			break
+		assert_false(t.post in ["navigator", "carpenter", "surgeon"] or (t.side == 0 and t.post == "quartermaster"), "%s waits for orders" % t.post)
+		if t.side == 0:
+			b.act("")
+		else:
+			b.act_ai()
+	var acted := {}
+	for e in b.entries:
+		if e.side == 0:
+			acted[e.post] = true
+	assert_true(acted.has("carpenter") and acted.has("surgeon") and acted.has("navigator"), "they took their turns")
+	b.band = 3
+	assert_false(b.is_auto({"side": 0, "post": "quartermaster"}), "you command the boarders")
+
+
+func test_crits_fit_the_weak_point():
+	var b := battle("navy")
+	var masts: int = b.sides[1].masts
+	for i in 10:
+		b._crit(1, "chain")
+	assert_lt(b.sides[1].masts, masts, "chain on a lofty rig brings masts down")
+	assert_eq(b.sides[1].leak, 0, "chain doesn't hole her")
