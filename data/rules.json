@@ -396,7 +396,7 @@
     "hunters_max": 2, "hunter_spawn_chance": 0.15,
     "_traders": "Other ships besides the economy's merchants: smugglers running a Spanish port's contraband in from the Dutch and English islands, coasters carrying a port's own goods to a neighbour, and Spanish guarda costas.",
     "smugglers": 2, "coasters": 3, "guarda_costas": 2,
-    "sight_nm": 45, "contact_nm": 9, "chase_nm": 32,
+    "sight_nm": 25, "contact_nm": 9, "chase_nm": 20,
     "npc_speed_factor": 0.9, "merchant_cargo_fraction": 0.7,
     "contact_cooldown_days": 1.5, "max_age_days": 60
   },
@@ -420,7 +420,7 @@
       "hurricane": {"kind": "weather", "name": "Hurricane", "text": "Madness: fighting in a hurricane. The sea is the worst enemy here, and it hits both ships.", "gun": [-5, -4, -3, -2], "seamanship": -3, "gauge_flip": 0.4, "sea_damage": [1, 8]},
       "calm": {"kind": "weather", "name": "Dead calm", "text": "Not a breath of wind. Neither ship can manoeuvre much: whoever has the better guns wins. A steady deck makes for good shooting.", "gun": [1, 1, 1, 0], "actions": {"close": -4, "open": -4, "flee": -6, "gauge": -5, "grapple": -3}, "ends": 0.1, "end_text": "A breeze ruffles the water: the ships can move again."},
       "shoals": {"kind": "place", "name": "Shoal water", "text": "Reefs and sandbars all round. A shallow keel goes where a deep one dares not, and a deep ship that blunders may touch bottom.", "grounding": 0.35, "shallow_bonus": 2},
-      "fort": {"kind": "place", "name": "Under the guns of {port}", "text": "The fort at {port} is close enough to join in.", "range_nm": 14,
+      "fort": {"kind": "place", "name": "Under the guns of {port}", "text": "The fort at {port} is close enough to join in.", "range_nm": 3,
         "guns": {"small": 8, "medium": 14, "large": 24}, "gunnery": {"small": 8, "medium": 10, "large": 12}, "gun_weight": {"small": 12, "medium": 18, "large": 24}}
     },
     "bands": ["Long range", "Medium range", "Close range", "Grappled"],

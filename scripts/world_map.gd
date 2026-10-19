@@ -339,6 +339,7 @@ func _zoom(factor: float) -> void:
 	var z := clampf(camera.zoom.x * factor, maxf(fit.x, fit.y), ZOOM_MAX)
 	camera.zoom = Vector2(z, z)
 	port_layer.zoom = z
+	$MapLayer.zoom = z
 
 
 func _on_arrived(id: String) -> void:

@@ -207,7 +207,8 @@ func test_dawn_catches_the_side_attacked():
 	var b := with_conditions("merchant", ["dawn"], "attack")
 	var calm := battle("merchant", "attack")
 	assert_eq(b.gauge, 0, "the attacker has the gauge")
-	assert_lt(b.sides[1].morale, calm.sides[1].morale)
+	var temper := func(x: DiceCombat) -> float: return float(DiceCombat.cfg().temperaments.get(x.sides[1].temper, {"morale": 0}).morale)
+	assert_lt(b.sides[1].morale - temper.call(b), calm.sides[1].morale - temper.call(calm), "their captains' temperaments aside")
 
 
 func test_a_fort_fires_on_the_side_it_is_against():

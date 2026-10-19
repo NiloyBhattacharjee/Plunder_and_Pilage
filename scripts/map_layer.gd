@@ -1,7 +1,13 @@
 extends Node2D
 ## The world map's land, HD-2D style: beaches, then the land lit as relief by assets/map/land.gdshader (hills
 ## and mountains from assets/map/height.png), coastlines, and the sea's names (data/map_labels.json).
-## Drawn once; Godot caches it. The sea underneath and the clouds on top are shaders (sea_layer.gd).
+## Drawn once; Godot caches it (only the lettering redraws, on zoom). The sea underneath and the clouds on top are shaders (sea_layer.gd).
+
+var zoom := 1.0:  # set by world_map; the sea's names are re-rasterised at screen size so they stay sharp
+	set(z):
+		zoom = z
+		queue_redraw()
+
 
 func _ready() -> void:
 	var land := _Land.new()  # the land itself, drawn behind this node's lettering through the relief shader
@@ -53,9 +59,12 @@ func _labels() -> void:
 		var l: Dictionary = Data.table("map_labels")[id]
 		var font := Style.font("pixel")
 		var pos := Geo.latlon_to_px(l.lat, l.lon)
-		var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size)).x
-		draw_string_outline(font, pos - Vector2(w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size), 5, Color(0.04, 0.1, 0.2, 0.5))
-		draw_string(font, pos - Vector2(w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(l.size), Color(0.9, 0.95, 1.0, 0.55))
+		var px := roundi(float(l.size) * zoom)  # world size -> screen pixels, drawn back down under a 1/zoom transform
+		var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		draw_set_transform(pos, 0.0, Vector2.ONE / zoom)
+		draw_string_outline(font, Vector2(-w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, roundi(5 * zoom), Color(0.04, 0.1, 0.2, 0.5))
+		draw_string(font, Vector2(-w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(0.9, 0.95, 1.0, 0.55))
+	draw_set_transform(Vector2.ZERO)
 
 
 func _ring(pts: PackedVector2Array, color: Color, width: float) -> void:

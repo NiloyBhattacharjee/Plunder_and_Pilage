@@ -13,7 +13,7 @@ func before_each():
 
 
 func merchant_npc() -> Dictionary:
-	var v: Dictionary = Economy.voyages()[0]
+	var v: Dictionary = Economy.voyages().filter(func(x): return Economy.price(x.dest, x.good, false) > 2.0)[0]  # a cargo worth haggling over
 	var e := Encounters.generate(v.faction, rng, "merchant")
 	e.cargo = {v.good: int(v.qty)}
 	return {"id": "n1", "enemy": e, "voyage": v.id, "origin": v.origin, "dest": v.dest}

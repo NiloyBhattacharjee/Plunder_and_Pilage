@@ -127,5 +127,50 @@
     "make": {"hides": 3, "logwood": 3, "food": 10},
     "shipyard": 1, "sailors": 45, "ships_for_sale": ["sloop", "schooner"], "recruits": {"skills": {"swordplay": 2}, "traits": {"drunkard": 0.15, "greedy": 0.1}},
     "laws": {"contraband": [], "vigilance": 0.0}
+  },
+  "campeche": {
+    "name": "Campeche", "faction": "spain", "lat": 19.845, "lon": -90.536, "size": "small",
+    "governor": "Don Rodrigo de Salcedo",
+    "description": "A low town on the Yucatan shore, sacked so often it is building walls. English logwood cutters work the lagoons to the south.",
+    "population": 2000, "tags": ["plantation"],
+    "make": {"logwood": 10, "hides": 6, "food": 40},
+    "import_mult": 1.5, "shipyard": 1, "sailors": 10, "ships_for_sale": ["sloop"],
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.4}
+  },
+  "trujillo": {
+    "name": "Trujillo", "faction": "spain", "lat": 15.92, "lon": -85.955, "size": "small",
+    "governor": "Don Lope Arriaga",
+    "description": "An old fort on the Honduras coast, burned by pirates and half abandoned. A handful of soldiers and cattle men hold on.",
+    "population": 600, "tags": [],
+    "make": {"hides": 6, "indigo": 2, "food": 20},
+    "import_mult": 1.6, "shipyard": 0, "sailors": 5, "ships_for_sale": [],
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.2}
+  },
+  "san_juan": {
+    "name": "San Juan", "faction": "spain", "lat": 18.466, "lon": -66.106, "size": "medium",
+    "governor": "Don Gaspar Maldonado",
+    "description": "Puerto Rico's walled harbour, the first Spanish guns a ship meets coming in from Europe. Its guarda costas hunt the islands to the east.",
+    "population": 4000, "tags": ["garrison"],
+    "make": {"sugar": 6, "hides": 8, "tobacco": 3, "food": 50},
+    "shipyard": 1, "sailors": 12, "ships_for_sale": ["sloop", "brigantine"],
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.5}
+  },
+  "la_guaira": {
+    "name": "La Guaira", "faction": "spain", "lat": 10.601, "lon": -66.933, "size": "small",
+    "governor": "Don Andres Bermudez",
+    "description": "Caracas's port, a strip of town under the mountains. Cocoa comes down the mule road, and Dutch smugglers come in after dark to buy it.",
+    "population": 1500, "tags": ["plantation"],
+    "make": {"cocoa": 14, "tobacco": 4, "hides": 4, "food": 30},
+    "import_mult": 1.5, "shipyard": 0, "sailors": 8, "ships_for_sale": [],
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.4}
+  },
+  "st_augustine": {
+    "name": "St. Augustine", "faction": "spain", "lat": 29.894, "lon": -81.313, "size": "small",
+    "governor": "Don Pablo de Hita",
+    "description": "Spain's lonely watch on the Florida coast, where the treasure fleets turn for home. Masons are raising a stone fort over the wooden one.",
+    "population": 1400, "tags": ["garrison"],
+    "make": {"hides": 3, "naval_stores": 2, "food": 15},
+    "import_mult": 1.6, "shipyard": 1, "sailors": 6, "ships_for_sale": ["sloop"],
+    "laws": {"contraband": ["cloth", "tools", "wine", "gunpowder"], "vigilance": 0.5}
   }
 }

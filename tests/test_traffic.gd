@@ -33,6 +33,8 @@ func test_a_lost_voyage_never_arrives_and_frightens_the_route():
 	var tr := m.traffic
 	var v: Dictionary = tr.voyages[0]
 	var before: float = m.stock[v.dest][v.good]
+	tr.risk.clear()  # forget losses from the warm-up
+	tr.approach.clear()
 	tr.lose(v, "player", m.day)
 	assert_false(v in tr.voyages)
 	assert_eq(m.stock[v.dest][v.good], before)

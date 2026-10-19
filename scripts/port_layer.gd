@@ -32,8 +32,7 @@ func _draw() -> void:
 		var label: String = Bases.cove(id).name + (" (your base)" if mine else "")
 		if mine and not Bases.bases[id].raid.is_empty() and Bases.bases[id].raid.warned:
 			label += " - RAID COMING"
-		draw_string_outline(Style.font("pixel"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), int(4 * s), Style.c("chart_paper_light"))
-		draw_string(Style.font("pixel"), cp + Vector2(8, 5) * s, label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), col)
+		_text(Style.font("pixel"), cp + Vector2(8, 5) * s, label, 15, col, Style.c("chart_paper_light"))
 	if trade_good == "@routes":
 		_draw_routes(s)
 	for h in Contracts.hints():  # where your contracts send you, inked on the chart
@@ -44,7 +43,7 @@ func _draw() -> void:
 		else:
 			draw_dashed_line(h.from, h.to, red, 2.0 * s, 10.0 * s)
 			at = h.from.lerp(h.to, 0.5)
-		draw_string(Style.font("italic"), at, h.label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(15 * s), red)
+		_text(Style.font("italic"), at, h.label, 15, red)
 	for id in port_positions:
 		var port: Dictionary = Data.table("ports")[id]
 		var pos: Vector2 = port_positions[id]
@@ -73,15 +72,21 @@ func _draw() -> void:
 		draw_line(pole, pole + Vector2(0, -9) * k, Style.c("chart_ink"), 1.0 * k)
 		draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -9) * k, pole + Vector2(7, -7) * k, pole + Vector2(0, -5) * k]),
 			Style.c("wax") if not held.is_empty() else Color(Data.table("factions")[port.faction].color))
-		draw_string_outline(Style.font("pixel"), text_pos, label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), int(4 * s), Style.c("chart_paper_light"))
-		draw_string(Style.font("pixel"), text_pos, label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(16 * s), Style.c("chart_ink"))
+		_text(Style.font("pixel"), text_pos, label, 16, Style.c("chart_ink"), Style.c("chart_paper_light"))
 		var on := PortLife.active(id)  # what's going on there, under the name
 		if not on.is_empty():
 			var what := "  ".join(on.map(func(h): return PortLife.name_of(id, h.id)))
-			draw_string_outline(Style.font("italic"), text_pos + Vector2(0, 15) * s, what, HORIZONTAL_ALIGNMENT_LEFT, -1, int(14 * s), int(4 * s), Style.c("chart_paper_light"))
-			draw_string(Style.font("italic"), text_pos + Vector2(0, 15) * s, what, HORIZONTAL_ALIGNMENT_LEFT, -1, int(14 * s), Style.c("wax"))
+			_text(Style.font("italic"), text_pos + Vector2(0, 15) * s, what, 14, Style.c("wax"), Style.c("chart_paper_light"))
+
+
+## Text at a steady size on screen. Drawn at full size under a 1/zoom transform, so the glyphs are rasterised at
+## screen resolution; drawing them at size/zoom instead makes tiny glyphs the camera then magnifies into a blur.
+func _text(font: Font, pos: Vector2, text: String, size: int, color: Color, outline := Color.TRANSPARENT) -> void:
+	draw_set_transform(pos, 0.0, Vector2.ONE / zoom)
+	if outline.a > 0.0:
+		draw_string_outline(font, Vector2.ZERO, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, outline)
+	draw_string(font, Vector2.ZERO, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	draw_set_transform(Vector2.ZERO)
 
 
 ## Trade routes map mode: a line for each route merchants have used lately, thicker the busier, redder the riskier.
@@ -107,4 +112,4 @@ func _draw_routes(s: float) -> void:
 		var col := Color(Style.c("chart_ink"), 0.7).lerp(Style.c("bad"), clampf(r * 2.0, 0.0, 1.0))
 		draw_line(port_positions[a], port_positions[b], col, clampf(busy * 0.6, 1.5, 9.0) * s)
 		if r >= Data.table("economy").traffic.raid_reason_risk:
-			draw_string(font, port_positions[a].lerp(port_positions[b], 0.5), "raiders", HORIZONTAL_ALIGNMENT_CENTER, -1, int(14 * s), Style.c("bad"))
+			_text(font, port_positions[a].lerp(port_positions[b], 0.5), "raiders", 14, Style.c("bad"))

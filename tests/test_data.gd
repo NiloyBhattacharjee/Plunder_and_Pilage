@@ -3,7 +3,7 @@ extends GutTest
 
 func test_shipped_data_is_valid():
 	assert_eq(Data.errors, PackedStringArray(), "data/ files should validate cleanly")
-	assert_between(Data.table("ports").size(), 12, 15)
+	assert_between(Data.table("ports").size(), 12, 20)
 
 
 func test_validation_catches_missing_field_and_bad_reference():
