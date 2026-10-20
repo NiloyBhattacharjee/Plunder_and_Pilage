@@ -49,7 +49,7 @@
     "choices": [
       {"text": "We'll take it, at the next English port", "outcomes": ["opinion {wants} +10", "opinion {against} -15", "flag crew_wants_pardon 120"], "result": "Half the crew cheer. The other half go very quiet."},
       {"text": "We're Brethren, and we'll die Brethren", "outcomes": ["opinion {wants} -10", "opinion {against} +10", "relation pirates +3"], "result": "The black flag stays up. {wants} looks out at the sea for a long time."},
-      {"text": "Every man may choose for himself", "outcomes": ["leave {wants}", "opinion crew +2", "honour +1"], "result": "{wants} and a few others go ashore at the next landfall to seek the pardon."}
+      {"text": "Every man may choose for himself", "outcomes": ["leave {wants} blessed", "opinion crew +2", "honour +1"], "result": "{wants} and a few others go ashore at the next landfall to seek the pardon."}
     ]
   },
 

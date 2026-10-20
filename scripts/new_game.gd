@@ -90,6 +90,8 @@ static func build(cfg: Dictionary) -> Dictionary:
 		"career": {"pirate": false, "marque": "", "service": 0.0, "rank": 0, "crown_debt": 0.0, "pardoned_by": []},
 	}
 	auto_appoint(state, 7)
+	for id in state.officers.values():  # your officers each want something
+		Wants.ensure(People.person(id), People.rng)
 	Crew.ensure(state)
 	state.secrets = []
 	state.bonds = {}

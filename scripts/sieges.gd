@@ -343,6 +343,7 @@ static func sack(s: Dictionary, id: String) -> String:
 		if r != "":
 			msgs.append(r)
 	msgs.append("Fear +%d, honour %d, notoriety +%d. Every nation will remember %s." % [k.fear, k.honour, k.notoriety, p.name])
+	PortLife.remember(id, "sacked")
 	return " ".join(msgs)
 
 
@@ -360,6 +361,7 @@ static func ransom(s: Dictionary, id: String) -> String:
 	s.reputation.fear += int(k.fear)
 	s.reputation.honour += int(k.honour)
 	s.relations[p.faction] = s.relations.get(p.faction, 0) - int(k.relation)
+	PortLife.remember(id, "ransomed")
 	return " ".join(msgs)
 
 
@@ -386,4 +388,6 @@ static func hold(s: Dictionary, id: String) -> String:
 		s.relations[s.career.marque] += int(Data.rules.career.lawful_raid_issuer_bonus)
 	if id == "nassau":
 		Politics.council_leader = "player"
-	return " ".join([Bases.hold_town(s, id, garrison_needed(id))] + jobs)
+	var held := Bases.hold_town(s, id, garrison_needed(id))  # (a town that liked you before takes to your rule more easily)
+	PortLife.remember(id, "took")
+	return " ".join([held] + jobs)

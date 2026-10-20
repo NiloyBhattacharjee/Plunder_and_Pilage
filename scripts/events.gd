@@ -13,7 +13,7 @@ extends Node
 
 const DIR := "res://data/events/"
 const VERBS := {  # verb: [min args, max args]
-	"gold": [1, 1], "crew": [1, 1], "kill": [1, 1], "wound": [1, 1], "hire": [1, 1], "leave": [1, 1],
+	"gold": [1, 1], "crew": [1, 1], "kill": [1, 2], "wound": [1, 1], "hire": [1, 1], "leave": [1, 2],
 	"opinion": [2, 2], "relation": [2, 2], "honour": [1, 1], "fear": [1, 1], "notoriety": [1, 1],
 	"cargo": [2, 2], "loot": [2, 2], "food": [1, 1], "water": [1, 1], "hull": [1, 1], "sails": [1, 1], "wages": [1, 1], "paywages": [0, 0],
 	"skill": [3, 3], "trait": [2, 2], "untrait": [2, 2], "reveal": [1, 1],
@@ -22,7 +22,7 @@ const VERBS := {  # verb: [min args, max args]
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
 	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
 	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1], "bounty": [2, 2],
-	"patrols": [2, 2], "town": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
+	"patrols": [2, 2], "town": [2, 2], "deed": [1, 1], "want": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
 	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc", "base"]
@@ -280,6 +280,8 @@ func value(key: String, ctx: Dictionary) -> Variant:
 	match head:
 		"town": return PortLife.situation(ctx.port).get(rest, 0.0) if ctx.get("port", "") != "" else 0.0  # what the port is like
 		"life": return PortLife.is_on(ctx.get("port", ""), rest)  # what's going on there
+		"regard": return PortLife.regard(ctx.get("port", ""))  # what the town thinks of you
+		"deed": return PortLife.remembers(ctx.get("port", ""), rest)  # what it remembers you did
 		"gold": return s.gold
 		"crew": return ShipStats.headcount(s)
 		"hull": return s.hull / ctx.stats.hull * 100.0
@@ -364,6 +366,9 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"office": return c.get("role", "")
 			"bonded": return Bonds.level(ctx.s, id) != 0
 			"in_town": return PortLife.captain_here(ctx.get("port", "")) == id  # drinking in this port's tavern
+			"want": return Wants.open(c, rest)  # what they want, still hoping
+			"want_here": return Wants.open(c) and c.want.get("port", "") == ctx.get("port", "")  # and it's here
+			"asset": return c.get("asset", {}).get("id", "") == rest
 		if head in People.STATS or head in People.SKILLS:
 			return People.value(c, head)
 	elif Ports.state.has(id) and not (Bases.bases.has(id) and head in BASE_KEYS):  # a town you hold is a base too
@@ -432,8 +437,11 @@ func view(inst: Dictionary, ctx: Dictionary) -> Dictionary:
 				tip.append("If it fails: " + bad)
 		if not blocked.is_empty():
 			tip.append("Requires: " + ", ".join(blocked.map(func(c): return humanize(_sub(c, vars, true)))))
-		options.append({"text": text(ch.text, vars, ctx), "tooltip": "\n".join(tip), "disabled": not blocked.is_empty()})
-	return {"title": text(ev.title, vars, ctx), "text": text(ev.text, vars, ctx), "options": options}
+		options.append({"text": text(ch.text, vars, ctx), "tooltip": "\n".join(tip), "disabled": not blocked.is_empty(),
+			"voice": ch.get("voice", Voices.infer(ch.get("outcomes", [])))})
+	var said := Voices.dress(ctx.s, text(ev.text, vars, ctx), options, inst.vars.values(), rng)  # your people speak up
+	inst.voices = said.voices
+	return {"title": text(ev.title, vars, ctx), "text": said.text, "options": said.options}
 
 
 ## Applies a choice. Returns {text, effects: [lines], fight: {kind, faction, mode} or {}}.
@@ -463,7 +471,7 @@ func resolve(inst: Dictionary, index: int, ctx: Dictionary) -> Dictionary:
 		if Ports.state.has(str(inst.vars[k])):
 			named[k] = inst.vars[k]
 	res.effects.append_array(EconomyEffects.apply_all(ch.get("effects" if success else "fail_effects", []), named))
-	res.effects = Array(lines) + res.effects
+	res.effects = Array(lines) + res.effects + Voices.heard(ctx.s, inst.get("voices", []), index)
 	_cleanup(inst, ctx)
 	return res
 
@@ -534,10 +542,11 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 					Crew.captain_dies(s, "killed")
 					return "Captain %s is dead" % nm
 				return ""
-			if verb == "kill":
-				Crew.mourn(s, id)
-			Crew.remove_hand(s, id)
-			return "%s %s" % [nm, "is dead" if verb == "kill" else "leaves the ship"]
+			var how: String = a[2] if a.size() > 2 else ("died" if verb == "kill" else "dismissed")  # see _parting in data/wants.json
+			var news := PackedStringArray([Crew.mourn(s, id) if verb == "kill" else ""])
+			news.append(Wants.part(s, id, how))
+			var said := " ".join(Array(news).filter(func(m): return m != ""))
+			return "%s %s%s" % [nm, "is dead" if verb == "kill" else "leaves the ship", (". " + said) if said != "" else ""]
 		"wound":
 			var c := People.person(_who(a[1], ctx, vars))
 			var t := People.wound(c)
@@ -691,6 +700,10 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 				return ""
 			PortLife.nudge(ctx.port, a[1], float(a[2]))
 			return "%s in %s %+d" % [a[1].capitalize(), Ports.port(ctx.port).name, int(a[2])]
+		"want":  # their want seen to, or let go: want {who} done, want {who} ignored
+			return Wants.resolve(s, _who(a[1], ctx, vars), a[2])
+		"deed":  # the town you're in will remember this: deed fed_hungry
+			return PortLife.remember(ctx.port, a[1]) if ctx.port != "" else ""
 		"supply":  # from your hold into the town's market: food into a hungry town brings its price down
 			if ctx.port == "":
 				return ""
@@ -924,10 +937,14 @@ func validate() -> PackedStringArray:
 					out.append("%s: unknown outcome '%s'" % [where, o])
 				elif a.size() - 1 < VERBS[a[0]][0] or a.size() - 1 > VERBS[a[0]][1]:
 					out.append("%s: wrong number of arguments in '%s'" % [where, o])
+				elif a[0] in ["kill", "leave"] and a.size() > 2 and not Wants.table()._parting.has(a[2]):
+					out.append("%s: unknown way to part '%s' (see _parting in data/wants.json)" % [where, a[2]])
 				elif a[0] == "event" and not events.has(a[1]):
 					out.append("%s: chains to unknown event '%s'" % [where, a[1]])
 				elif a[0] in ["cargo", "loot"] and not a[1].begins_with("{") and not Data.table("goods").has(a[1]):
 					out.append("%s: unknown good in '%s'" % [where, o])
+				elif a[0] == "deed" and not PortLife.mem_cfg().deeds.has(a[1]):
+					out.append("%s: unknown deed in '%s'" % [where, o])
 				elif a[0] == "abandon" and not Data.table("contracts").has(a[1]):
 					out.append("%s: unknown contract in '%s'" % [where, o])
 				elif a[0] in ["trait", "untrait"] and not Data.table("traits").has(a[2]):
@@ -952,11 +969,11 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
 	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base",
-	"town", "life", "towns", "own_town", "sacked", "bounty"]
+	"town", "life", "towns", "own_town", "sacked", "bounty", "regard", "deed"]
 const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality", "taxes"]
 const BASE_KEYS := ["loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes"]
 const CAND_KEYS := ["in_town", "loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
-	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held"]
+	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held", "want", "want_here", "asset"]
 
 
 func _check_cond(c: String, where: String, candidate: bool) -> PackedStringArray:

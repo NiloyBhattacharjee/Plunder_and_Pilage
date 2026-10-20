@@ -511,6 +511,7 @@ func betray(c: Dictionary, s: Dictionary, port_id: String) -> String:
 	var text := "The governor of %s pays %d for a look at the seals. " % [Ports.port(port_id).name, pay]
 	if rng.randf() < b.discovery:
 		s.relations[c.faction] -= int(b.standing)
+		PortLife.remember(c.get("employer_port", ""), "betrayed")
 		text += "Word gets back: %s calls you a traitor (standing -%d)." % [Data.table("factions")[c.faction].name, b.standing]
 	else:
 		text += "For now, nobody knows."
@@ -527,6 +528,8 @@ func abandon(c: Dictionary, s: Dictionary) -> String:
 func _remember(c: Dictionary, how: String) -> void:
 	if People.chars.has(c.employer):
 		People.person(c.employer).last_job = {"template": c.template, "how": how, "port": c.port, "day": Clock.day}
+	if how != "betrayed":  # (a betrayal only counts against you if it comes out: see betray)
+		PortLife.remember(c.get("employer_port", ""), "broke_word" if how == "failed" else "kept_word")  # and so does the town
 
 
 # ---- describing jobs -----------------------------------------------------------

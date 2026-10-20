@@ -1,0 +1,140 @@
+{
+ "_comment": "What your officers and the standout hands in the taverns want, and what only they have (scripts/wants.gd). Each person gets one want, picked from those whose traits they have (or the ones with no traits, if none fit), and maybe one asset (asset_chance). A want has a port (home: a town of their own nation; any: any town but a haven), or a target (a named captain from the roster). It resolves by an event in its port (data/events/wants.json, 'want {who} done'), or in code: revenge (beat the target), glory (take a warship), own_ship (give them command of a consort). Help them before 'days' run out and they're yours (opinion +done_opinion, and loyal); let it lapse and they remember (opinion -ignored_opinion; an ambitious one leaves to find a ship elsewhere). An asset works while they're aboard, in its port: customs (seizure chance x), price (better prices), rumours (more in the tavern), cove (they can lead you to a hidden anchorage, once). Lose the person and you lose it. A captain's own want (one who came up from the crew) is their first ambition (data/ambitions.json, 'want'): a port want is seen to when they anchor there, paying its 'cost'.",
+ "_rules": {
+  "days": [
+   150,
+   300
+  ],
+  "done_opinion": 25,
+  "ignored_opinion": 20,
+  "asset_chance": 0.5
+ },
+ "wants": {
+  "debt": {
+   "name": "A debt",
+   "traits": [
+    "in_debt",
+    "gambler"
+   ],
+   "port": "any",
+   "resolve": "event",
+   "text": "owes 300 gold to a moneylender in {port}, and the interest grows",
+   "inherit": true,
+   "cost": 300
+  },
+  "family": {
+   "name": "Family",
+   "traits": [
+    "family_man"
+   ],
+   "port": "home",
+   "resolve": "event",
+   "text": "has a family in {port} they haven't seen in years"
+  },
+  "vow": {
+   "name": "A vow",
+   "traits": [
+    "devout",
+    "superstitious"
+   ],
+   "port": "home",
+   "resolve": "event",
+   "text": "vowed a silver chalice to the church in {port} if they lived through the last storm, and they did",
+   "inherit": true,
+   "cost": 150
+  },
+  "revenge": {
+   "name": "Revenge",
+   "traits": [
+    "vengeful",
+    "scarred",
+    "hot_headed"
+   ],
+   "target": true,
+   "resolve": "battle",
+   "text": "swore to see Captain {target} of the {ship} beaten, for what was done to them",
+   "inherit": true
+  },
+  "glory": {
+   "name": "Glory",
+   "traits": [
+    "brave",
+    "bloodthirsty"
+   ],
+   "resolve": "navy",
+   "text": "wants to take a warship: a story to tell for the rest of their life",
+   "inherit": true
+  },
+  "own_ship": {
+   "name": "A ship of their own",
+   "traits": [
+    "ambitious",
+    "schemer"
+   ],
+   "resolve": "consort",
+   "text": "wants a ship of their own to command"
+  },
+  "home": {
+   "name": "Home",
+   "traits": [],
+   "port": "home",
+   "resolve": "event",
+   "text": "wants to see {port} again before they die"
+  }
+ },
+ "assets": {
+  "customs": {
+   "name": "Kin in the customs house",
+   "mult": 0.3,
+   "text": "has a cousin in the customs house at {port}: smuggling there is far safer while they're aboard"
+  },
+  "price": {
+   "name": "An old friend in trade",
+   "price": 0.05,
+   "text": "grew up with a merchant house in {port}, which gives you better prices while they're aboard"
+  },
+  "rumours": {
+   "name": "Known in the taverns",
+   "rumours": 2,
+   "text": "knows everyone in the taverns of {port}: two more rumours there while they're aboard"
+  },
+  "cove": {
+   "name": "A secret anchorage",
+   "text": "knows the way into {cove}, a hidden anchorage, and can show you, once"
+  }
+ },
+ "_parting": {
+  "_comment": "What it costs to lose someone (Wants.part). friends: opinion of the captain for each of their friends aboard; deed: what their home town remembers (data/port_life.json _memory); rival: the chance one you knew (with a want) comes back as a captain (Bonds.former_officer): a friend if they liked you (opinion 30+), otherwise a captain who knows every weak point of your ship. Events: 'leave {r} HOW', 'kill {r} HOW'. inherit (on a want): a friend takes it up when they die; a named captain who killed them is owed revenge instead.",
+  "dismissed": {
+   "friends": -6,
+   "rival": 0.4
+  },
+  "marooned": {
+   "friends": -10,
+   "rival": 0.3,
+   "deed": "marooned"
+  },
+  "hanged": {
+   "friends": -15,
+   "rival": 0,
+   "deed": "hanged"
+  },
+  "handed_over": {
+   "friends": -12,
+   "rival": 0,
+   "deed": "handed_over"
+  },
+  "deserted": {
+   "friends": 0,
+   "rival": 0.4
+  },
+  "blessed": {
+   "friends": 0,
+   "rival": 0
+  },
+  "died": {
+   "friends": 0,
+   "rival": 0
+  }
+ }
+}

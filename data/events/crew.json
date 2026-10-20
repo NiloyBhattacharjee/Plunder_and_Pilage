@@ -129,7 +129,7 @@
     "roles": {"thief": {"from": "crew", "where": ["trait.greedy"]}},
     "choices": [
       {"text": "Moses' Law: thirty-nine lashes", "outcomes": ["opinion {thief} -15", "fear +2", "opinion crew +1"], "result": "The crew approve. Thieves get no sympathy."},
-      {"text": "Maroon {thief} on the next cay", "conditions": ["pirate"], "outcomes": ["leave {thief}", "fear +3", "opinion crew +2"], "result": "A pistol, a bottle of water, and a sandbar. Pirate justice."},
+      {"text": "Maroon {thief} on the next cay", "conditions": ["pirate"], "outcomes": ["leave {thief} marooned", "fear +3", "opinion crew +2"], "result": "A pistol, a bottle of water, and a sandbar. Pirate justice."},
       {"text": "Make {thief} pay it back from their share", "outcomes": ["opinion {thief} -5", "opinion crew -1"], "result": "Lenient. Some think too lenient."}
     ]
   },
@@ -306,9 +306,9 @@
     "where": "port",
     "roles": {"sailor": {"from": "crew", "where": ["not officer"]}},
     "choices": [
-      {"text": "Pay {sailor} off fairly", "conditions": ["gold >= 20"], "outcomes": ["gold -20", "leave {sailor}", "honour +1"], "result": "{sailor} goes ashore with your blessing."},
+      {"text": "Pay {sailor} off fairly", "conditions": ["gold >= 20"], "outcomes": ["gold -20", "leave {sailor} blessed", "honour +1"], "result": "{sailor} goes ashore with your blessing."},
       {"text": "Articles were signed: {sailor} stays", "check": {"who": "captain", "skill": "authority", "dc": 12},
-       "outcomes": ["opinion {sailor} -10"], "result": "{sailor} stays, sullen.", "fail_outcomes": ["leave {sailor}", "opinion crew -2"], "fail_result": "{sailor} jumps ship that night."}
+       "outcomes": ["opinion {sailor} -10"], "result": "{sailor} stays, sullen.", "fail_outcomes": ["leave {sailor} deserted", "opinion crew -2"], "fail_result": "{sailor} jumps ship that night."}
     ]
   },
 

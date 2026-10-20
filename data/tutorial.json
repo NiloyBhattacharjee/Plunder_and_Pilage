@@ -1,7 +1,7 @@
 {
   "_comment": "First-voyage hints (scripts/tutorial.gd). Each shows once, the first time you meet that part of the game. Keep them short: what it is, and the one decision that matters.",
   "welcome": {"title": "Your first voyage",
-    "text": "You're in port. Time stops while a port screen is open. The Market buys and sells (hover a price to see why it is what it is); the Shipyard repairs and refits; the Tavern hires hands and hears rumours; the Governor and the Contracts tab give you work.\n\nA first plan: buy a cheap good this port makes, and sell it where it's wanted. The map-mode list on the top bar shows the last prices you know elsewhere."},
+    "text": "You're in port. Time stops while a port screen is open. The Market buys and sells (hover a price to see why it is what it is); the Shipyard repairs and refits; the Tavern hires hands and hears rumours; the Governor and the Contracts tab give you work.\n\nThis town is going hungry (see the Town tab). Towns remember what you do: sell it food from your stores, or bring a cargo from where food is cheap, and it will greet you as a friend, sell cheaper and sign on for less. Cheat it, smuggle or sack it, and it remembers that too.\n\nA first plan: buy a cheap good this port makes, and sell it where it's wanted. The map-mode list on the top bar shows the last prices you know elsewhere."},
   "sailing": {"title": "Setting sail",
     "text": "Click the sea or a port to set a course; the route goes round the land. The wind matters: you're fast across it and slow into it. Space pauses, 1 2 3 set the speed. Food, water and wages go every day, so keep an eye on the top bar (hover anything for the breakdown).\n\nC opens the crew and ship screen."},
   "encounter": {"title": "",

@@ -10,7 +10,10 @@ class_name PortLife
 ## What you do there moves the town: food you sell into a hungry market lowers its price (and the hunger with it),
 ## a feast or a firm hand lifts order. Those nudges (mods) fade over the weeks, and a happening that lasts only while
 ## its cause does (a riot, a revolt) dies down once the town is fed or calmed.
-## State: Ports.state[id].life = {happenings: [{id, until, captain?}], ended: {happening id: day}, mods: {stat: amount}}.
+## And the town remembers you: what you did there (deeds, data/port_life.json "_memory") sets its regard for you,
+## which moves prices, the signing bounty and how it takes to your rule, and fades only slowly.
+## State: Ports.state[id].life = {happenings: [{id, until, captain?}], ended: {happening id: day}, mods: {stat: amount}};
+##        Ports.state[id].memory = {regard, deeds: [{id, day}]}.
 
 
 static func table() -> Dictionary:
@@ -36,6 +39,66 @@ static func nudge(id: String, stat: String, amount: float) -> void:
 		return
 	var mods: Dictionary = _life(id).mods
 	mods[stat] = clampf(float(mods.get(stat, 0.0)) + amount, -60.0, 60.0)
+
+
+# ---- what the town remembers of you -----------------------------------------------------
+
+static func mem_cfg() -> Dictionary:
+	return table()._memory
+
+
+static func _memory(id: String) -> Dictionary:
+	var ps: Dictionary = Ports.state[id]
+	if not ps.has("memory"):
+		ps.memory = {"regard": 0.0, "deeds": []}
+	return ps.memory
+
+
+## The town remembers something you did: remember("havana", "fed_hungry"). The same deed again soon after counts
+## once. Returns a line for the message log, or "".
+static func remember(id: String, deed: String) -> String:
+	if not Ports.state.has(id):
+		return ""
+	var c := mem_cfg()
+	var m := _memory(id)
+	if m.deeds.any(func(x): return x.id == deed and Clock.day - float(x.day) < float(c.repeat_days)):
+		return ""
+	var amount := float(c.deeds[deed].regard)
+	m.regard = clampf(m.regard + amount, -100.0, 100.0)
+	m.deeds.append({"id": deed, "day": Clock.day})
+	if m.deeds.size() > int(c.keep):  # the small things are forgotten first
+		var least := 0
+		for i in m.deeds.size():
+			if absf(c.deeds[m.deeds[i].id].regard) < absf(c.deeds[m.deeds[least].id].regard):
+				least = i
+		m.deeds.remove_at(least)
+	return "%s will remember that you %s." % [Ports.port(id).name, c.deeds[deed].text]
+
+
+static func regard(id: String) -> float:
+	return float(Ports.state[id].get("memory", {}).get("regard", 0.0)) if Ports.state.has(id) else 0.0
+
+
+static func remembers(id: String, deed: String) -> bool:
+	return Ports.state.has(id) and Ports.state[id].get("memory", {}).get("deeds", []).any(func(x): return x.id == deed)
+
+
+## How the town sees you, from its regard: "resented", "well liked", or "" if it has no strong feelings.
+static func regard_word(id: String) -> String:
+	var r := regard(id)
+	for b in mem_cfg().bands:
+		if r < float(b[0]):
+			return b[1]
+	return ""
+
+
+## What the town remembers, most recent first: "you sacked the town (1681); you brought food when ... (1680)".
+static func deeds_text(id: String) -> String:
+	var deeds: Array = Ports.state[id].get("memory", {}).get("deeds", [])
+	var out := PackedStringArray()
+	for i in range(deeds.size() - 1, -1, -1):
+		out.append("you %s (%d)" % [mem_cfg().deeds[deeds[i].id].text, Clock.date_of(int(deeds[i].day)).year])
+	return "; ".join(out)
 
 
 ## Ends a happening now (a riot put down, a fever burnt out).
@@ -189,6 +252,9 @@ static func daily(rng: RandomNumberGenerator, s: Dictionary) -> Array:
 	var news := []
 	var decay: float = table()._town.mod_decay_per_day
 	for id in Ports.state:
+		if Ports.state[id].has("memory"):  # old grudges and old kindnesses fade, slowly
+			var m: Dictionary = Ports.state[id].memory
+			m.regard = move_toward(m.regard, 0.0, float(mem_cfg().decay_per_day))
 		var life := _life(id)
 		for k in life.mods.keys():
 			life.mods[k] = move_toward(life.mods[k], 0.0, decay)

@@ -76,8 +76,8 @@
     "conditions": ["unrest >= 2", "unrest_known"],
     "roles": {"leader": {"from": "ringleader"}},
     "choices": [
-      {"text": "Hang {leader} from the yardarm", "outcomes": ["kill {leader}", "fear +4", "morale -6 30"], "result": "Without a head, the plot dies. The crew will fear you, and some will hate you for it."},
-      {"text": "Maroon {leader} on the next cay", "outcomes": ["leave {leader}", "fear +2", "morale -2 20"], "result": "A pistol, a bottle of water, and the horizon."},
+      {"text": "Hang {leader} from the yardarm", "outcomes": ["kill {leader} hanged", "fear +4", "morale -6 30"], "result": "Without a head, the plot dies. The crew will fear you, and some will hate you for it."},
+      {"text": "Maroon {leader} on the next cay", "outcomes": ["leave {leader} marooned", "fear +2", "morale -2 20"], "result": "A pistol, a bottle of water, and the horizon."},
       {"text": "Put {leader} ashore at the next port", "outcomes": ["leave {leader}"], "result": "Quietly done. The plotters have lost their voice."},
       {"text": "Buy {leader} off with a bigger share", "conditions": ["gold >= 100"], "outcomes": ["gold -100", "opinion {leader} +30", "calm 2"], "result": "Money talks. For now, {leader} is on your side."}
     ]

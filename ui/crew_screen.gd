@@ -213,6 +213,31 @@ func _build_officers() -> void:
 	UIKit.button(box, "Appoint the best available to empty posts", func():
 		NewGame.auto_appoint(s, 0)
 		refresh())
+	UIKit.label(box, "")
+	UIKit.label(box, "What they want, and what they know", "Help them with what they want before they give up on you, and they're yours.\nWhat they know works only while they're aboard: lose them and it goes with them.", Style.c("header"))
+	for id in Wants.people(s):
+		var c := People.person(id)
+		var row := UIKit.row(box)
+		row.add_child(Portrait.make(c, "crew", 36))
+		var post := _post_of(id)
+		var l := UIKit.label(row, "%s%s. %s" % [c.name, " (%s)" % Data.rules.officer_roles[post].name if post != "" else "", Wants.describe(c).replace("\n", " ")],
+			People.describe(c), Style.c("dim") if c.want.status != "open" else Style.c("ink"))
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 900
+		if c.get("asset", {}).get("id", "") == "cove" and not c.asset.used:
+			UIKit.button(row, "Show me", func():
+				message.emit(Wants.show_cove(c))
+				refresh(), "They mark the anchorage on your chart. You can only learn it once, and only while they're with you.")
+		var how := "dismissed" if docked else "marooned"
+		var cost := Wants.parting_text(s, id, how)
+		var gone := UIKit.button(row, "Put ashore" if docked else "Maroon", func(): pass,
+			("Pay them off and leave them on the quay." if docked else "Leave them on a sandbar with a pistol and a bottle of water.") + ("\n" + cost if cost != "" else ""))
+		gone.pressed.connect(func():  # a second click to be sure: there's no taking it back
+			if gone.text.ends_with("?"):
+				message.emit("%s leaves the ship. %s" % [c.name, Wants.part(s, id, how)])
+				refresh()
+			else:
+				gone.text = "Really?")
 
 
 ## "Level 3" (with a mark if there's a point or perk to spend), opening the character panel.
@@ -244,6 +269,7 @@ func _appoint(role: String, id: String) -> void:
 		%Status.text = "%s post left empty." % Data.rules.officer_roles[role].name
 	else:
 		s.officers[role] = id
+		Wants.ensure(People.person(id), People.rng)  # a new officer brings their own story
 		%Status.text = "%s is now %s." % [People.person(id).name, Data.rules.officer_roles[role].name]
 		message.emit(%Status.text)
 	refresh()

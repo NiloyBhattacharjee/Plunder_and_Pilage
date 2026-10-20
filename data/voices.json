@@ -1,0 +1,33 @@
+{
+ "_comment": "Voices at decisions (scripts/voices.gd). Before you choose, up to max of your officers and the hands you know (those with a want) speak for or against a choice, from their traits. Each choice has stances: cruel (blood and fear; below 0 mercy), decent (honour, a word kept; below 0 a dirty trick), greedy (money in; below 0 money out), bold (a fight; below 0 backing off). Event choices get them from their outcomes (infer: verb -> stance per point of its number, or 'kill'/'fight' flat) unless they say \"voice\": {stance: n} (or {} to stay quiet). traits: how much each trait cares about each stance. A person speaks if their score for some choice reaches min; heeded: opinion when you take the choice they spoke for (or pass over the one they spoke against); overruled: when you don't.",
+ "_rules": {"max": 3, "min": 2, "heeded": 2, "overruled": -3},
+ "infer": {
+  "kill": {"cruel": 2}, "fight": {"bold": 1},
+  "fear": {"cruel": 1}, "honour": {"decent": 1}, "gold": {"greedy": 1}, "loot": {"greedy": 1}
+ },
+ "traits": {
+  "bloodthirsty": {"cruel": 2}, "merciful": {"cruel": -2}, "vengeful": {"cruel": 1},
+  "devout": {"cruel": -1, "decent": 1}, "honest": {"decent": 2}, "loyal_to_crown": {"decent": 1},
+  "schemer": {"decent": -1, "greedy": 1}, "corrupt": {"decent": -1, "greedy": 1},
+  "greedy": {"greedy": 2}, "in_debt": {"greedy": 1},
+  "brave": {"bold": 1}, "hot_headed": {"bold": 2}, "cowardly": {"bold": -2}, "calm": {"bold": -1}, "family_man": {"bold": -1}
+ },
+ "lines": {
+  "cruel+": {"for": ["They'd do the same to us, given half a chance.", "Fear's cheaper than powder, Captain.", "Make an example. The next lot will remember."],
+             "against": ["We're not butchers, Captain.", "God sees what we do out here, even this far from land.", "Do that and we're no better than the ones they hang."]},
+  "cruel-": {"for": ["Let them be. It costs us nothing.", "Mercy now buys us something later.", "There's been enough blood."],
+             "against": ["Mercy's for men who can afford it.", "Soft hearts get cut throats.", "They'll laugh at us in every tavern from here to Tortuga."]},
+  "decent+": {"for": ["It's the right thing, Captain, and you know it.", "A name's worth more than a purse out here.", "Do it straight, and sleep easy."],
+              "against": ["Decency doesn't fill the hold.", "Honour's a fine thing for men with pensions.", "Nobody out here will thank you for it."]},
+  "decent-": {"for": ["Nobody'll ever know.", "Everyone does it. The clever ones just don't get caught.", "A word given to them isn't worth the breath."],
+              "against": ["A word's a word, Captain. Break it, and who'll trust us?", "That's a dirty trick, and it'll come back on us.", "I didn't sign on for this."]},
+  "greedy+": {"for": ["Think of the money.", "Shares all round, Captain.", "Money is money."],
+              "against": ["Some money costs more than it pays.", "That gold's got a curse on it.", "We're not that hungry."]},
+  "greedy-": {"for": ["Money's for spending, and this is worth it.", "Pay it and be done.", "Cheap at the price."],
+              "against": ["That's our shares you're throwing away.", "Not one coin, Captain.", "We bled for that money."]},
+  "bold+": {"for": ["We can take them.", "Let's have at it!", "I didn't come to sea to run."],
+            "against": ["That's a fool's fight, Captain.", "Dead men spend no shares.", "Count their guns before you count the prize."]},
+  "bold-": {"for": ["Live to fight another day.", "No shame in a wise course.", "Not this one, Captain. Not today."],
+            "against": ["Running? The crew will never let us forget it.", "We look like cowards.", "They'll think we're soft."]}
+ }
+}

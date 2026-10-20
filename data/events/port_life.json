@@ -129,7 +129,8 @@
      "town order +15",
      "relation port +6",
      "honour +3",
-     "influence {port} poor 8"
+     "influence {port} poor 8",
+     "deed fed_hungry"
     ],
     "result": "Your boats ply between ship and quay until dark. By morning there's bread in the shops, and your name on every street corner."
    },
@@ -145,7 +146,8 @@
      "town order +10",
      "relation port +3",
      "honour +2",
-     "influence {port} poor 5"
+     "influence {port} poor 5",
+     "deed fed_hungry"
     ],
     "result": "They queue at your boat all afternoon. An old woman kisses your hand, and the square grows quieter."
    },
@@ -159,7 +161,8 @@
      "gold +220",
      "town order -5",
      "honour -2",
-     "influence {port} poor -3"
+     "influence {port} poor -3",
+     "deed gouged"
     ],
     "result": "A fortune for salt pork. They'll remember your face, and not fondly."
    },
@@ -416,7 +419,8 @@
     ],
     "outcomes": [
      "gold -20",
-     "honour +1"
+     "honour +1",
+     "deed charity"
     ],
     "result": "Blessings follow you up the quay."
    },
@@ -556,7 +560,8 @@
      "gold -50",
      "honour +2",
      "relation port +2",
-     "influence {port} church 3"
+     "influence {port} church 3",
+     "deed charity"
     ],
     "result": "Your name goes in the parish book."
    },
@@ -818,7 +823,8 @@
      "town order +10",
      "honour +3",
      "relation port +4",
-     "influence {port} poor 5"
+     "influence {port} poor 5",
+     "deed fed_hungry"
     ],
     "result": "You pay the hoarder his price and sell at cost from the warehouse steps. The riot ends there."
    }
@@ -917,7 +923,8 @@
      "honour +2",
      "relation port +3",
      "town order +5",
-     "influence {port} church 3"
+     "influence {port} church 3",
+     "deed charity"
     ],
     "result": "A week of hard work. The town won't forget the foreign ship that came to help.",
     "fail_outcomes": [
@@ -934,7 +941,8 @@
     "outcomes": [
      "gold -60",
      "relation port +2",
-     "honour +1"
+     "honour +1",
+     "deed charity"
     ],
     "result": ""
    },
@@ -1314,6 +1322,77 @@
     "text": "You have enough hands",
     "outcomes": [],
     "result": ""
+   }
+  ]
+ },
+ "town_remembered": {
+  "where": "port",
+  "weight": 12,
+  "cooldown": 90,
+  "title": "{port} remembers you",
+  "text": "Your boat has barely touched the quay before someone calls your name. A fishwife presses a basket on the coxswain, a carter offers to haul your water for nothing, and three young men off the waterfront ask if the {ship} needs hands.",
+  "conditions": [
+   "regard >= 8",
+   "not wanted"
+  ],
+  "choices": [
+   {
+    "text": "Take the gifts, with thanks",
+    "outcomes": [
+     "food +20",
+     "water +20",
+     "morale +8 20"
+    ],
+    "result": "The crew eat well tonight, and walk a little taller."
+   },
+   {
+    "text": "Sign on the young men",
+    "outcomes": [
+     "crew +3"
+    ],
+    "result": "They're aboard before you've finished speaking."
+   }
+  ]
+ },
+ "town_grudge": {
+  "where": "port",
+  "weight": 12,
+  "cooldown": 60,
+  "title": "{port} has not forgotten",
+  "text": "The chandler shuts up shop as you come up the quay. Children throw stones at your boat, a woman spits, and in the church the priest is saying a mass for those who died by your hand.",
+  "conditions": [
+   "regard <= -8"
+  ],
+  "choices": [
+   {
+    "text": "Pay for masses for the dead",
+    "conditions": [
+     "gold >= 150"
+    ],
+    "outcomes": [
+     "gold -150",
+     "honour +1",
+     "deed amends"
+    ],
+    "result": "The priest takes your money without looking at you. But the stones stop."
+   },
+   {
+    "text": "Pay what the chandler asks, and more",
+    "conditions": [
+     "gold >= 40"
+    ],
+    "outcomes": [
+     "gold -40"
+    ],
+    "result": "The chandler serves you at twice the price, eyes on the floor."
+   },
+   {
+    "text": "Stare them down",
+    "outcomes": [
+     "fear +1",
+     "opinion crew -1"
+    ],
+    "result": "They scatter. Your crew don't enjoy being hated."
    }
   ]
  }

@@ -1,5 +1,5 @@
 {
- "_comment": "Ambitions, Paradox style: the captain chases one at a time (scripts/ambitions.gd). Progress is a 'value' of your situation (any number the event conditions know: gold, fear, honour, prizes, bases...) or a 'tally' of deeds since you took it up (ships_taken, treasure_taken, lawful_prizes, rescues, finds, rivals_beaten, pardons, trade_profit, towns_taken). 'requires': event conditions for it to be offered. On success: 'rewards' (event outcomes), the 'title' for life, and any lasting 'bonus' (enemy_morale: added to every enemy's morale when you fight).",
+ "_comment": "Ambitions, Paradox style: the captain chases one at a time (scripts/ambitions.gd). Progress is a 'value' of your situation (any number the event conditions know: gold, fear, honour, prizes, bases...) or a 'tally' of deeds since you took it up (ships_taken, treasure_taken, lawful_prizes, rescues, finds, rivals_beaten, pardons, trade_profit, towns_taken). 'requires': event conditions for it to be offered. On success: 'rewards' (event outcomes), the 'title' for life, and any lasting 'bonus' (enemy_morale: added to every enemy's morale when you fight). Entries with a 'want' (tally own_want) are never offered: a captain who came up from the crew starts out chasing that want of theirs (goal: {port}, {target}, {ship} filled in).",
  "scourge": {
   "name": "Scourge of the Main",
   "goal": "Take five ships",
@@ -193,5 +193,86 @@
   "bonus": {
    "enemy_morale": -3
   }
+ },
+ "own_debt": {
+  "want": "debt",
+  "name": "Old debts",
+  "goal": "Pay off the moneylender in {port} (300 gold)",
+  "description": "The crew made you captain, but the ledger still has your name in it. Draw the line through it, and stand on your own deck owing no man.",
+  "tally": "own_want",
+  "target": 1,
+  "title": "the Square",
+  "rewards": [
+   "honour +2",
+   "morale +5 60"
+  ]
+ },
+ "own_family": {
+  "want": "family",
+  "name": "Family",
+  "goal": "See your family in {port}",
+  "description": "Captain now, and still the same child they waved off from the quay. Go home, if only for a night.",
+  "tally": "own_want",
+  "target": 1,
+  "title": "the Prodigal",
+  "rewards": [
+   "honour +1",
+   "morale +5 60"
+  ]
+ },
+ "own_vow": {
+  "want": "vow",
+  "name": "A vow kept",
+  "goal": "Give the church in {port} its silver chalice (150 gold)",
+  "description": "You promised God a chalice if you lived. You lived, and then some. Pay up before He notices.",
+  "tally": "own_want",
+  "target": 1,
+  "title": "the Faithful",
+  "rewards": [
+   "honour +3",
+   "morale +5 60"
+  ]
+ },
+ "own_revenge": {
+  "want": "revenge",
+  "name": "Old blood",
+  "goal": "Beat Captain {target} of the {ship}",
+  "description": "You swore it before you had a ship to swear by. Now you have one, and a crew to sail her at them.",
+  "tally": "own_want",
+  "target": 1,
+  "title": "the Avenger",
+  "rewards": [
+   "fear +4",
+   "morale +10 60"
+  ]
+ },
+ "own_glory": {
+  "want": "glory",
+  "name": "Glory",
+  "goal": "Take a warship",
+  "description": "A deckhand dreams of taking a king's ship. A captain can actually try.",
+  "tally": "own_want",
+  "target": 1,
+  "title": "the Bold",
+  "rewards": [
+   "notoriety +5",
+   "fear +3",
+   "morale +10 60"
+  ],
+  "bonus": {
+   "enemy_morale": -3
+  }
+ },
+ "own_home": {
+  "want": "home",
+  "name": "Home",
+  "goal": "See {port} again",
+  "description": "All those years before the mast, you meant to see it again before you died. You still mean to.",
+  "tally": "own_want",
+  "target": 1,
+  "title": "the Wanderer",
+  "rewards": [
+   "morale +5 60"
+  ]
  }
 }

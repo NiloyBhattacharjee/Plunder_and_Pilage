@@ -65,10 +65,10 @@
     "choices": [
       {"text": "Confront {officer}", "check": {"who": "captain", "skill": "charisma", "dc": 13},
        "outcomes": ["opinion {officer} +10"], "result": "{officer} confesses everything: {enemy} wanted your plans and your course. They're yours again.",
-       "fail_outcomes": ["leave {officer}", "gold -15%"], "fail_result": "{officer} slips ashore that night, and takes the ship's purse."},
+       "fail_outcomes": ["leave {officer} deserted", "gold -15%"], "fail_result": "{officer} slips ashore that night, and takes the ship's purse."},
       {"text": "Feed {officer} false plans", "check": {"who": "captain", "skill": "experience", "dc": 14},
        "outcomes": ["secret bribes {enemy}", "opinion {enemy} -10"], "result": "{enemy} acts on your lies and is made a fool of, and you learn how they pay their spies.",
-       "fail_outcomes": ["leave {officer}"], "fail_result": "{officer} sees through it and goes over to {enemy} for good."},
+       "fail_outcomes": ["leave {officer} deserted"], "fail_result": "{officer} sees through it and goes over to {enemy} for good."},
       {"text": "Dismiss {officer} at once", "outcomes": ["leave {officer}"], "result": "Better safe."}
     ]
   },

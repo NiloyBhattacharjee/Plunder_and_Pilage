@@ -118,3 +118,42 @@ func test_new_happenings_need_their_town():
 	assert_true(PortLife.situation("havana").contraband)
 	assert_false(PortLife.situation("port_royal").contraband)
 	assert_false(PortLife.can_start("port_royal", "smugglers", s), "nothing forbidden to smuggle")
+
+
+func test_the_town_remembers_you():
+	var cost := Ports.hire_cost("port_royal")
+	var price := Career.price_mult(s, "port_royal")
+	Ports.start_market_event("port_royal", "famine")
+	assert_gte(PortLife.situation("port_royal").hunger, 40.0, "a famine makes a hungry town")
+	s.cargo.food = 60.0
+	var r := Ports.sell("port_royal", "food", 30, s)
+	assert_string_contains(r.text, "will remember")
+	assert_true(PortLife.remembers("port_royal", "fed_hungry"))
+	assert_gt(PortLife.regard("port_royal"), 0.0)
+	Ports.sell("port_royal", "food", 30, s)
+	assert_almost_eq(PortLife.regard("port_royal"), float(PortLife.mem_cfg().deeds.fed_hungry.regard), 0.01, "the same deed soon after counts once")
+	assert_lt(Ports.hire_cost("port_royal"), cost, "friends sign on cheaper")
+	assert_lt(Career.price_mult(s, "port_royal"), price, "and trade cheaper")
+	assert_true(Events.test("regard >= 10", ctx_at("port_royal"), {}))
+	assert_eq(PortLife.regard("havana"), 0.0, "other towns don't know you")
+	Events.apply_outcome("deed sacked", ctx_at("port_royal"))
+	assert_eq(PortLife.regard_word("port_royal"), PortLife.mem_cfg().bands[0][1], "but a sack is not forgiven")
+	assert_string_contains(PortLife.deeds_text("port_royal"), "sacked the town")
+	for d in 100:
+		PortLife.daily(rng, s)
+	assert_gt(PortLife.regard("port_royal"), -100.0 + 12.0 - 70.0, "it fades, slowly")
+	assert_lt(PortLife.regard("port_royal"), -40.0)
+
+
+func test_trade_and_hiring_are_remembered():
+	var g: String = Economy.wants("port_royal").filter(func(x): return x != "food" and not x in Ports.state.port_royal.laws.contraband)[0]
+	Economy.model.stock["port_royal"][g] *= 0.02
+	assert_eq(Economy.level("port_royal", g), "scarce")
+	s.cargo[g] = 40.0
+	assert_string_contains(Ports.sell("port_royal", g, 40, s).text, "short of")
+	assert_true(PortLife.remembers("port_royal", "supplied"))
+	s.gold = 5000.0
+	Ports.hire("havana", 5, s, 999)
+	assert_false(PortLife.remembers("havana", "gave_work"), "a handful of hands is nothing")
+	Ports.hire("havana", 10, s, 999)
+	assert_true(PortLife.remembers("havana", "gave_work"))

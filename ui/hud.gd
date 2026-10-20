@@ -11,7 +11,7 @@ signal enter_port_pressed
 signal crew_pressed
 signal save_pressed
 signal load_pressed
-signal map_mode_changed(good: String)  # "" = political, "@standing" = your standing, "@routes" = merchant traffic, "@life" = how the towns are
+signal map_mode_changed(good: String)  # "" = political, "@standing" = your standing, "@routes" = merchant traffic, "@life" = how the towns are, "@regard" = what they remember of you
 signal flag_changed(flag: String)
 signal ambition_pressed
 
@@ -117,6 +117,8 @@ func _ready() -> void:
 	_modes.set_item_metadata(2, "@routes")
 	_modes.add_item("Map: Town life")
 	_modes.set_item_metadata(3, "@life")
+	_modes.add_item("Map: Towns' regard")
+	_modes.set_item_metadata(4, "@regard")
 	for good in Data.table("goods"):
 		_modes.add_item("Map: " + Data.table("goods")[good].name)
 		_modes.set_item_metadata(_modes.item_count - 1, good)
@@ -232,9 +234,9 @@ func _process(_delta: float) -> void:
 	_portrait.tooltip_text = People.describe(cap)
 	_cap_name.text = "Capt. " + cap.name
 	Ambitions.ensure(s)
-	_cap_name.tooltip_text = People.describe(cap) + ("\n\nKnown as: " + ", ".join(s.titles.map(func(id): return Ambitions.table()[id].title)) if not s.titles.is_empty() else "")
+	_cap_name.tooltip_text = People.describe(cap) + ("\n\nKnown as: " + ", ".join(cap.titles.map(func(id): return Ambitions.table()[id].title)) if not cap.titles.is_empty() else "")
 	var ctx := {"s": s, "stats": st, "port": ship.anchored_at, "storm": false}
-	if s.ambition.is_empty():
+	if cap.ambition.is_empty():
 		_ambition.text = "Choose an ambition!"
 		_ambition.modulate = Color(1, 1, 1, 0.75 + 0.25 * sin(Time.get_ticks_msec() / 300.0))  # a gentle pulse until you do
 	else:

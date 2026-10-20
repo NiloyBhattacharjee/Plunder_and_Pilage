@@ -66,6 +66,9 @@ func _draw() -> void:
 				Market.fmt(k.buy), Market.fmt(k.sell), int(Clock.day) - int(k.day), ", rumour" if k.get("source", "") == "rumour" else ""]
 		elif trade_good == "@life":
 			label += "  " + PortLife.describe(id)
+		elif trade_good == "@regard":
+			var word := PortLife.regard_word(id)
+			label += "  regard %+d%s" % [PortLife.regard(id), ", " + word.get_slice(":", 0) if word != "" else ""]
 		var k := 1.5 * s  # the town at a steady size on screen
 		draw_texture_rect(TOWN, Rect2(pos - Vector2(14, 18) * k, Vector2(28, 22) * k), false)
 		var pole := pos + Vector2(11, -14) * k  # a pennant in the nation's colours

@@ -78,6 +78,9 @@ func rich_state(kind: String) -> void:
 	s.cargo.gunpowder = 20.0
 	s.cargo.naval_stores = 5.0
 	s.cargo.silver = 5.0
+	var wants := ["debt", "family", "home", "vow"]
+	for i in wants.size():  # someone whose want comes due in port, at Port Royal
+		People.person(s.crew[10 + i]).want = {"id": wants[i], "port": "port_royal", "due": 9999.0, "status": "open"}
 	s.stolen = {"silver": 5.0}
 	s.wages_owed = 50.0
 	s.reputation = {"honour": 10, "fear": 30, "notoriety": 40}

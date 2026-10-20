@@ -100,8 +100,8 @@ static func log_text(s: Dictionary, deeds := 12) -> String:
 	var cap := ShipStats.captain(s)
 	var lines := PackedStringArray(["The captains of the %s:" % s.name])
 	for c in s.get("captains", []):
-		lines.append("  %s (until %s, %s)" % [c.name, c.until, c.fate])
-	var titles: Array = s.get("titles", []).map(func(a): return Data.table("ambitions")[a].title)
+		lines.append("  %s (until %s, %s)%s" % [c.name, c.until, c.fate, ", known as %s" % ", ".join(c.titles) if not c.get("titles", []).is_empty() else ""])
+	var titles: Array = Ambitions.ensure(s).titles.map(func(a): return Data.table("ambitions")[a].title)
 	lines.append("  %s (now)%s" % [cap.name, ", known as %s" % ", ".join(titles) if not titles.is_empty() else ""])
 	var hist: Array = cap.history.slice(maxi(0, cap.history.size() - deeds))
 	if not hist.is_empty():

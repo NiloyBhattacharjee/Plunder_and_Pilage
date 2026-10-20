@@ -39,6 +39,7 @@ use the role's name or "they". Historical figures and strangers described in the
 | `priority` | Fires as soon as its conditions hold (historical moments). Use with `once` and a date window. |
 | `chain_only` | Only fires when another event queues it. |
 | `choices` | 1 to 4. Each has `text`, optional `conditions` (unmet ones show greyed out with the reason), optional `check`, `outcomes`, `result`, and for checks `fail_outcomes` and `fail_result`. `hidden: true` hides the effect preview in the tooltip. |
+| `voice` | On a choice: how your people see it, `{"cruel": 2, "decent": -1, "greedy": 1, "bold": 1}` (negative: mercy, a dirty trick, money out, backing off). Officers and the hands you know speak for or against choices from their traits, and remember whether you listened (data/voices.json). Left out, it's read from the outcomes (`kill`, `fear`, `honour`, `gold`, `loot`, `fight`); `{}` keeps them quiet. Not the people the event is about. |
 | `check` | `{"who": "captain" or "post.surgeon" or "{role}", "skill": skill or stat, "dc": n, "bonus": [[condition, label, modifier]]}`. A d20 roll, shown in full; whoever rolls learns from it. |
 
 ## Roles
@@ -59,6 +60,7 @@ Numbers: `gold`, `crew` (headcount), `hull`, `sails` (percent), `notoriety`, `ho
 Faction words: `relation.X`, `war.X.Y`, `port_is.X` and the candidate key `at_war.X` also accept `port` (the port you're in), `home` and `marque`.
 
 The town you're in (scripts/port_life.gd): `town.wealth`, `town.prosperity`, `town.hunger`, `town.order`, `town.piety` (0-100), and yes/no `town.war`, `town.lawless`, `town.fleet`. What's going on there: `life.festival`, `life.press_gang`, `life.bread_riot`... (the happenings in data/port_life.json). Candidate key `in_town`: a character drinking in this port's tavern.
+What it remembers of you: `regard` (-100 to 100), and yes/no `deed.ID` (a deed it still remembers: the deeds in data/port_life.json `_memory`).
 
 Yes/no: `own_town` (you hold the town you're in), `sacked` (you sacked the town you're in), `at_base` (anchored at one of your coves), `neutral` (no alliances or rivalries), `council_member`, `council_leader`, `unrest_known`, `shares` (no prey, no pay), `port_is.FACTION`, `at_sea`, `in_port`, `storm`, `pirate`, `privateer`, `honest`, `wanted`, `pardoned`, `pardon_open.FACTION`, `war.A.B`, `flag.NAME`,
 `contract.TEMPLATE`, `captain_trait.TRAIT`, `has_officer.POST`, `port_fence`, `true`.
@@ -72,6 +74,7 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `gold +100`, `gold -10%` | Money |
 | `crew +3`, `crew -2` | Recruits from the local mix, or random hands lost |
 | `kill {r}`, `leave {r}`, `wound {r}`, `hire {r}` | One person (`kill captain` really kills the captain: someone else takes over) |
+| `leave {r} marooned`, `kill {r} hanged` | How they go: `dismissed` (the default for leave), `marooned`, `hanged`, `handed_over`, `deserted`, `blessed`, `died`. Sets what it costs: friends aboard resent it, their home town remembers, and a dismissed one may come back as a rival captain who knows your ship (`_parting` in data/wants.json). A death passes their cause to a friend. |
 | `opinion {r} +5`, `opinion crew -3` | Their opinion of the captain |
 | `relation spain -5` | Standing. Also `port` (this port's nation), `home`, `marque`, or a `{role}` holding a nation |
 | `honour +2`, `fear +1`, `notoriety +3` | Reputation |
@@ -94,6 +97,8 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `fight KIND [faction] [mode]` | A battle: `merchant`, `pirate`, `navy`, `hunter`; mode `defend` (default), `attack`, `ambush`, `flee` |
 | `market PORT shortage` | Sets off a market shock from `economy.json` `shocks` (`shortage`, `glut`, `bad_harvest`, `hurricane`, `epidemic`, `warehouse_fire`, `garrison_reinforced`, `coin_shortage`, `piracy_wave`, `bankruptcy`) |
 | `time 3` | Days pass |
+| `want {r} done`, `want {r} ignored` | A person's want (data/wants.json) seen to (they're yours: opinion up, loyal) or let go (they remember) |
+| `deed fed_hungry` | The town you're in remembers what you did: its regard for you moves (data/port_life.json `_memory` `deeds`) |
 
 ## Structured effects (the market and the world)
 

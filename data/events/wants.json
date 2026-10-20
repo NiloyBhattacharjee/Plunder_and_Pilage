@@ -1,0 +1,198 @@
+{
+ "_comment": "Wants (scripts/wants.gd, data/wants.json): the moment a person's want comes due, in its port. priority: it comes up as soon as you're in that port with them aboard (want_here), and again after the cooldown if you put it off.",
+ "want_debt": {
+  "where": "port",
+  "priority": true,
+  "cooldown": 30,
+  "title": "The moneylender's men",
+  "text": "Two large men and a clerk with a ledger are waiting on the quay at {port}. They want {who}, who owes 300 gold with interest, and they've waited long enough.",
+  "roles": {
+   "who": {
+    "from": "crew",
+    "where": [
+     "want.debt",
+     "want_here"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Pay the debt (300 gold)",
+    "conditions": [
+     "gold >= 300"
+    ],
+    "outcomes": [
+     "gold -300",
+     "want {who} done",
+     "opinion crew +1"
+    ],
+    "result": "The clerk strikes a line through the ledger. {who} shakes your hand and doesn't let go for a long moment."
+   },
+   {
+    "text": "Tell them to come back when you've the money",
+    "outcomes": [
+     "opinion {who} -3"
+    ],
+    "result": "They go, for now. {who} watches them all the way up the street."
+   },
+   {
+    "text": "Run them off the quay",
+    "check": {
+     "who": "captain",
+     "skill": "intimidation",
+     "dc": 12
+    },
+    "outcomes": [
+     "fear +1",
+     "relation port -3",
+     "opinion {who} +5"
+    ],
+    "result": "They back away from your boarding party. The debt is still owed, but the lender knows what it'll cost to collect.",
+    "fail_outcomes": [
+     "wound {who}",
+     "relation port -3"
+    ],
+    "fail_result": "It comes to cudgels on the quay, and {who} takes the worst of it."
+   },
+   {
+    "text": "Hand them over",
+    "outcomes": [
+     "leave {who} handed_over",
+     "honour -2",
+     "opinion crew -5"
+    ],
+    "result": "They take {who} away in irons. Your crew watch in silence, and every one of them is thinking: me next?"
+   }
+  ]
+ },
+ "want_family": {
+  "where": "port",
+  "priority": true,
+  "cooldown": 30,
+  "title": "A family in {port}",
+  "text": "{who} is at your elbow before the anchor is down. Their family lives here: up the hill, past the church. Years since they've seen them. Could they have a few days ashore?",
+  "roles": {
+   "who": {
+    "from": "crew",
+    "where": [
+     "want.family",
+     "want_here"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Take three days: the whole ship can wait",
+    "outcomes": [
+     "time 3",
+     "want {who} done",
+     "morale +5 20"
+    ],
+    "result": "{who} comes back with a basket of bread, a child's drawing of the ship, and a look you haven't seen on them before."
+   },
+   {
+    "text": "Let them go home for good",
+    "outcomes": [
+     "leave {who} blessed",
+     "honour +1",
+     "opinion crew +3"
+    ],
+    "result": "{who} stands on the quay with the family round them and waves until you're past the fort. The crew talk about it for days."
+   },
+   {
+    "text": "No time. Next visit",
+    "outcomes": [
+     "opinion {who} -5"
+    ],
+    "result": "{who} says nothing at all."
+   }
+  ]
+ },
+ "want_home": {
+  "where": "port",
+  "priority": true,
+  "cooldown": 30,
+  "title": "Home",
+  "text": "{who} is standing at the rail, looking at {port} as if they'd forgotten it was real. They were born here. They'd like an afternoon ashore, to walk the streets they ran in as a child.",
+  "roles": {
+   "who": {
+    "from": "crew",
+    "where": [
+     "want.home",
+     "want_here"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Go with them, and stand them a drink",
+    "conditions": [
+     "gold >= 20"
+    ],
+    "outcomes": [
+     "gold -20",
+     "time 1",
+     "want {who} done"
+    ],
+    "result": "They show you the house they were born in, the church where they were christened, and the tavern where they first got drunk. All three are smaller than they remembered."
+   },
+   {
+    "text": "An hour ashore, no more",
+    "outcomes": [
+     "opinion {who} -2"
+    ],
+    "result": "An hour isn't much. They come back quieter than they went."
+   }
+  ]
+ },
+ "want_vow": {
+  "where": "port",
+  "priority": true,
+  "cooldown": 30,
+  "title": "A vow to keep",
+  "text": "{who} vowed a silver chalice to the church here if they lived through the last storm. They lived. They can't pay for it themselves, and a broken vow sits heavy.",
+  "roles": {
+   "who": {
+    "from": "crew",
+    "where": [
+     "want.vow",
+     "want_here"
+    ]
+   }
+  },
+  "choices": [
+   {
+    "text": "Give silver from the hold",
+    "conditions": [
+     "cargo.silver >= 5"
+    ],
+    "outcomes": [
+     "cargo silver -5",
+     "want {who} done",
+     "honour +1",
+     "deed charity"
+    ],
+    "result": "The priest holds the chalice up to the light. {who} kneels, and so, to your surprise, do half your crew."
+   },
+   {
+    "text": "Pay a silversmith (150 gold)",
+    "conditions": [
+     "gold >= 150"
+    ],
+    "outcomes": [
+     "gold -150",
+     "want {who} done",
+     "deed charity"
+    ],
+    "result": "It's a fine piece. {who} carries it up the hill in both hands."
+   },
+   {
+    "text": "God can wait",
+    "outcomes": [
+     "opinion {who} -4"
+    ],
+    "result": "{who} crosses themselves and says nothing. The superstitious among the crew don't like it."
+   }
+  ]
+ }
+}

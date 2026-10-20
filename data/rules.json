@@ -310,11 +310,11 @@
   "prizes": {"crew_fraction": 0.4, "sale_mult": 0.6, "max_speed_share": 1.0},
   "prisoners": {
     "fates": {
-      "adrift": {"name": "Set them adrift in the boats", "honour": 2, "fear": 0, "relation": 2, "tags": {"hates_mercy": -3, "hates_cruelty": 1},
+      "adrift": {"name": "Set them adrift in the boats", "honour": 2, "fear": 0, "relation": 2, "tags": {"hates_mercy": -3, "hates_cruelty": 1}, "voice": {"cruel": -1},
                  "description": "Merciful. Word of it will spread. Bloodthirsty hands will grumble."},
-      "maroon": {"name": "Maroon them on a key", "honour": -1, "fear": 2, "relation": -3, "tags": {"hates_cruelty": -1},
+      "maroon": {"name": "Maroon them on a key", "honour": -1, "fear": 2, "relation": -3, "tags": {"hates_cruelty": -1}, "voice": {"cruel": 1},
                  "description": "Harsh but not murder. Some will live."},
-      "kill":   {"name": "Put them to the sword", "honour": -6, "fear": 6, "relation": -12, "tags": {"hates_cruelty": -6, "hates_mercy": 2, "devout": -2},
+      "kill":   {"name": "Put them to the sword", "honour": -6, "fear": 6, "relation": -12, "tags": {"hates_cruelty": -6, "hates_mercy": 2, "devout": -2}, "voice": {"cruel": 2},
                  "description": "Ruthless. Every captain in the Caribbean will hear of it. Some of your own crew won't forgive it."}
     },
     "ransom_per_authority": 40

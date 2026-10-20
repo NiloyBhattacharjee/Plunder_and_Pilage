@@ -40,6 +40,8 @@ func open(id: String, player_ship: Node2D, in_disguise := false) -> void:
 	ship = player_ship
 	disguised = in_disguise
 	rumours_left = Data.rules.tavern.rumours_per_visit + PortLife.bonus(id, "rumours")
+	if not Wants.helper(player_ship.state, id, "rumours").is_empty():  # someone aboard knows everyone here
+		rumours_left += int(Wants.table().assets.rumours.rumours)
 	_done = {}
 	%Tabs.current_tab = 0
 	%Rumours.text = ""
@@ -681,10 +683,17 @@ func _build_town() -> void:
 		seen = "a respected captain"
 	elif rel <= -20:
 		seen = "unwelcome"
+	if PortLife.regard_word(port_id) != "" and not Career.wanted(s):  # what you did here counts for more than your flag
+		seen = PortLife.regard_word(port_id)
 	if s.reputation.notoriety >= 40 and not Career.wanted(s):
 		seen += ", and everyone knows your name"
-	UIKit.label(_town, "Here you are %s. (Standing %+d, honour %+d, notoriety %d.)" % [seen, rel, s.reputation.honour, s.reputation.notoriety],
-		"How the town sees you decides what you're invited to, and what's said behind your back.", Style.c("dim"))
+	UIKit.label(_town, "Here you are %s. (Regard %+d, standing %+d, honour %+d, notoriety %d.)" % [seen, PortLife.regard(port_id), rel, s.reputation.honour, s.reputation.notoriety],
+		"How the town sees you decides what you're invited to, and what's said behind your back.\nRegard is this town's own memory of you: it moves prices here (x%.2f with standing), the signing bounty, and how the town would take to your rule. It fades, slowly." % Career.price_mult(s, port_id), Style.c("dim"))
+	var deeds := PortLife.deeds_text(port_id)
+	if deeds != "":
+		var l := UIKit.label(_town, "They remember: %s." % deeds, "", Style.c("ink"))
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 1000
 	UIKit.label(_town, "What's going on", "", Style.c("header"))
 	var on := PortLife.active(port_id)
 	if on.is_empty():

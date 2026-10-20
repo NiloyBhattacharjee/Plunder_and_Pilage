@@ -33,7 +33,7 @@ func test_tallies_count_from_when_you_take_it_up():
 	var won := Ambitions.check(s, ctx())
 	assert_eq(won.title, "Scourge of the Main")
 	assert_gt(s.reputation.fear, fear, "the rewards apply")
-	assert_true(s.ambition.is_empty())
+	assert_true(ShipStats.captain(s).ambition.is_empty())
 	assert_eq(Ambitions.bonus(s, "enemy_morale"), -5.0, "a lasting edge")
 	assert_false("scourge" in Ambitions.offered(s, ctx()), "achieved once")
 
@@ -53,7 +53,7 @@ func test_giving_up_disappoints_the_crew():
 	var id: String = s.crew[0]
 	var before: int = People.person(id).relations.get(s.captain, 0)
 	Ambitions.abandon(s, ctx())
-	assert_true(s.ambition.is_empty())
+	assert_true(ShipStats.captain(s).ambition.is_empty())
 	assert_lt(People.person(id).relations.get(s.captain, 0), before)
 
 

@@ -92,7 +92,8 @@ static func appoint(s: Dictionary, i: int, id: String) -> String:
 	s.crew.erase(id)
 	p.captain = id
 	People.person(id).history.append("Given command of the %s, %s." % [p.name, Clock.date_string()])
-	return "%s takes command of the %s." % [People.person(id).name, p.name]
+	var dream: String = Wants.resolve(s, id, "done") if Wants.open(People.person(id), "own_ship") else ""  # what they always wanted
+	return ("%s takes command of the %s. %s" % [People.person(id).name, p.name, dream]).strip_edges()
 
 
 ## Everyone aboard her rejoins the flagship's crew (when she's sold, laid up or given up).

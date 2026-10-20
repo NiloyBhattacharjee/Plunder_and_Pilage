@@ -140,8 +140,9 @@ func _ready() -> void:
 		_first_port.call_deferred(start_port)
 
 
-## The first port of a new game: a word of welcome on a first voyage, then the port screen.
+## The first port of a new game: a hungry town, a word of welcome on a first voyage, then the port screen.
 func _first_port(id: String) -> void:
+	hud.show_message(Ports.start_market_event(id, "famine"))  # a town in need: a first chance to be remembered
 	await Tutorial.show(self, "welcome")
 	port_screen.open(id, ship)
 
@@ -171,6 +172,8 @@ func _daily() -> void:
 	Politics.prune_secrets(s)
 	Bonds.ensure_on_map(shipping)
 	for m in Fleet.daily(s, rng):
+		hud.show_message(m)
+	for m in Wants.daily(s, rng):
 		hud.show_message(m)
 	_deliver_news()
 	if ship.anchored_at == "" and not ship.route.is_empty():
@@ -349,6 +352,9 @@ func _on_arrived(id: String) -> void:
 	var access := Career.port_access(ship.state, id)
 	if access.open:
 		hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
+		var own := Wants.captain_arrives(ship.state, id)  # the captain's own want, seen to here
+		if own != "":
+			hud.show_message(own)
 		if ship.state.get("ironman", false):  # ironman keeps one save, written for you
 			SaveGame.save_game(self)
 		await Tutorial.show(self, "contracts")
@@ -517,9 +523,9 @@ func choose_ambition() -> void:
 	_in_event = true
 	var s: Dictionary = ship.state
 	var ctx := _event_ctx()
-	Ambitions.ensure(s)
-	if not s.ambition.is_empty():
-		var a: Dictionary = Ambitions.table()[s.ambition.id]
+	var cap := Ambitions.ensure(s)
+	if not cap.ambition.is_empty():
+		var a: Dictionary = Ambitions.table()[cap.ambition.id]
 		var pick: int = await dialog.ask(a.name, "%s\n\n%s\n\nWhen you achieve it: known as %s. %s" % [a.description, Ambitions.summary(s, ctx), a.title,
 			Events._preview(a.get("rewards", []), {})], [{"text": "Keep at it"}, {"text": "Give it up", "tooltip": "The crew had started to believe in it (opinion -2)."}])
 		if pick == 1:
@@ -788,16 +794,21 @@ func encounter(enemy: Dictionary, npc := {}) -> void:
 This is the %s you were hired to find." % enemy.name
 		if job.trap:
 			flag_note += " But she's no %s: her gunports are open and her decks are packed with men. You were sold out." % job.kind
+	if Wants.knows_you(enemy) != "":
+		flag_note += "\nAt her helm: %s, who once sailed in your ship and knows every weak point of her." % Wants.knows_you(enemy)
 	var hostile: bool = npc.get("hostile") if npc.get("hostile") != null else Career.npc_hostile(s, enemy, rng)
 	if enemy.behaviour == "merchant":
 		hostile = false
 	if hostile:
-		var pick: int = await dialog.ask("Enemy sail!", "A %s is bearing down on you.\n%s%s%s" % [enemy.label, seen, flag_note,
+		var said := Voices.dress(s, "A %s is bearing down on you.\n%s%s%s" % [enemy.label, seen, flag_note,
 				Encounters.conditions_text(Encounters.conditions(s, enemy, "defend", ship.position, terrain))], [
-			{"text": "Clear for action", "tooltip": "Turn and fight."},
-			{"text": "Crowd on sail and run", "tooltip": "Start the fight at long range with the weather gauge likely hers. Win a run for it and you're free.\nA fast, handy ship runs better; a shallower keel can lead her onto the shoals."},
-			{"text": "Strike your colours", "tooltip": "Surrender without a fight. They'll strip your hold and take half your gold."},
-		])
+			{"text": "Clear for action", "tooltip": "Turn and fight.", "voice": {"bold": 1}},
+			{"text": "Crowd on sail and run", "tooltip": "Start the fight at long range with the weather gauge likely hers. Win a run for it and you're free.\nA fast, handy ship runs better; a shallower keel can lead her onto the shoals.", "voice": {"bold": -1}},
+			{"text": "Strike your colours", "tooltip": "Surrender without a fight. They'll strip your hold and take half your gold.", "voice": {"bold": -2, "greedy": -1}},
+		], [], rng)
+		var pick: int = await dialog.ask("Enemy sail!", said.text, said.options)
+		for m in Voices.heard(s, said.voices, pick):
+			hud.show_message(m)
 		match pick:
 			0: start_combat(enemy, "defend")
 			1: start_combat(enemy, "flee")
@@ -820,12 +831,16 @@ This is the %s you were hired to find." % enemy.name
 			tip += "\n%s is your ally: attacking breaks your %s, and everyone hears of it." % [People.person(enemy.captain_id).name,
 				Bonds.level_name(enemy.captain_id, Bonds.level(s, enemy.captain_id)).to_lower()]
 		var why_not := AtSea.hail_problem(s, enemy) if not npc.is_empty() else "Nobody to hail."
-		var pick: int = await dialog.ask("Sail ho!", "A %s.\n%s%s%s" % [enemy.label, seen, flag_note,
+		var said := Voices.dress(s, "A %s.\n%s%s%s" % [enemy.label, seen, flag_note,
 				Encounters.conditions_text(Encounters.conditions(s, enemy, "attack", ship.position, terrain))], [
-			{"text": "Attack her" + ("" if verdict.legal else " (piracy)"), "tooltip": tip},
+			{"text": "Attack her" + ("" if verdict.legal else " (piracy)"), "tooltip": tip,
+				"voice": {"bold": 1, "greedy": 1 if enemy.behaviour == "merchant" else 0, "decent": 0 if verdict.legal else -1}},
 			{"text": "Hail her", "disabled": why_not != "", "tooltip": why_not if why_not != "" else "Heave to alongside: swap news, trade over the rail%s." % (", gam with the Brethren" if enemy.behaviour == "aggressive" else "")},
-			{"text": "Let her pass", "tooltip": "Hold your course."},
-		])
+			{"text": "Let her pass", "tooltip": "Hold your course.", "voice": {"bold": -1}},
+		], [], rng)
+		var pick: int = await dialog.ask("Sail ho!", said.text, said.options)
+		for m in Voices.heard(s, said.voices, pick):
+			hud.show_message(m)
 		if pick == 1:
 			hail(npc)
 			return
@@ -1010,7 +1025,7 @@ func _settle_battle(result: Dictionary) -> void:
 	_show_world(true)
 	camera.make_current()
 	var s: Dictionary = ship.state
-	for m in Encounters.apply_battle(s, result.player, rng):
+	for m in Encounters.apply_battle(s, result.player, rng, result.enemy_data.get("captain_id", "")):
 		hud.show_message(m)
 	for m in Fleet.after_battle(s, result.player.get("allies", [])):
 		hud.show_message(m)
@@ -1021,6 +1036,8 @@ func _settle_battle(result: Dictionary) -> void:
 	if result.outcome in ["enemy_struck", "enemy_sunk"] and e.has("captain_id") and Bonds.level(s, e.captain_id) < 0:
 		Ambitions.tally(s, "rivals_beaten")  # before the battle changes what you are to each other
 	for m in Bonds.on_battle(s, e, result.outcome, _attacked):
+		hud.show_message(m)
+	for m in Wants.on_battle(s, e, result.outcome):
 		hud.show_message(m)
 	if _raid_base != "" and Bases.bases.has(_raid_base):
 		var won: bool = result.outcome in ["enemy_struck", "enemy_sunk"]
@@ -1045,6 +1062,17 @@ func _settle_battle(result: Dictionary) -> void:
 		if current_npc.has("expedition"):  # caught at sea before it reached your town
 			hud.show_message(Bases.expedition_beaten(current_npc.expedition))
 			port_layer.queue_redraw()
+		var home: String = current_npc.get("origin", "")
+		if home == "":
+			home = Economy.voyage(current_npc.get("voyage", "")).get("origin", "")
+		var near := _nearest_port(ship.position)
+		var said := ""  # the towns hear of it: a merchant's home port grieves, the coast a pirate haunted is glad
+		if e.kind in ["merchant", "coaster", "smuggler"] and home != "":
+			said = PortLife.remember(home, "preyed")
+		elif e.kind == "pirate" and near != "" and Ports.port(near).faction != "pirates":
+			said = PortLife.remember(near, "rid_of_pirates")
+		if said != "":
+			hud.show_message(said)
 		if current_npc.has("voyage"):  # her cargo never reaches port, and the route remembers
 			var v := Economy.voyage(current_npc.voyage)
 			if not v.is_empty():  # her papers: what her home port knew of prices when she sailed

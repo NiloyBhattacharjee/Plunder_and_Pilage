@@ -185,15 +185,15 @@ func buy(id: String, good: String, qty: int, s: Dictionary, capacity: float, spr
 	var laws: Dictionary = state[id].laws
 	if good in laws.get("enumerated", []) and Career.flag_faction(s.get("flag", "white")) != port(id).faction:
 		# the Navigation Acts: these goods go home in the nation's own ships. Loading them under other colours is smuggling.
-		if rng.randf() < Market.seizure_chance({"contraband": [good], "vigilance": laws.vigilance}, good, qty):
+		if rng.randf() < Market.seizure_chance({"contraband": [good], "vigilance": laws.vigilance}, good, qty) * Wants.customs_mult(s, id):
 			var sm: Dictionary = Data.rules.smuggling
 			var fine := int(round(cost * sm.fine_mult))
 			s.gold = maxf(0.0, s.gold - fine)
 			var f: String = port(id).faction
 			s.relations[f] = s.relations.get(f, 0) - int(sm.seizure_relation)
 			laws.vigilance = minf(1.0, laws.vigilance + sm.seizure_vigilance)
-			return {"ok": false, "text": "Customs stop the loading: %s may leave here only in %s ships. Fined %d (standing -%d)." % [
-				_name(good), Data.table("factions")[f].adjective, fine, sm.seizure_relation]}
+			return {"ok": false, "text": ("Customs stop the loading: %s may leave here only in %s ships. Fined %d (standing -%d). " % [
+				_name(good), Data.table("factions")[f].adjective, fine, sm.seizure_relation] + PortLife.remember(id, "smuggling")).strip_edges()}
 	s.gold -= cost
 	s.cargo[good] = s.cargo.get(good, 0) + qty
 	s.cargo_cost[good] = s.cargo_cost.get(good, 0.0) + cost
@@ -250,7 +250,7 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 	var trade = EconomyEffects.active(s, "trade_mult")
 	if trade != null:
 		income = int(income * trade.value)
-	var risk: float = Market.seizure_chance(ps.laws, good, qty) * (1.0 - EconomyEffects.econ(s).smugglers / 200.0)  # friends among the smugglers
+	var risk: float = Market.seizure_chance(ps.laws, good, qty) * (1.0 - EconomyEffects.econ(s).smugglers / 200.0) * Wants.customs_mult(s, id)  # friends among the smugglers, kin in the customs house
 	if opened != null and contraband:
 		risk = 0.0
 	if rng.randf() < risk:
@@ -261,16 +261,24 @@ func sell(id: String, good: String, qty: int, s: Dictionary, spread_mult := 1.0)
 		s.relations[f] = s.relations.get(f, 0) - int(sm.seizure_relation)
 		s.reputation.notoriety += 1
 		ps.laws.vigilance = minf(1.0, ps.laws.vigilance + sm.seizure_vigilance)
-		return {"ok": false, "text": "Customs officers seized all your %s and fined you %d! %s will remember (standing -%d), and customs here are watching closer." % [
-			_name(good), fine, Data.table("factions")[f].name, sm.seizure_relation]}
+		return {"ok": false, "text": ("Customs officers seized all your %s and fined you %d! %s will remember (standing -%d), and customs here are watching closer. " % [
+			_name(good), fine, Data.table("factions")[f].name, sm.seizure_relation] + PortLife.remember(id, "smuggling")).strip_edges()}
 	if contraband:  # even a clean sale gets noticed
 		ps.laws.vigilance = minf(1.0, ps.laws.vigilance + sm.sale_vigilance)
+	var mem := PortLife.mem_cfg()
+	var deed := ""  # what the town makes of the sale, judged before it eases the shortage
+	if qty >= int(mem.fed_min) and good == "food" and PortLife.situation(id).hunger >= float(mem.fed_hunger):
+		deed = "fed_hungry"
+	elif qty >= int(mem.fed_min) and not contraband and good in Economy.wants(id) and Economy.level(id, good) == "scarce":
+		deed = "supplied"
 	remove_cargo(s, good, qty, n_stolen)
 	s.gold += income
 	Economy.add(id, good, qty)
 	log_trade(s, id, good, -qty, income, income - paid)
 	Ambitions.tally(s, "trade_profit", maxf(0.0, income - paid))
 	var text := "Sold %d %s for %d.%s" % [qty, _name(good), income, note]
+	if deed != "":
+		text += " " + PortLife.remember(id, deed)
 	if n_stolen > 0:  # plunder: the crew take their share by the articles
 		text += " " + Crew.plunder(s, income * n_stolen / float(qty))
 	return {"ok": true, "text": text.strip_edges(), "value": income}
@@ -406,6 +414,7 @@ func refresh_notables(id: String) -> void:
 			if c.skills[sk] > c.skills[best]:
 				best = sk
 		c.skills[best] = mini(20, c.skills[best] + 3)  # they stand out for a reason
+		Wants.ensure(c, rng)  # and they have a story
 		ps.notables.append(c)
 
 
@@ -457,12 +466,17 @@ func hire(id: String, n: int, s: Dictionary, crew_max: int) -> Dictionary:
 		s.crew.append(People.add(People.generate(recruit_opts(id))))
 	ps.sailors -= n
 	s.gold -= n * cost_each
-	return {"ok": true, "text": "Signed on %d sailors for %d." % [n, n * cost_each]}
+	var text := "Signed on %d sailors for %d." % [n, n * cost_each]
+	if n >= int(PortLife.mem_cfg().work_min):
+		text += " " + PortLife.remember(id, "gave_work")
+	return {"ok": true, "text": text.strip_edges()}
 
 
-## A sailor's signing bounty here: dearer when the press gangs are out, cheaper when the poor are starving.
+## A sailor's signing bounty here: dearer when the press gangs are out, cheaper when the poor are starving,
+## and cheaper where the town thinks well of you.
 func hire_cost(id: String) -> float:
-	return roundf(Data.rules.tavern.hire_cost * PortLife.mult(id, "hire_cost"))
+	var liked := 1.0 - PortLife.regard(id) * float(PortLife.mem_cfg().hire_per_regard)
+	return roundf(Data.rules.tavern.hire_cost * PortLife.mult(id, "hire_cost") * liked)
 
 
 ## Pays off the n least useful hands (never officers). They go back to the port's pool.

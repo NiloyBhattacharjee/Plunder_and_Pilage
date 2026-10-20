@@ -210,6 +210,8 @@ func describe(c: Dictionary) -> String:
 	best.sort_custom(func(a, b): return value(c, a) > value(c, b))
 	lines.append("Best at: %s %d, %s %d" % [SKILL_NAMES[best[0]], value(c, best[0]), SKILL_NAMES[best[1]], value(c, best[1])])
 	lines.append("Traits: " + trait_names(c))
+	if Wants.describe(c) != "":
+		lines.append(Wants.describe(c))
 	return "\n".join(lines)
 
 

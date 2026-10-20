@@ -52,6 +52,9 @@ func start(player_data: Dictionary, enemy: Dictionary, mode: String, _wind_dir: 
 	add_child(music)
 	music.play()
 	_log("[i]The %s %s. Find her weak points, break her, and make her strike.[/i]" % [enemy.label, enemy.name])
+	if Wants.knows_you(enemy) != "":  # a former officer of yours: they know where to hit you
+		battle.sides[0].known = battle.sides[0].weak.duplicate()
+		_log("[b]%s once sailed in your ship.[/b] They know every weak point of her." % Wants.knows_you(enemy))
 	if not battle.sides[1].known.is_empty():
 		_log("What you know of her: %s." % ", ".join(battle.sides[1].known.map(func(w): return DiceCombat.weak_name(w).to_lower())))
 	for c in battle.conditions:

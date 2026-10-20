@@ -161,7 +161,7 @@
     "choices": [
       {"text": "Buy {hand}'s loyalty (100 gold)", "conditions": ["gold >= 100"], "outcomes": ["gold -100", "opinion {hand} +15"], "result": "{hand} takes the money and swears it was all talk."},
       {"text": "Put {hand} ashore", "outcomes": ["leave {hand}"], "result": "{hand} is left on the quay with a sea chest and a grudge."},
-      {"text": "Make an example", "outcomes": ["kill {hand}", "fear +3", "opinion crew -3"], "result": "The crew watch {hand} go over the side. Nobody asks about the price on your head again."}
+      {"text": "Make an example", "outcomes": ["kill {hand} hanged", "fear +3", "opinion crew -3"], "result": "The crew watch {hand} go over the side. Nobody asks about the price on your head again."}
     ]
   },
   "a_clerk_with_a_pen": {

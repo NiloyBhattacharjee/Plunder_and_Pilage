@@ -299,17 +299,20 @@ static func feuds(s: Dictionary) -> Array:
 	return out
 
 
-## A death that hurts: friends grieve, and the loss of a popular hand or an officer weighs on everyone.
-static func mourn(s: Dictionary, id: String) -> void:
+## A death that hurts: friends grieve, the loss of a popular hand or an officer weighs on everyone, and a friend
+## may take up their cause (or swear revenge on the killer). Returns the news.
+static func mourn(s: Dictionary, id: String, killer := "") -> String:
 	if not People.chars.has(id):
-		return
+		return ""
 	var p := People.person(id)
 	var grief: int = friends_of(s, id).size() + (4 if "popular" in p.traits else 0) + (2 if id in s.officers.values() else 0)
 	if grief > 0:
 		add_mod(s, "mourning_" + id, "Mourning %s" % p.name, -(cfg().mourning_base + grief), cfg().mourning_days)
+	return Wants.inherit(s, id, killer)
 
 
-static func remove_hand(s: Dictionary, id: String) -> void:
+## keep: they live on elsewhere (a captain now), so stay in the registry.
+static func remove_hand(s: Dictionary, id: String, keep := false) -> void:
 	for post in s.officers.keys():
 		if s.officers[post] == id:
 			s.officers.erase(post)
@@ -319,7 +322,8 @@ static func remove_hand(s: Dictionary, id: String) -> void:
 		s.unrest = fresh_unrest()
 	if s.heir == id:
 		s.heir = ""
-	People.remove(id)
+	if not keep:
+		People.remove(id)
 
 
 # ---- mutiny: discontent, a ringleader, and support that grows -------------------------
@@ -458,17 +462,19 @@ static func punish(s: Dictionary, rebels: Array, how: String) -> String:
 		"hang":
 			if lead != "" and lead in s.crew:
 				text = "%s hangs from the main yard at dawn." % People.person(lead).name
-				remove_hand(s, lead)
+				text += " " + Wants.part(s, lead, "hanged")
 			s.reputation.fear += 3
 			for id in rebels:
 				if id in s.crew:
 					People.person(id).relations[s.captain] = People.person(id).relations.get(s.captain, 0) - 5
 		"maroon":
+			text = "%d mutineers are left on a sandbar with a cask of water." % rebels.size()
 			for id in rebels:
 				if id in s.crew:
-					remove_hand(s, id)
+					var after := Wants.part(s, id, "marooned")
+					if after != "":
+						text += " " + after
 			s.reputation.fear += 2
-			text = "%d mutineers are left on a sandbar with a cask of water." % rebels.size()
 		"forgive":
 			for id in rebels:
 				if id in s.crew:
@@ -566,10 +572,11 @@ static func strongmen(s: Dictionary) -> Array:
 ## Hands over the ship. how: elected, command or force. Returns messages.
 static func make_captain(s: Dictionary, id: String, how: String) -> Array:
 	var c := cfg()
-	var old := ShipStats.captain(s)
+	var old := Ambitions.ensure(s)  # their ambition and titles go with them; the log keeps the titles
 	var fate: String = s.succession.cause if s.has("succession") else "stood down"
 	var new_cap := People.person(id)
-	s.captains.append({"name": old.name, "until": Clock.date_string(), "fate": fate})
+	s.captains.append({"name": old.name, "until": Clock.date_string(), "fate": fate,
+		"titles": old.titles.map(func(a): return Ambitions.table()[a].title)})
 	old.history.append("%s, %s." % [fate.capitalize(), Clock.date_string()])
 	for post in s.officers.keys():
 		if s.officers[post] == id:
@@ -598,5 +605,8 @@ static func make_captain(s: Dictionary, id: String, how: String) -> Array:
 		"elected": add_mod(s, "new_captain", "A captain of their own choosing", c.elected, c.new_captain_days)
 		"force": add_mod(s, "new_captain", "Command taken by force", c.by_force, c.new_captain_days)
 	s.erase("succession")
+	var dream := Ambitions.from_want(s)
+	if dream != "":
+		msgs.append(dream)
 	msgs.append_array(Bonds.reconsider(s))  # the ship's bonds carry over, but allies weigh up the new captain
 	return msgs

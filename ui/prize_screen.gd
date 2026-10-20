@@ -106,6 +106,9 @@ func _build() -> void:
 			fates[f].description, fates[f].honour, fates[f].fear, Data.table("factions")[enemy.faction].name,
 			fates[f].get("relation", 0), react.upset, react.pleased])
 	box.add_child(_prisoner_fate)
+	var said := Voices.dress(s, "", fates.values().map(func(f): return {"text": f.name, "voice": f.get("voice", {})}))  # they'll feel it either way
+	if not said.voices.is_empty():
+		UIKit.label(box, said.text.strip_edges()).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	UIKit.label(box, "")
 	var cap_row := UIKit.row(box)

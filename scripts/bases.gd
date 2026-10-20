@@ -109,7 +109,8 @@ func _new_base(id: String, buildings: Array, visibility: float, loyalty: float) 
 ## extra: men who come with it (Nassau's council). from: who will come to take it back (its old masters).
 func hold_town(s: Dictionary, id: String, garrison: int, extra := 0, from := "") -> String:
 	var h: Dictionary = Data.rules.sieges.hold
-	var b := _new_base(id, h.buildings[Ports.port(id).size].duplicate(), 100.0, float(h.loyalty))
+	var loyalty := clampf(float(h.loyalty) + PortLife.regard(id) * float(PortLife.mem_cfg().loyalty_per_regard), 0.0, 100.0)  # what it remembers of you
+	var b := _new_base(id, h.buildings[Ports.port(id).size].duplicate(), 100.0, loyalty)
 	b.town = {"from": from if from != "" else Ports.port(id).faction, "since": Clock.day, "failed": 0}
 	b.taxes = "fair"
 	b.town_buildings = b.buildings.duplicate()  # the town keeps these up itself

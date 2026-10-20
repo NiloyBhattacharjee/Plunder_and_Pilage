@@ -10,6 +10,114 @@
   "hunger_per_mult": 125,
   "mod_decay_per_day": 1.5
  },
+ "_memory": {
+  "_comment": "What a town remembers of you (scripts/port_life.gd, Ports.state[id].memory). Each deed moves the town's regard for you (-100 to 100), which fades by decay_per_day; the same deed again within repeat_days counts once. The town keeps the keep weightiest deeds to tell you about. Regard moves prices (price_per_regard, like standing), the signing bounty (hire_per_regard) and how a town you take accepts your rule (loyalty_per_regard). Code records fed_hungry (selling at least fed_min food where hunger is at least fed_hunger), supplied (as much of a good the town needs while it's scarce), gave_work (hiring at least work_min hands), smuggling (seized by customs), preyed (a merchant, coaster or smuggler from there taken or sunk), rid_of_pirates (a pirate beaten: the nearest town), kept_word/broke_word/betrayed (contracts, at the employer's port), sacked/ransomed/took (sieges); events use 'deed ID', and read 'regard' and 'deed.ID'. bands: how the town sees you, below each regard.",
+  "decay_per_day": 0.03,
+  "repeat_days": 60,
+  "keep": 5,
+  "price_per_regard": 0.002,
+  "hire_per_regard": 0.004,
+  "loyalty_per_regard": 0.3,
+  "fed_hunger": 40,
+  "fed_min": 20,
+  "bands": [
+   [
+    -40,
+    "hated: they remember what you did"
+   ],
+   [
+    -8,
+    "resented"
+   ],
+   [
+    8,
+    ""
+   ],
+   [
+    40,
+    "well liked"
+   ],
+   [
+    101,
+    "one of their own"
+   ]
+  ],
+  "deeds": {
+   "fed_hungry": {
+    "text": "brought food when the town was hungry",
+    "regard": 12
+   },
+   "supplied": {
+    "text": "brought what the town was short of",
+    "regard": 3
+   },
+   "gave_work": {
+    "text": "gave work to the waterfront",
+    "regard": 2
+   },
+   "rid_of_pirates": {
+    "text": "rid its waters of a pirate",
+    "regard": 4
+   },
+   "charity": {
+    "text": "helped the town in hard times",
+    "regard": 6
+   },
+   "kept_word": {
+    "text": "did the governor's work, and did it well",
+    "regard": 4
+   },
+   "broke_word": {
+    "text": "took the governor's work and failed it",
+    "regard": -6
+   },
+   "betrayed": {
+    "text": "sold the governor's secrets to an enemy",
+    "regard": -20
+   },
+   "smuggling": {
+    "text": "were caught smuggling on the quay",
+    "regard": -4
+   },
+   "preyed": {
+    "text": "took the town's ships at sea",
+    "regard": -8
+   },
+   "gouged": {
+    "text": "sold food to the starving at famine prices",
+    "regard": -10
+   },
+   "amends": {
+    "text": "paid for masses for the dead you made",
+    "regard": 10
+   },
+   "ransomed": {
+    "text": "held the town to ransom",
+    "regard": -30
+   },
+   "took": {
+    "text": "took the town by force",
+    "regard": -15
+   },
+   "sacked": {
+    "text": "sacked the town",
+    "regard": -70
+   },
+   "hanged": {
+    "text": "hanged one of their own",
+    "regard": -15
+   },
+   "marooned": {
+    "text": "marooned one of their own",
+    "regard": -10
+   },
+   "handed_over": {
+    "text": "handed one of their own to the moneylender's men",
+    "regard": -8
+   }
+  },
+  "work_min": 10
+ },
  "festival": {
   "name": "Feast day",
   "names": {

@@ -205,7 +205,8 @@ static func remember(s: Dictionary, enemy: Dictionary, known: Array) -> void:
 
 
 ## Writes battle damage back to the ship and buries the dead. Returns messages.
-static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGenerator) -> Array:
+## killer: the named captain who did it, if any (a friend of the fallen may swear revenge).
+static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGenerator, killer := "") -> Array:
 	var st := ShipStats.effective(s.type, s.upgrades)
 	s.hull = maxf(0.0, after.hull)
 	s.sails = minf(after.sails, st.sails * float(after.masts) / st.masts)  # lost masts are jury-rigged
@@ -215,11 +216,13 @@ static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGene
 	if lost > 0:
 		var saves: float = minf(0.8, ShipStats.officer_skill(s, "surgeon") * Data.rules.combat.surgeon_saves_per_point)
 		var dead := int(round(lost * (1.0 - saves)))
-		var names := kill_crew(s, dead, rng)
+		var sworn := []
+		var names := kill_crew(s, dead, rng, killer, sworn)
 		var text := "%d of your men fell; the surgeon saved %d." % [lost, lost - dead]
 		if not names.is_empty():
 			text += " Among the dead: " + ", ".join(names) + "."
 		msgs.append(text)
+		msgs.append_array(sworn)
 		var maimed := []  # some of the saved carry the battle with them for life
 		for i in lost - dead:
 			if s.crew.is_empty() or rng.randf() >= Data.rules.wounds.crew_chance:
@@ -252,7 +255,8 @@ static func apply_battle(s: Dictionary, after: Dictionary, rng: RandomNumberGene
 
 
 ## Removes n random crew (officers included). Friends mourn them.
-static func kill_crew(s: Dictionary, n: int, rng: RandomNumberGenerator) -> Array:
+## sworn: collects the oaths of friends left behind.
+static func kill_crew(s: Dictionary, n: int, rng: RandomNumberGenerator, killer := "", sworn := []) -> Array:
 	var named := []
 	for i in mini(n, s.crew.size()):
 		var id: String = s.crew[rng.randi() % s.crew.size()]
@@ -265,7 +269,9 @@ static func kill_crew(s: Dictionary, n: int, rng: RandomNumberGenerator) -> Arra
 			named.append("%s (%s)" % [People.person(id).name, Data.rules.officer_roles[post].name])
 		elif People.person(id).traits.has("popular"):
 			named.append(People.person(id).name)
-		Crew.mourn(s, id)
+		var oath := Crew.mourn(s, id, killer)
+		if oath != "":
+			sworn.append(oath)
 		Crew.remove_hand(s, id)
 	return named
 

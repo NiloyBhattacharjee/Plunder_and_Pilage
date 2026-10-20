@@ -204,15 +204,19 @@ func _after_the_fall(s: Dictionary, id: String) -> void:
 	var p := Ports.port(id)
 	var k: Dictionary = Sieges.cfg()
 	var why := Sieges.hold_problem(s, id)
-	var pick: int = await world.dialog.ask("%s is yours" % p.name, "The governor hands over the keys of %s. What now?" % p.name, [
+	var said := Voices.dress(s, "The governor hands over the keys of %s. What now?" % p.name, [
 		{"text": "Sack it (about %d gold)" % Sieges.sack_gold(id), "tooltip": "Strip it bare: the biggest haul, and the crew's shares.\nThe town is ruined for a long time. Fear +%d, honour %d, notoriety +%d. %s never forgives (standing -%d), every other nation -%d; the governor becomes your enemy. The Brethren love it (+%d)." % [
-			k.sack.fear, k.sack.honour, k.sack.notoriety, Career.fname(p.faction), k.sack.relation, k.sack.relation_all, k.sack.pirates]},
+			k.sack.fear, k.sack.honour, k.sack.notoriety, Career.fname(p.faction), k.sack.relation, k.sack.relation_all, k.sack.pirates],
+			"voice": {"cruel": 2, "greedy": 1}},
 		{"text": "Ransom it back (%d gold)" % Sieges.ransom_gold(id), "tooltip": "The town council pays to see you go, and the town is left standing.\nFear +%d, honour +%d, standing with %s -%d." % [
-			k.ransom.fear, k.ransom.honour, Career.fname(p.faction), k.ransom.relation]},
+			k.ransom.fear, k.ransom.honour, Career.fname(p.faction), k.ransom.relation], "voice": {"cruel": -1, "decent": 1}},
 		{"text": "Hold it as your own (leave %d men)" % Sieges.garrison_needed(id), "disabled": why != "",
 			"tooltip": why if why != "" else "A base with walls, wharves and guns already built, and taxes of about %d gold a day.\nIt counts toward your %d bases. %s will send expeditions to take it back (standing -%d): garrison it and build up its fort." % [
-				Bases.taxes(id) * k.hold.loyalty / 100.0, Data.rules.bases.max, Career.fname(p.faction), k.hold.relation]},
-	])
+				Bases.taxes(id) * k.hold.loyalty / 100.0, Data.rules.bases.max, Career.fname(p.faction), k.hold.relation], "voice": {"bold": 1}},
+	], [], world.rng)
+	var pick: int = await world.dialog.ask("%s is yours" % p.name, said.text, said.options)
+	for m in Voices.heard(s, said.voices, pick):
+		world.hud.show_message(m)
 	match pick:
 		0: world.hud.show_message(Sieges.sack(s, id))
 		1: world.hud.show_message(Sieges.ransom(s, id))

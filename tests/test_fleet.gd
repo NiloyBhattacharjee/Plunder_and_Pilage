@@ -91,6 +91,8 @@ func test_ships_are_built_at_a_base():
 	Bases.discovered.append("roatan")
 	Bases.claim(s, "roatan")
 	var b: Dictionary = Bases.bases.roatan
+	b.gold = 5000.0  # paid and quiet: no rebellion or raid takes the yard before she's launched
+	Bases.rng.seed = 4
 	assert_string_contains(Bases.keel_problem(s, "roatan", "sloop"), "shipyard")
 	b.buildings = ["dock", "careening_yard", "shipyard"]
 	assert_string_contains(Bases.keel_problem(s, "roatan", "frigate"), "warehouse")

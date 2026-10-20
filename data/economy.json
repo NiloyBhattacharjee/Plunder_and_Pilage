@@ -123,6 +123,8 @@
                    "news": "A great merchant house in {port} has failed. Credit is gone, and few ships are fitting out there."},
     "sacked": {"name": "Sacked", "months": [], "effects": [{"type": "port_damage", "severity": 0.6}, {"type": "stock", "goods": "all", "mult": 0.3}],
                "news": "{port} has been sacked: the warehouses emptied, the churches stripped, half the town burned."},
+    "famine": {"name": "Famine", "months": [], "effects": [{"type": "stock", "goods": ["food"], "mult": 0.15}, {"type": "flows", "goods": ["food"], "make": 0.3, "use": 4.0, "days": 75}],
+               "news": "{port} is going hungry: the provision ships are late and the bakers have nothing to sell."},
     "warehouse_fire": {"name": "Warehouse fire", "weight": 1.5, "effects": [{"type": "stock", "goods": "all", "mult": 0.55}],
                        "news": "Fire on the waterfront at {port}: a row of warehouses has burned to the ground."},
     "garrison_reinforced": {"name": "Garrison reinforced", "weight": 1, "tags": ["garrison", "capital"], "effects": [{"type": "flows", "goods": ["food", "gunpowder", "rum", "naval_stores"], "use": 1.8, "days": 120}],

@@ -323,7 +323,10 @@ static func carries_spanish_contraband(s: Dictionary) -> bool:
 static func price_mult(s: Dictionary, port_id: String) -> float:
 	var pa: Dictionary = Data.rules.port_access
 	var rel: int = s.relations.get(Ports.port(port_id).faction, 0)
-	return clampf(1.0 - rel * pa.price_per_standing, pa.price_clamp[0], pa.price_clamp[1]) * Bonds.price_mult(s, port_id)  # the tariff is a duty now (Economy.duty)
+	var liked: float = PortLife.regard(port_id) * PortLife.mem_cfg().price_per_regard  # and the town's own memory of you
+	if not Wants.helper(s, port_id, "price").is_empty():  # an old friend in trade, aboard
+		liked += float(Wants.table().assets.price.price)
+	return clampf(1.0 - rel * pa.price_per_standing - liked, pa.price_clamp[0], pa.price_clamp[1]) * Bonds.price_mult(s, port_id)  # the tariff is a duty now (Economy.duty)
 
 
 ## Will this ship attack you on sight? Navies judge you by your record and by the colours you fly.
