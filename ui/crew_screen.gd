@@ -97,6 +97,22 @@ func _build_log() -> void:
 	UIKit.label(box, "The log of the %s" % s.name, "", Style.c("header"))
 	for line in Endings.log_text(s, 1000).split("\n"):
 		UIKit.label(box, line, "", Style.c("dim") if line.begins_with("  ") else Color(0, 0, 0, 0))
+	if not Events.stories.is_empty():  # open stories first, each with what has happened so far
+		UIKit.label(box, "")
+		UIKit.label(box, "Stories", "Threads that run across many events, from a start to an ending. At most %d at once." % Events.cfg().max_stories, Style.c("header"))
+		var ids: Array = Events.stories.keys()
+		ids.sort_custom(func(a, b): return Events.is_open(a) and not Events.is_open(b))
+		for sid in ids:
+			var st: Dictionary = Events.stories[sid]
+			var d: Dictionary = Events.story_defs[sid.get_slice("#", 0)]
+			var summary: String = Events._sub(d.summary, st.get("vars", {}), true)
+			if Events.is_open(sid):
+				UIKit.label(box, "%s: act %d of %d, %s" % [d.title, st.act, d.acts.size(), d.acts[st.act - 1].to_lower()], summary)
+				for e in st.entries:
+					UIKit.label(box, "  " + e, "", Style.c("dim"))
+			else:
+				UIKit.label(box, "%s: %s" % [d.title, d.endings.get(st.ending, {"name": "the trail went cold"}).name.to_lower()],
+					summary + "\n\n" + "\n".join(st.entries), Style.c("dim"))
 	if not s.captains.is_empty():
 		UIKit.label(box, "")
 		UIKit.label(box, "Captains of the %s" % s.name, "Everyone who has commanded this ship before you.", Style.c("header"))

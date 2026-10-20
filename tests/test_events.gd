@@ -204,3 +204,64 @@ func test_finds_wait_on_the_map_not_in_the_daily_roll():
 	var inst := Events.pick_find(ctx(""))
 	assert_true(Events.events[inst.id].has("find"))
 	assert_true(Events.pick_find(ctx(""), Events.events.keys()).is_empty(), "never one already out there")
+
+
+func test_a_story_runs_from_hook_to_ending():
+	Events.flags["sacked_havana"] = -1.0
+	s.gold = 1000.0
+	var hook := Events._materialize(Events._instance(Events.events.brother_knife, ctx("havana"), {}), ctx("havana"))
+	assert_false(hook.is_empty())
+	assert_string_contains(Events.view(hook, ctx("havana")).title, "A Brother's Knife")
+	Events.resolve(hook, 2, ctx("havana"))  # the purse, thrown back
+	assert_true(Events.is_open("brother"))
+	assert_false(Events._eligible(Events.events.brother_knife, "port"), "a story is told once")
+	Clock.day += 16
+	var bills := Events.pick("port", ctx("port_royal"))
+	assert_eq(bills.id, "brother_handbills")
+	Events.resolve(bills, 1, ctx("port_royal"))  # meet at dawn
+	assert_true(Events.pick("port", ctx("port_royal")).get("id", "") != "brother_dawn", "only on the beach below the town")
+	var dawn := Events.pick("port", ctx("havana"))
+	assert_eq(dawn.id, "brother_dawn")
+	var res := Events.resolve(dawn, 2, ctx("havana"))
+	assert_false(Events.is_open("brother"))
+	assert_eq(Events.stories.brother.ending, "murdered")
+	assert_eq(Events.stories.brother.entries.size(), 4, "three acts and the ending")
+	assert_true(res.effects.any(func(e): return e.contains("Settled with grape")))
+
+
+func test_a_battle_decides_the_next_act():
+	var inst := Events._materialize(Events._instance(Events.events.brother_hunter, ctx(), {"town": "havana"}), ctx())
+	var res := Events.resolve(inst, 0, ctx())
+	assert_false(res.fight.is_empty())
+	assert_true(People.chars.has(inst.vars.avenger), "kept for the next act while the battle is fought")
+	Events.after_battle(false)
+	assert_eq(Events.queue[-1].id, "brother_avenged")
+	assert_true(Events.after_fight.is_empty())
+
+
+func test_stories_go_cold_and_have_a_limit():
+	var inst := Events._materialize(Events._instance(Events.events.pardon_hunt, ctx(), {}), ctx())
+	Events.stories.pardon = {"act": 2, "began": "", "entries": [], "ended": -1.0, "ending": ""}
+	Events.queue.append({"id": "pardon_hunt", "at": 0.0, "until": 5.0, "vars": inst.vars})
+	Clock.day = 10.0
+	Events.pick("sea", ctx())
+	assert_eq(Events.stories.pardon.ending, "cold", "the trail ran out")
+	for sid in ["brother", "silver", "castaway"]:
+		Events.stories[sid] = {"act": 1, "began": "", "entries": [], "ended": -1.0, "ending": ""}
+	assert_false(Events._story_ok(Events.events.want_debt), "no new story while three are open")
+	assert_false(Events._story_ok(Events.events.dying_pirate), "nor its hook again while it runs")
+	Events.end_story("silver", "found")
+	assert_true(Events._story_ok(Events.events.want_debt), "room for one more")
+	assert_false(Events._story_ok(Events.events.dying_pirate), "but never the same story twice")
+	assert_false(Events._story_ok(Events.events.pardon_old_friends), "one that went cold was told")
+	Events.stories.debt = {"act": 3, "began": "", "entries": [], "ended": 1.0, "ending": "paid"}
+	assert_true(Events._story_ok(Events.events.want_debt), "the debt story can be told again")
+
+
+func test_validator_catches_a_story_left_hanging():
+	Events.events["_bad"] = {"id": "_bad", "title": "T", "text": "x", "story": "brother", "act": 9,
+		"choices": [{"text": "a", "outcomes": ["gold +1"]}, {"text": "b", "outcomes": ["ending brother nope"]}]}
+	var errs := "\n".join(Events.validate())
+	Events.events.erase("_bad")
+	for want in ["has no act 9", "leaves the story hanging", "unknown ending"]:
+		assert_string_contains(errs, want)

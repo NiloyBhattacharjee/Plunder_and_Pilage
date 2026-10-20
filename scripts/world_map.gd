@@ -1016,6 +1016,7 @@ func _next_track() -> void:
 
 func _on_combat_finished(result: Dictionary) -> void:
 	await _settle_battle(result)
+	Events.after_battle(result.outcome in ["enemy_struck", "enemy_sunk"])  # a story's next act, if a story started this fight
 	battle_over.emit(result.outcome)
 
 

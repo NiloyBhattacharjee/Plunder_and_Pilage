@@ -1,0 +1,341 @@
+{
+  "_comment": "Story events (data/stories.json): each has a story and an act. Act 1 is the hook; the rest come only through chains (or a battle's won/lost). Every choice must go on to the story's next event, into a fight with won/lost events, or to an ending. The debt story's hook is want_debt (data/events/wants.json); the castaway's is queued when you maroon someone you knew (Wants.part).",
+
+  "brother_knife": {
+    "story": "brother", "act": 1,
+    "title": "A brother's knife",
+    "text": "In an alley off the square in {port}, someone steps out of a doorway with a knife and your name on their lips. {avenger}. You took their house, their savings and their brother.",
+    "where": "port", "weight": 14,
+    "conditions": ["sacked"],
+    "roles": {"avenger": {"from": "new"}, "town": {"from": "here"}},
+    "choices": [
+      {"text": "Fight", "check": {"who": "captain", "skill": "swordplay", "dc": 12},
+       "outcomes": ["fear +1", "event brother_handbills 15 150"], "result": "It's over quickly. You leave {avenger} bleeding in the gutter for the watch. They'll live, and they'll remember.",
+       "fail_outcomes": ["wound captain", "fear +1", "event brother_handbills 15 150"], "fail_result": "You drive {avenger} off, but not before the blade finds your ribs."},
+      {"text": "Talk them down", "check": {"who": "captain", "skill": "charisma", "dc": 14},
+       "outcomes": ["honour +2", "event brother_letter 20 150"], "result": "{avenger} weeps, and drops the knife, and lets you talk. You leave them a purse and the name of your ship.",
+       "fail_outcomes": ["wound captain", "event brother_handbills 15 150"], "fail_result": "{avenger} isn't listening. You get away with a cut on your arm."},
+      {"text": "Throw them a purse and walk away (100 gold)", "conditions": ["gold >= 100"],
+       "outcomes": ["gold -100", "event brother_handbills 15 150"], "result": "{avenger} throws the purse back at you. It splits on the cobbles, and children come running for the coins."}
+    ]
+  },
+
+  "brother_letter": {
+    "story": "brother", "act": 2, "chain_only": true,
+    "title": "A letter from {town}",
+    "text": "A letter finds you in {port}, in a careful, schoolroom hand. {avenger} has thought about what you said in the alley. The church roof in {town} is still open to the rain. Their brother is buried under it.",
+    "where": "port",
+    "conditions": ["port != {town}"],
+    "roles": {"avenger": {"from": "new"}, "town": {"from": "here"}},
+    "choices": [
+      {"text": "Send money for the roof (300 gold)", "conditions": ["gold >= 300"],
+       "outcomes": ["gold -300", "honour +3", "ending brother forgiven"], "result": "You send the money with a letter you rewrite four times."},
+      {"text": "Write back, and mean it", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["honour +2", "ending brother forgiven"], "result": "A reply comes a month later: one line. 'I don't forgive you. But I'm done.'",
+       "fail_outcomes": ["event brother_handbills 10 150"], "fail_result": "Your words come out wrong on the page. You know it as soon as the letter's gone."},
+      {"text": "Burn it", "outcomes": ["fear +1", "event brother_handbills 10 150"], "result": "The letter curls up in the galley fire. You don't think about it again, for a while."}
+    ]
+  },
+
+  "brother_handbills": {
+    "story": "brother", "act": 2, "chain_only": true,
+    "title": "Your name on the walls",
+    "text": "Handbills on every wall in {port}: your name, your ship, and a reward for proof of your death. They're signed {avenger}, of {town}. Someone has sold a house to pay for this.",
+    "where": "port",
+    "conditions": ["port != {town}"],
+    "roles": {"avenger": {"from": "new"}, "town": {"from": "here"}},
+    "choices": [
+      {"text": "Tear them down and find out who's posting them", "check": {"who": "captain", "skill": "intimidation", "dc": 13},
+       "outcomes": ["fear +1", "event brother_hunter 6 120"], "result": "A frightened printer tells you everything: the money came through a pirate hunter, and the hunter has already sailed. Now you know what to look for.",
+       "fail_outcomes": ["notoriety +2", "event brother_hunter 4 120"], "fail_result": "Nobody will tell you anything. The bills go back up as fast as you tear them down."},
+      {"text": "Send word to {avenger}: settle it at dawn, the two of us", "outcomes": ["honour +1", "event brother_dawn 0 200"], "result": "You leave a letter at the printer's. If {avenger} wants you, they know where to find you: the beach below {town}."},
+      {"text": "Ignore them", "outcomes": ["notoriety +2", "event brother_hunter 3 120"], "result": "Let them print what they like."}
+    ]
+  },
+
+  "brother_hunter": {
+    "story": "brother", "act": 3, "chain_only": true,
+    "title": "A sail astern",
+    "text": "A fast sloop has been on your quarter for two days, never closing, never falling back. Her master is a pirate hunter, paid in {town} silver: {avenger}'s silver.",
+    "where": "sea",
+    "roles": {"avenger": {"from": "new"}, "town": {"from": "port"}},
+    "choices": [
+      {"text": "Turn and fight her", "outcomes": ["fight hunter"], "won": "brother_dawn", "lost": "brother_avenged",
+       "result": "You wear ship and run out your guns."},
+      {"text": "Buy the hunter off (300 gold)", "conditions": ["gold >= 300"],
+       "outcomes": ["gold -300", "event brother_dawn 0 200"], "result": "The hunter takes your gold, and as a courtesy tells you where {avenger} will be waiting: the beach below {town}, any dawn you like."}
+    ]
+  },
+
+  "brother_dawn": {
+    "story": "brother", "act": 4, "chain_only": true,
+    "title": "Dawn below {town}",
+    "text": "{avenger} is waiting on the beach below {town} at first light, with a borrowed sword and two seconds who look sorry to be there. Half the town is watching from the dunes.",
+    "where": "port",
+    "conditions": ["port == {town}"],
+    "roles": {"avenger": {"from": "new"}, "town": {"from": "here"}},
+    "choices": [
+      {"text": "Fight it out", "check": {"who": "captain", "skill": "swordplay", "dc": 14},
+       "outcomes": ["fear +2", "notoriety +2", "ending brother killed"], "result": "Three passes, a feint, and it's done. The town walks home in silence.",
+       "fail_outcomes": ["wound captain", "honour +1", "ending brother spared_you"], "fail_result": "You're on your back in the wet sand with {avenger}'s point at your throat. A long moment. Then they throw the sword into the sea and walk away."},
+      {"text": "Lay down your sword and pay for what you burned (500 gold)", "conditions": ["gold >= 500"],
+       "outcomes": ["gold -500", "honour +4", "relation port +8", "deed amends", "ending brother forgiven"], "result": "You put your sword on the sand and the purse beside it. The crowd on the dunes doesn't know what to do. Neither does {avenger}."},
+      {"text": "Have your gunners settle it from the boat", "outcomes": ["fear +3", "honour -4", "notoriety +3", "ending brother murdered"], "result": "A swivel gun barks from the longboat. The seconds run."}
+    ]
+  },
+
+  "brother_avenged": {
+    "story": "brother", "act": 4, "chain_only": true,
+    "title": "{avenger} on the quay",
+    "text": "Word reaches you: when the hunter brought your beaten ship into port, {avenger} was on the quay to watch. They didn't say a word. They just looked at you for a long time, and then went home to {town}.",
+    "where": "any",
+    "roles": {"avenger": {"from": "new"}, "town": {"from": "here"}},
+    "choices": [
+      {"text": "Let it be", "outcomes": ["ending brother avenged"], "result": "Perhaps that's fair."},
+      {"text": "Swear you'll be back", "outcomes": ["fear +1", "ending brother avenged"], "result": "You say it out loud, so the crew hear. It doesn't make you feel better."}
+    ]
+  },
+
+  "dying_pirate": {
+    "story": "silver", "act": 1,
+    "title": "An old pirate's last words",
+    "text": "In a tavern back room an old buccaneer is dying of the drink. He grips your sleeve: 'Silver, Captain. Silver from the Panama raid, buried on a cay off {port}. I never went back for it.' At the next table, {listener} is very carefully not listening.",
+    "where": "port", "weight": 4,
+    "conditions": ["port_fence"],
+    "roles": {"port": {"from": "port", "where": ["not here"]}, "listener": {"from": "new"}},
+    "choices": [
+      {"text": "Sit with him and hear it all", "outcomes": ["event dying_pirate_cay 0 365", "honour +1"], "result": "He dies before dawn. You have a bearing, a landmark, a number of paces. When you look up, the next table is empty."},
+      {"text": "Buy him a last bottle and leave him be", "outcomes": ["gold -5", "ending silver passed_by"], "result": "He dies happy, if not rich."}
+    ]
+  },
+
+  "dying_pirate_cay": {
+    "story": "silver", "act": 2, "chain_only": true,
+    "title": "The cay off {port}",
+    "text": "You anchor off {port}, row to the low cay the old man described, and find the blasted tree he swore by. The sand beneath it has been turned over, not long ago.",
+    "where": "port",
+    "conditions": ["port == {port}"],
+    "roles": {"port": {"from": "port"}, "listener": {"from": "new"}},
+    "choices": [
+      {"text": "Dig anyway", "check": {"who": "captain", "skill": "navigation", "dc": 13},
+       "outcomes": ["cargo silver +8", "opinion crew +3", "event silver_listener 5 120"], "result": "The old man's paces lead to a second hole the diggers missed: two chests of silver, black with tarnish. The rest is gone. Someone else heard him.",
+       "fail_outcomes": ["time 2", "event silver_listener 5 120"], "fail_result": "Nothing but empty holes and an iron chest lid, kicked aside. Someone else heard him."},
+      {"text": "Take the whole crew ashore and turn the cay over", "conditions": ["crew >= 20"],
+       "outcomes": ["cargo silver +10", "time 3", "event silver_listener 5 120"], "result": "Three days and every hand with a spade. You find what the first diggers missed, and the marks of a boat that was here a week ago."}
+    ]
+  },
+
+  "silver_listener": {
+    "story": "silver", "act": 3, "chain_only": true,
+    "title": "Tarnished silver",
+    "text": "In the tavern, {listener} is buying rounds for the whole room, and paying with silver bars black with tarnish. They see you come in, and the smile goes.",
+    "where": "port",
+    "conditions": ["port_fence"],
+    "roles": {"port": {"from": "port"}, "listener": {"from": "new"}},
+    "choices": [
+      {"text": "Make them talk", "check": {"who": "captain", "skill": "intimidation", "dc": 13},
+       "outcomes": ["fear +1", "event silver_race 2 60"], "result": "Up against the wall, {listener} tells you everything. They couldn't carry it all: their friends sail tomorrow to fetch the rest from where they hid it.",
+       "fail_outcomes": ["event silver_race 1 60"], "fail_result": "{listener} slips out of the back while your bosun is still getting up off the floor. They'll warn the others."},
+      {"text": "Offer a partnership: halves", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["hire {listener}", "event silver_race 2 60"], "result": "{listener} spits on a palm and shakes yours. Their friends have the rest, and they don't know {listener} has changed sides.",
+       "fail_outcomes": ["event silver_race 1 60"], "fail_result": "{listener} laughs in your face. You'll have to take it the hard way."},
+      {"text": "Let them have it", "outcomes": ["honour +1", "ending silver let_go"], "result": "It was a dying man's story. Let somebody have the luck of it."}
+    ]
+  },
+
+  "silver_race": {
+    "story": "silver", "act": 4, "chain_only": true,
+    "title": "A sloop low in the water",
+    "text": "There she is: a sloop beating out of a cay's lee, sitting low in the water. The old man's silver is in her hold.",
+    "where": "sea",
+    "roles": {"port": {"from": "port"}, "listener": {"from": "new"}},
+    "choices": [
+      {"text": "Run her down", "outcomes": ["fight pirate pirates attack"], "won": "silver_hold", "lost": "silver_outrun", "result": "All sail. She's heavy, and you're not."},
+      {"text": "Let her go", "outcomes": ["ending silver let_go"], "result": "You watch her out of sight."}
+    ]
+  },
+
+  "silver_hold": {
+    "story": "silver", "act": 4, "chain_only": true,
+    "title": "The old man's silver",
+    "text": "Her hold is half full of tarnished bars and broken church plate, stamped with the arms of Panama. The crew are already counting.",
+    "where": "any",
+    "roles": {"port": {"from": "port"}, "listener": {"from": "new"}},
+    "choices": [
+      {"text": "Share it out fair, by the articles", "outcomes": ["cargo silver +20", "opinion crew +5", "ending silver found"], "result": "Every hand gets a bar to hold. Some of them kiss it."},
+      {"text": "The captain's share first", "outcomes": ["cargo silver +28", "opinion crew -4", "ending silver found"], "result": "You take the best of it. The crew see you do it."}
+    ]
+  },
+
+  "silver_outrun": {
+    "story": "silver", "act": 4, "chain_only": true,
+    "title": "Hull down",
+    "text": "The sloop is hull down on the horizon, and the old man's silver with her.",
+    "where": "any",
+    "roles": {"port": {"from": "port"}, "listener": {"from": "new"}},
+    "choices": [
+      {"text": "Curse your luck", "outcomes": ["opinion crew -2", "ending silver lost"], "result": "The crew curse it with you."}
+    ]
+  },
+
+  "debt_interest": {
+    "story": "debt", "act": 2, "chain_only": true,
+    "title": "Interest",
+    "text": "A notice nailed up on the quay at {port}: the debt of {who}, now six hundred gold with interest, has been bought by a man who collects for the courts. He has collected before. {who} has gone very quiet.",
+    "where": "port",
+    "conditions": ["port != {town}"],
+    "roles": {"who": {"from": "crew"}, "town": {"from": "here"}},
+    "choices": [
+      {"text": "Pay it now (600 gold)", "conditions": ["gold >= 600"], "outcomes": ["gold -600", "want {who} done", "ending debt paid_dear"], "result": "Twice what it was. The collector counts it twice too."},
+      {"text": "Post a guard on {who}, and go to {town} to settle it", "check": {"who": "post.boatswain", "skill": "intimidation", "dc": 12},
+       "outcomes": ["opinion {who} +5", "event debt_house 0 180"], "result": "The collector's men come in the night, and find your bosun waiting with a cudgel. You'll settle this in {town}, face to face.",
+       "fail_outcomes": ["leave {who} handed_over", "ending debt taken"], "fail_result": "In the morning {who}'s hammock is empty, and there are marks on the rail where they were dragged over it."},
+      {"text": "Hand them over", "outcomes": ["leave {who} handed_over", "honour -2", "ending debt handed_over"], "result": "The collector thanks you. Nobody else does."}
+    ]
+  },
+
+  "debt_house": {
+    "story": "debt", "act": 3, "chain_only": true,
+    "title": "The counting house",
+    "text": "The counting house in {town} smells of ink and sealing wax. The lender sits behind a desk with two large men behind him and {who}'s debt in a ledger in front of him.",
+    "where": "port",
+    "conditions": ["port == {town}"],
+    "roles": {"who": {"from": "crew"}, "town": {"from": "here"}},
+    "choices": [
+      {"text": "Pay, with interest (600 gold)", "conditions": ["gold >= 600"], "outcomes": ["gold -600", "want {who} done", "ending debt paid_dear"], "result": "The lender strikes the line through with a flourish."},
+      {"text": "Make the debt the ship's: paid from the next voyages", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["wages +350", "want {who} done", "ending debt bargain"], "result": "The lender likes a debtor with a ship. The crew are less pleased: it comes out of the wages.",
+       "fail_outcomes": ["opinion {who} -3", "event debt_house 20 120"], "fail_result": "The lender wants coin, not promises. Come back when you have it."},
+      {"text": "Burn the ledger", "check": {"who": "captain", "skill": "intimidation", "dc": 14},
+       "outcomes": ["fear +2", "relation port -6", "bounty port +150", "want {who} done", "ending debt burned"], "result": "The lender's men take one look at your boarding party and find somewhere else to be. The ledger burns very nicely.",
+       "fail_outcomes": ["wound captain", "relation port -8", "bounty port +250", "want {who} done", "ending debt burned"], "fail_result": "It comes to fists and then knives, and the watch arrives before the smoke clears. You get out, and the ledger doesn't."},
+      {"text": "Hand {who} over after all", "outcomes": ["leave {who} handed_over", "honour -2", "ending debt handed_over"], "result": "You came all this way to do it. The crew won't forget that either."}
+    ]
+  },
+
+  "castaway_word": {
+    "story": "castaway", "act": 1, "chain_only": true,
+    "title": "A face from the sandbar",
+    "text": "A turtler in {port} tells a story over his rum: a castaway, taken off a sandbar more dead than alive. Thin as a rope, burnt black, and asking every captain in port about the {ship}. It's {who}, the one you marooned.",
+    "where": "port",
+    "roles": {"who": {"from": "new"}},
+    "choices": [
+      {"text": "Find them and make it right (200 gold)", "conditions": ["gold >= 200"], "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["gold -200", "honour +2", "ending castaway reconciled"], "result": "{who} takes the money and doesn't thank you. But the hate goes out of their eyes, a little.",
+       "fail_outcomes": ["gold -200", "event castaway_ship 30 120"], "fail_result": "{who} takes the money, and spends it on a ship."},
+      {"text": "Offer them their old berth back", "outcomes": ["hire {who}", "opinion crew +2", "ending castaway returned"], "result": "A long silence. Then {who} picks up their sea chest."},
+      {"text": "Pay someone to finish the job", "outcomes": ["honour -3", "fear +2", "event castaway_ship 30 120"], "result": "The man you pay comes back without his ear. {who} has friends now."},
+      {"text": "Let them talk", "outcomes": ["event castaway_ship 30 120"], "result": "Talk is cheap."}
+    ]
+  },
+
+  "castaway_ship": {
+    "story": "castaway", "act": 2, "chain_only": true,
+    "title": "Colours dipped, insolently",
+    "text": "A sloop crosses your bow at long range and dips her colours to you, slow and mocking. Through the glass you can see {who} at her rail, raising a hat.",
+    "where": "sea",
+    "roles": {"who": {"from": "new"}},
+    "choices": [
+      {"text": "Give chase", "outcomes": ["fight pirate pirates attack"], "won": "castaway_taken", "lost": "castaway_gone", "result": "All hands. You'll have them."},
+      {"text": "Hold your course", "outcomes": ["opinion crew -1", "event castaway_reckoning 20 120"], "result": "You let them go. The crew think you're afraid of them."}
+    ]
+  },
+
+  "castaway_reckoning": {
+    "story": "castaway", "act": 3, "chain_only": true,
+    "title": "Waiting off the cape",
+    "text": "{who} has been selling what they know: your ship's slow tack, the rotten timber by the stern post, how your gunners load. This morning a ship is waiting for you off the cape, and {who} is aboard her.",
+    "where": "sea",
+    "roles": {"who": {"from": "new"}},
+    "choices": [
+      {"text": "Fight", "outcomes": ["fight pirate pirates"], "won": "castaway_taken", "lost": "castaway_gone", "result": "There's no getting round her."},
+      {"text": "Run for it", "outcomes": ["fight pirate pirates flee"], "won": "castaway_taken", "lost": "castaway_gone", "result": "Every stitch of canvas."}
+    ]
+  },
+
+  "castaway_taken": {
+    "story": "castaway", "act": 3, "chain_only": true,
+    "title": "{who} in irons",
+    "text": "{who} is brought aboard in irons and stood on the deck where they once stood watch. The crew who sailed with them won't meet their eye.",
+    "where": "any",
+    "roles": {"who": {"from": "new"}},
+    "choices": [
+      {"text": "Hang them", "outcomes": ["fear +3", "opinion crew -2", "ending castaway hanged"], "result": "The crew do it. They don't like it."},
+      {"text": "Maroon them again, with a pistol this time", "outcomes": ["fear +2", "ending castaway marooned_again"], "result": "A sandbar, a bottle of water, a pistol, one ball."},
+      {"text": "Let them go: you're even", "outcomes": ["honour +3", "opinion crew +3", "ending castaway even"], "result": "You strike the irons off yourself and put them in a boat."}
+    ]
+  },
+
+  "castaway_gone": {
+    "story": "castaway", "act": 3, "chain_only": true,
+    "title": "Out there still",
+    "text": "{who} is gone over the horizon, and every captain in the islands will soon know what they know about your ship.",
+    "where": "any",
+    "roles": {"who": {"from": "new"}},
+    "choices": [
+      {"text": "So be it", "outcomes": ["opinion crew -2", "ending castaway escaped"], "result": "There'll be another day."}
+    ]
+  },
+
+  "pardon_old_friends": {
+    "story": "pardon", "act": 1,
+    "title": "Old friends",
+    "text": "{friend} is drinking in the corner of the tavern in {port}, still on the account, still in the old coat. They look up as you come in, and the whole room hears what they call you: turncoat.",
+    "where": "port", "weight": 20,
+    "conditions": ["pardoned", "not pirate"],
+    "roles": {"friend": {"from": "captain_npc", "where": ["faction == pirates"]}},
+    "choices": [
+      {"text": "Sit down and drink with them anyway", "outcomes": ["honour +1", "event pardon_commission 15 150"], "result": "By the third bottle you're both laughing about the old days. By the fourth, neither of you is."},
+      {"text": "Turn your back", "outcomes": ["event pardon_commission 15 150"], "result": "You hear them laugh behind you all the way to the door."}
+    ]
+  },
+
+  "pardon_commission": {
+    "story": "pardon", "act": 2, "chain_only": true,
+    "title": "The commission",
+    "text": "The governor's secretary in {port} has a paper for you: a commission to hunt down and bring in {friend}, who has refused the King's mercy. 'You know the haunts, Captain. And a pardon must be earned.'",
+    "where": "port",
+    "conditions": ["port_is.home"],
+    "roles": {"friend": {"from": "captain_npc"}},
+    "choices": [
+      {"text": "Take the commission", "outcomes": ["gold +300", "relation port +5", "event pardon_hunt 10 120"], "result": "Three hundred in advance, the rest on delivery."},
+      {"text": "Take it, and warn {friend}", "outcomes": ["gold +300", "relation port -5", "bond {friend} 1", "ending pardon warned"], "result": "You take the governor's money and send a boy to the old haunt with a message."},
+      {"text": "Refuse", "outcomes": ["relation port -3", "ending pardon refused"], "result": "The secretary makes a note."}
+    ]
+  },
+
+  "pardon_hunt": {
+    "story": "pardon", "act": 3, "chain_only": true,
+    "title": "The old haunts",
+    "text": "You know where {friend} waters, and there's their ship, careened on the beach where the two of you once careened together. They've seen you.",
+    "where": "sea",
+    "roles": {"friend": {"from": "captain_npc"}},
+    "choices": [
+      {"text": "Engage", "outcomes": ["fight pirate pirates attack"], "won": "pardon_taken", "lost": "pardon_away", "result": "Beat to quarters."},
+      {"text": "Let them slip away, and report that you lost them", "outcomes": ["honour +1", "relation home -4", "ending pardon let_slip"], "result": "You look the other way while they float her off on the tide."}
+    ]
+  },
+
+  "pardon_taken": {
+    "story": "pardon", "act": 3, "chain_only": true,
+    "title": "{friend} in irons",
+    "text": "{friend} sits in irons in your hold, the way you'd have sat if you'd been unluckier. 'Remember the Main?' they ask you. You do.",
+    "where": "any",
+    "roles": {"friend": {"from": "captain_npc"}},
+    "choices": [
+      {"text": "Deliver them to the gallows", "outcomes": ["gold +500", "relation home +10", "honour -2", "ending pardon delivered"], "result": "You hand them over at the quay. You don't stay for the hanging."},
+      {"text": "Cut their bonds in the night", "outcomes": ["honour +2", "relation home -8", "bond {friend} 1", "ending pardon freed"], "result": "A knife, a boat, a nod. That's all."}
+    ]
+  },
+
+  "pardon_away": {
+    "story": "pardon", "act": 3, "chain_only": true,
+    "title": "Away on the tide",
+    "text": "{friend} beats you off and gets away on the tide. You hear later what they're calling you in Nassau now.",
+    "where": "any",
+    "roles": {"friend": {"from": "captain_npc"}},
+    "choices": [
+      {"text": "Let them call you what they like", "outcomes": ["rivalry {friend} 2", "ending pardon escaped"], "result": "An old friend is the worst kind of enemy."}
+    ]
+  }
+}

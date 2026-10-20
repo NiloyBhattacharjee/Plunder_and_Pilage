@@ -105,7 +105,7 @@
   },
 
   "brethren_council": {
-    "title": "The captains' council",
+    "title": "A raid with the Brethren",
     "text": "The pirate captains in {port} are meeting in the old fort. They're planning a joint raid on a {nation_adj} convoy and want your ship.",
     "where": "port",
     "conditions": ["port_faction == pirates", "relation.pirates >= 0"],

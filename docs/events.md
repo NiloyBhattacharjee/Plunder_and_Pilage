@@ -38,6 +38,7 @@ use the role's name or "they". Historical figures and strangers described in the
 | `once` | Fires at most once per game. Otherwise `cooldown` days (default in `rules.json` `events`). |
 | `priority` | Fires as soon as its conditions hold (historical moments). Use with `once` and a date window. |
 | `chain_only` | Only fires when another event queues it. |
+| `story`, `act` | Part of a story (see Stories below). |
 | `choices` | 1 to 4. Each has `text`, optional `conditions` (unmet ones show greyed out with the reason), optional `check`, `outcomes`, `result`, and for checks `fail_outcomes` and `fail_result`. `hidden: true` hides the effect preview in the tooltip. |
 | `voice` | On a choice: how your people see it, `{"cruel": 2, "decent": -1, "greedy": 1, "bold": 1}` (negative: mercy, a dirty trick, money out, backing off). Officers and the hands you know speak for or against choices from their traits, and remember whether you listened (data/voices.json). Left out, it's read from the outcomes (`kill`, `fear`, `honour`, `gold`, `loot`, `fight`); `{}` keeps them quiet. Not the people the event is about. |
 | `check` | `{"who": "captain" or "post.surgeon" or "{role}", "skill": skill or stat, "dc": n, "bonus": [[condition, label, modifier]]}`. A d20 roll, shown in full; whoever rolls learns from it. |
@@ -64,6 +65,8 @@ What it remembers of you: `regard` (-100 to 100), and yes/no `deed.ID` (a deed i
 
 Yes/no: `own_town` (you hold the town you're in), `sacked` (you sacked the town you're in), `at_base` (anchored at one of your coves), `neutral` (no alliances or rivalries), `council_member`, `council_leader`, `unrest_known`, `shares` (no prey, no pay), `port_is.FACTION`, `at_sea`, `in_port`, `storm`, `pirate`, `privateer`, `honest`, `wanted`, `pardoned`, `pardon_open.FACTION`, `war.A.B`, `flag.NAME`,
 `contract.TEMPLATE`, `captain_trait.TRAIT`, `has_officer.POST`, `port_fence`, `true`.
+
+Stories: `story.ID` (the act an open story is at, 0 if it isn't running).
 
 Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `marque`, `home`.
 
@@ -94,11 +97,25 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `intel {captain}` | Learn every weak point of a named captain's ship: shown in battle before the first shot |
 | `abandon TEMPLATE` | Fails your active contract of that template (a double-cross, a bribe taken) |
 | `event ID [delay] [window]` | Chain: queue another event, with the same roles, after `delay` days; it waits up to `window` days for its conditions |
+| `ending STORY KEY` | Closes a story with one of its endings (data/stories.json) |
 | `fight KIND [faction] [mode]` | A battle: `merchant`, `pirate`, `navy`, `hunter`; mode `defend` (default), `attack`, `ambush`, `flee` |
 | `market PORT shortage` | Sets off a market shock from `economy.json` `shocks` (`shortage`, `glut`, `bad_harvest`, `hurricane`, `epidemic`, `warehouse_fire`, `garrison_reinforced`, `coin_shortage`, `piracy_wave`, `bankruptcy`) |
 | `time 3` | Days pass |
 | `want {r} done`, `want {r} ignored` | A person's want (data/wants.json) seen to (they're yours: opinion up, loyal) or let go (they remember) |
 | `deed fed_hungry` | The town you're in remembers what you did: its regard for you moves (data/port_life.json `_memory` `deeds`) |
+
+## Stories
+
+A story is a pre-written chain with a start, a peak and an ending: `data/stories.json` gives its title, summary, act names,
+endings (`{name, text}`, the text can use the story's roles), optional `boost` (`{event_id: multiplier}`: those events are likelier
+while it runs) and `repeat` (it can be told again once it ends). Its events (most of them in `data/events/stories.json`) carry
+`"story"` and `"act"`. Act 1 is the hook: it fires like any event, but only if the story hasn't been told and fewer than
+`rules.json` `events.max_stories` are running. Later acts are `chain_only` and come through `event` outcomes, carrying the roles,
+so each one must declare the roles it uses again. A choice that starts a battle can name what follows it: `"won": "event_id"` and
+`"lost": "event_id"` (lost: anything but taking or sinking her, fleeing included). Every choice of a story event must go
+somewhere: on to another of its events, into a fight with `won` and `lost`, or to `ending STORY KEY`; the validator checks it.
+If a chain runs out before its next act can happen (the window passes, someone in it dies), the story goes cold. The ship's log
+lists every story, the act it's at and what's happened so far.
 
 ## Structured effects (the market and the world)
 

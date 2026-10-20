@@ -1,0 +1,72 @@
+{
+  "_comment": "Stories: pre-written chains of events with acts and endings (scripts/events.gd, events in data/events/stories.json). An event with \"story\" and \"act\" moves its story on; \"ending STORY KEY\" closes it; a chain that runs out goes cold. At most rules.events.max_stories run at once. acts: names, shown in the log. endings: {name, text}; text can use the story's roles. boost: while it's open, these events are this many times likelier. repeat: it can be told again once it ends.",
+
+  "brother": {
+    "title": "A Brother's Knife",
+    "summary": "You sacked {town}. {avenger} lost a brother there, and means to make you pay for it.",
+    "acts": ["The knife", "Handbills", "The hunter", "Dawn"],
+    "boost": {"sacked_town_remembers": 3.0},
+    "endings": {
+      "killed": {"name": "Settled with steel", "text": "{avenger} died on the beach below {town}. The town buried them next to their brother."},
+      "murdered": {"name": "Settled with grape", "text": "Your gunners settled it from the boat. {town} will tell that story for a hundred years."},
+      "forgiven": {"name": "Forgiven, in a way", "text": "{avenger} took your money for the church roof. Forgiven is too strong a word. But it's over."},
+      "spared_you": {"name": "Spared", "text": "{avenger} had you on the sand with a blade at your throat, and let you live. You don't know what to do with that."},
+      "avenged": {"name": "Avenged", "text": "{avenger} watched you beaten and dragged into port, and that was enough. They went home."}
+    }
+  },
+
+  "silver": {
+    "title": "The Old Man's Silver",
+    "summary": "A dying buccaneer told you of Panama silver buried on a cay off {port}. Someone else was listening.",
+    "acts": ["Last words", "The cay", "Someone else listened", "The race"],
+    "endings": {
+      "passed_by": {"name": "Let it lie", "text": "You never went to the cay. Perhaps the silver is still there."},
+      "let_go": {"name": "Let it go", "text": "{listener} got the old man's silver. You got a story to tell."},
+      "found": {"name": "Silver from Panama", "text": "The old man's silver came aboard at last, in a stranger's hold."},
+      "lost": {"name": "Outrun", "text": "{listener}'s friends got away with the rest of the silver."}
+    }
+  },
+
+  "debt": {
+    "title": "The Debt",
+    "summary": "{who} owes money in {town}, and the people they owe it to don't forget.",
+    "acts": ["The ledger", "Interest", "The counting house"],
+    "repeat": true,
+    "endings": {
+      "paid": {"name": "Paid", "text": "The ledger is clean. {who} won't forget who cleaned it."},
+      "paid_dear": {"name": "Paid, dearly", "text": "Twice what it was. But {who} is free of it."},
+      "handed_over": {"name": "Handed over", "text": "{who} went to the debtors' prison. The crew remember."},
+      "taken": {"name": "Taken in the night", "text": "They came for {who} in the night, and nobody stopped them."},
+      "burned": {"name": "The ledger burned", "text": "No ledger, no debt. {town} won't love you for it."},
+      "bargain": {"name": "A bargain struck", "text": "{who}'s debt is the ship's debt now, paid from the next voyages."}
+    }
+  },
+
+  "castaway": {
+    "title": "The Castaway",
+    "summary": "You marooned {who}. They didn't die on the sandbar.",
+    "acts": ["Survived", "A ship of their own", "The reckoning"],
+    "endings": {
+      "reconciled": {"name": "Amends", "text": "You found {who} and paid what it was worth. Neither of you will call it friendship."},
+      "returned": {"name": "Back aboard", "text": "{who} took their old berth back. The crew watch them, and you, very carefully."},
+      "hanged": {"name": "Hanged", "text": "You hanged {who} from your own yardarm. Nobody aboard said a word."},
+      "marooned_again": {"name": "Marooned again", "text": "{who} went back to a sandbar, with a pistol and one ball this time."},
+      "even": {"name": "Even", "text": "You let {who} go. You're even, the two of you, or near enough."},
+      "escaped": {"name": "Still out there", "text": "{who} is out there still, and knows your ship better than you do."}
+    }
+  },
+
+  "pardon": {
+    "title": "The Pardon",
+    "summary": "You took the King's pardon. {friend}, who sailed on the account with you, didn't.",
+    "acts": ["Old friends", "The commission", "The hunt"],
+    "endings": {
+      "warned": {"name": "A word of warning", "text": "You warned {friend}. The governor will hear of it, sooner or later."},
+      "refused": {"name": "Not that", "text": "You turned down the commission. Pardoned men aren't supposed to say no."},
+      "let_slip": {"name": "Lost in the fog", "text": "You let {friend} slip away and reported that you'd lost them. Nobody believed you."},
+      "delivered": {"name": "Delivered", "text": "{friend} hanged at the next assizes. You were paid in full."},
+      "freed": {"name": "A cut rope", "text": "Somebody cut {friend}'s bonds in the night. The governor has a good idea who."},
+      "escaped": {"name": "Away", "text": "{friend} got away, and won't forgive you for coming after them."}
+    }
+  }
+}

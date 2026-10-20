@@ -15,33 +15,6 @@
     ]
   },
 
-  "dying_pirate": {
-    "title": "An old pirate's last words",
-    "text": "In a tavern back room an old buccaneer is dying of the drink. He grips your sleeve: 'Silver, Captain. Silver from the Panama raid, buried on a cay off {port}. I never went back for it.'",
-    "where": "port", "weight": 4,
-    "conditions": ["port_fence"],
-    "roles": {"port": {"from": "port", "where": ["not here"]}},
-    "choices": [
-      {"text": "Sit with him and hear it all", "outcomes": ["event dying_pirate_cay 0 365", "honour +1"], "result": "He dies before dawn. You have a bearing, a landmark, a number of paces."},
-      {"text": "Buy him a last bottle and leave him be", "outcomes": ["gold -5"], "result": "He dies happy, if not rich."}
-    ]
-  },
-
-  "dying_pirate_cay": {
-    "title": "The cay off {port}",
-    "text": "You anchor off {port}, row to the low cay the old man described, and find the blasted tree he swore by.",
-    "where": "port", "chain_only": true,
-    "conditions": ["port == {port}"],
-    "roles": {"port": {"from": "port"}},
-    "choices": [
-      {"text": "Dig", "check": {"who": "captain", "skill": "navigation", "dc": 13},
-       "outcomes": ["cargo silver +15", "opinion crew +5"], "result": "Three rotten sea chests. Silver bars, black with tarnish. The old man told the truth.",
-       "fail_outcomes": ["time 2", "opinion crew -2"], "fail_result": "Nothing. Perhaps the old man lied. Perhaps someone else listened."},
-      {"text": "Take the whole crew ashore and turn the cay over", "conditions": ["crew >= 20"],
-       "outcomes": ["cargo silver +12", "time 3"], "result": "Three days and every man with a spade. You find most of it."}
-    ]
-  },
-
   "map_seller": {
     "title": "A treasure map, cheap",
     "text": "A one-eyed man in the market unrolls a stained chart: 'Spanish gold, Captain, on an island near {port}. Yours for {price} pieces.'",

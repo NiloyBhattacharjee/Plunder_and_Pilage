@@ -13,6 +13,9 @@
      "want.debt",
      "want_here"
     ]
+   },
+   "town": {
+    "from": "here"
    }
   },
   "choices": [
@@ -24,14 +27,16 @@
     "outcomes": [
      "gold -300",
      "want {who} done",
-     "opinion crew +1"
+     "opinion crew +1",
+     "ending debt paid"
     ],
     "result": "The clerk strikes a line through the ledger. {who} shakes your hand and doesn't let go for a long moment."
    },
    {
     "text": "Tell them to come back when you've the money",
     "outcomes": [
-     "opinion {who} -3"
+     "opinion {who} -3",
+     "event debt_interest 15 150"
     ],
     "result": "They go, for now. {who} watches them all the way up the street."
    },
@@ -45,12 +50,14 @@
     "outcomes": [
      "fear +1",
      "relation port -3",
-     "opinion {who} +5"
+     "opinion {who} +5",
+     "event debt_interest 20 150"
     ],
     "result": "They back away from your boarding party. The debt is still owed, but the lender knows what it'll cost to collect.",
     "fail_outcomes": [
      "wound {who}",
-     "relation port -3"
+     "relation port -3",
+     "event debt_interest 15 150"
     ],
     "fail_result": "It comes to cudgels on the quay, and {who} takes the worst of it."
    },
@@ -59,11 +66,14 @@
     "outcomes": [
      "leave {who} handed_over",
      "honour -2",
-     "opinion crew -5"
+     "opinion crew -5",
+     "ending debt handed_over"
     ],
     "result": "They take {who} away in irons. Your crew watch in silence, and every one of them is thinking: me next?"
    }
-  ]
+  ],
+  "story": "debt",
+  "act": 1
  },
  "want_family": {
   "where": "port",

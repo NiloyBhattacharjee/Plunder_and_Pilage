@@ -2,7 +2,7 @@
   "_comment": "Taking towns and what comes after: towns that remember a sack, towns you hold, the price on your head, and the wars between nations. Also finds, contract and bond events to deepen thin categories.",
 
   "sacked_town_remembers": {
-    "title": "{port} remembers",
+    "title": "{port} remembers the sack",
     "text": "The last time you were in {port}, you took everything that wasn't nailed down. Doors close as you walk up from the quay. A child points at you, and is pulled indoors.",
     "where": "port", "weight": 30, "cooldown": 90,
     "conditions": ["sacked"],
@@ -10,16 +10,6 @@
       {"text": "Pay for the church roof you burned (300 gold)", "conditions": ["gold >= 300"], "outcomes": ["gold -300", "honour +3", "relation port +5", "bounty port -25%"], "result": "The priest takes your money without a word. But the word gets round."},
       {"text": "Walk tall: let them be afraid", "outcomes": ["fear +2", "notoriety +2", "relation port -3"], "result": "Nobody meets your eye. That's how you like it."},
       {"text": "Do your business and go", "outcomes": [], "result": "You don't linger."}
-    ]
-  },
-  "sacked_town_knife": {
-    "title": "A knife in the dark",
-    "text": "In an alley off the square in {port}, a man steps out of a doorway with a knife and your name on his lips. You took his house, his savings and his brother.",
-    "where": "port", "weight": 14, "cooldown": 120,
-    "conditions": ["sacked"],
-    "choices": [
-      {"text": "Fight", "check": {"who": "captain", "skill": "swordplay", "dc": 12}, "outcomes": ["fear +1"], "result": "It's over quickly. You leave him in the gutter for the watch.", "fail_outcomes": ["wound captain", "fear +1"], "fail_result": "You drive him off, but not before the blade finds your ribs."},
-      {"text": "Talk him down", "check": {"who": "captain", "skill": "charisma", "dc": 15}, "outcomes": ["honour +2"], "result": "He weeps, and drops the knife, and you leave him a purse he'll never forgive you for.", "fail_outcomes": ["wound captain"], "fail_result": "He isn't listening."}
     ]
   },
   "sacked_town_rebuilds": {

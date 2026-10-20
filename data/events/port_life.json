@@ -585,7 +585,7 @@
  "life_festival_bravo": {
   "where": "port",
   "chain_only": true,
-  "title": "A challenge",
+  "title": "A swordsman in the crowd",
   "text": "A local swordsman, all lace and swagger, steps out of the crowd and challenges any foreign captain to show what they're made of. The crowd turns to look at you.",
   "choices": [
    {
@@ -1329,7 +1329,7 @@
   "where": "port",
   "weight": 12,
   "cooldown": 90,
-  "title": "{port} remembers you",
+  "title": "Welcome back to {port}",
   "text": "Your boat has barely touched the quay before someone calls your name. A fishwife presses a basket on the coxswain, a carter offers to haul your water for nothing, and three young men off the waterfront ask if the {ship} needs hands.",
   "conditions": [
    "regard >= 8",

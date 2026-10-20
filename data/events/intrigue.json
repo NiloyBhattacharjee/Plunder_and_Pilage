@@ -184,7 +184,7 @@
   },
 
   "council_invitation": {
-    "title": "The captains' council",
+    "title": "A seat at the council",
     "text": "In the ruined fort above Nassau harbour, the captains of the council are drinking. One of them waves you over: your name is known now, and there's a seat for you if you want it.",
     "where": "port", "once": true, "weight": 40,
     "conditions": ["port == nassau", "not council_member", "notoriety >= 25", "relation.pirates >= 15"],

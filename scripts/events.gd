@@ -10,6 +10,8 @@ extends Node
 ##   "cargo {good} -all", "flag met_morgan", "event treasure_dig 0 120", "fight pirate pirates".
 ## {name} is replaced by the role's id in conditions and outcomes, and by its display name in texts.
 ## See docs/events.md for the full list. validate() checks every event at startup.
+## Stories (data/stories.json) are pre-written chains with acts and endings: an event with "story" and "act"
+## moves its story on, the outcome "ending STORY KEY" closes it, and a chain that runs out goes cold.
 
 const DIR := "res://data/events/"
 const VERBS := {  # verb: [min args, max args]
@@ -22,7 +24,7 @@ const VERBS := {  # verb: [min args, max args]
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
 	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
 	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1], "bounty": [2, 2],
-	"patrols": [2, 2], "town": [2, 2], "deed": [1, 1], "want": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1],
+	"patrols": [2, 2], "town": [2, 2], "deed": [1, 1], "want": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1], "ending": [2, 2],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
 	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc", "base"]
@@ -32,6 +34,9 @@ var errors := PackedStringArray()
 var fired := {}      # event id -> day it last fired
 var flags := {}      # flag -> day it expires (-1: never)
 var queue: Array = []  # [{id, at, until, vars}]
+var story_defs := {}  # data/stories.json
+var stories := {}     # story id -> {act, began, entries: [text], ended: day or -1, ending: key}
+var after_fight := {} # {won, lost, vars}: the story event that follows the battle a choice started
 var rng := RandomNumberGenerator.new()
 
 
@@ -49,6 +54,8 @@ func _init() -> void:
 			ev.id = id
 			ev.category = ev.get("category", file.get_basename())
 			events[id] = ev
+	story_defs = Data.read_json("res://data/stories.json")
+	story_defs.erase("_comment")
 	errors.append_array(validate())
 	for e in errors:
 		push_error("Events: " + e)
@@ -62,6 +69,8 @@ func reset() -> void:
 	fired = {}
 	flags = {}
 	queue = []
+	stories = {}
+	after_fight = {}
 
 
 static func cfg() -> Dictionary:
@@ -80,7 +89,10 @@ func pick(where: String, ctx: Dictionary) -> Dictionary:
 	for q in queue.duplicate():  # chains first: they wait until their moment comes
 		if today > q.until:
 			queue.erase(q)
-		elif today >= q.at and _fits(events[q.id], where):
+			var sid: String = events[q.id].get("story", "")
+			if sid != "" and not queue.any(func(o): return events[o.id].get("story", "") == sid):
+				end_story(sid, "cold")  # the trail ran out before the next act could happen
+		elif today >= q.at and _fits(events[q.id], where) and _story_ok(events[q.id]):
 			var inst := _instance(events[q.id], ctx, q.vars)
 			if not inst.is_empty():
 				queue.erase(q)
@@ -122,6 +134,8 @@ func _draw(where: String, ctx: Dictionary, exclude := []) -> Dictionary:
 		for wm in ev.get("weight_mods", []):
 			if test(wm[0], ctx, _with_builtins(inst.vars, ctx)):
 				w *= wm[1]
+		for sid in open_stories():  # an open story makes the events around it likelier
+			w *= float(story_defs[sid].get("boost", {}).get(ev.id, 1.0))
 		pool.append([inst, w])
 		total += w
 	var r := rng.randf() * total
@@ -163,7 +177,7 @@ func _fits(ev: Dictionary, where: String) -> bool:
 
 
 func _eligible(ev: Dictionary, where: String) -> bool:
-	if ev.get("chain_only", false) or not _fits(ev, where):
+	if ev.get("chain_only", false) or not _fits(ev, where) or not _story_ok(ev):
 		return false
 	if fired.has(ev.id):
 		if ev.get("once", false):
@@ -227,6 +241,46 @@ func _bind(spec: Dictionary, ctx: Dictionary, vars: Dictionary) -> Variant:
 	if cands.is_empty():
 		return null
 	return cands[rng.randi() % cands.size()]
+
+
+# ---- stories -------------------------------------------------------------------
+
+## A story's first act needs it not yet told (or "repeat") and room for it (rules events.max_stories); later acts need it open.
+func _story_ok(ev: Dictionary) -> bool:
+	if not ev.has("story"):
+		return true
+	if is_open(ev.story):
+		return int(ev.act) > 1
+	return int(ev.act) == 1 and (not stories.has(ev.story) or story_defs[ev.story].get("repeat", false)) 		and open_stories().size() < int(cfg().max_stories)
+
+
+func is_open(sid: String) -> bool:
+	return stories.has(sid) and stories[sid].ended < 0
+
+
+func open_stories() -> Array:
+	return stories.keys().filter(is_open)
+
+
+## Closes a story with one of its endings ("cold": the trail ran out). Returns the news.
+func end_story(sid: String, key: String) -> String:
+	if not is_open(sid):
+		return ""
+	var d: Dictionary = story_defs[sid]
+	var e: Dictionary = d.endings.get(key, {"name": "The trail went cold", "text": "Nothing more came of it."})
+	var st: Dictionary = stories[sid]
+	st.ended = Clock.day
+	st.ending = key
+	st.entries.append("%s. %s" % [e.name, _sub(e.text, st.get("vars", {}), true)])
+	return "%s: %s" % [d.title, e.name]
+
+
+## The battle a story event started is over: its next act follows (the choice's "won" or "lost" event).
+func after_battle(won: bool) -> void:
+	var id: String = after_fight.get("won" if won else "lost", "")
+	if id != "":
+		queue.append({"id": id, "at": Clock.day, "until": Clock.day + float(cfg().chain_window_days), "vars": after_fight.vars})
+	after_fight = {}
 
 
 # ---- conditions ----------------------------------------------------------------
@@ -345,6 +399,7 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"council_leader": return Politics.council_leader == "player"
 		"power": return Politics.power(ctx.port).get(rest, 0.0) if ctx.port != "" else 0.0
 		"true": return true
+		"story": return int(stories[rest].act) if is_open(rest) else 0  # the act an open story is at
 	return null
 
 
@@ -364,6 +419,7 @@ func _cand_value(key: String, cand: Variant, ctx: Dictionary) -> Variant:
 			"age": return c.age
 			"hidden": return not c.hidden.is_empty()
 			"office": return c.get("role", "")
+			"faction": return c.get("faction", "")
 			"bonded": return Bonds.level(ctx.s, id) != 0
 			"in_town": return PortLife.captain_here(ctx.get("port", "")) == id  # drinking in this port's tavern
 			"want": return Wants.open(c, rest)  # what they want, still hoping
@@ -441,7 +497,10 @@ func view(inst: Dictionary, ctx: Dictionary) -> Dictionary:
 			"voice": ch.get("voice", Voices.infer(ch.get("outcomes", [])))})
 	var said := Voices.dress(ctx.s, text(ev.text, vars, ctx), options, inst.vars.values(), rng)  # your people speak up
 	inst.voices = said.voices
-	return {"title": text(ev.title, vars, ctx), "text": said.text, "options": said.options}
+	var title := text(ev.title, vars, ctx)
+	if ev.has("story"):
+		title = "%s: %s" % [story_defs[ev.story].title, title]
+	return {"title": title, "text": said.text, "options": said.options}
 
 
 ## Applies a choice. Returns {text, effects: [lines], fight: {kind, faction, mode} or {}}.
@@ -461,6 +520,15 @@ func resolve(inst: Dictionary, index: int, ctx: Dictionary) -> Dictionary:
 			People.gain_xp(People.person(who), ch.check.skill, cfg().check_xp)
 	var res := {"text": text(ch.get("result" if success else "fail_result", ""), vars, ctx), "effects": [], "fight": {},
 		"mutiny": false, "id": ev.id, "title": text(ev.title, vars, ctx)}
+	if ev.has("story"):  # before the outcomes, so an ending lands after this act's entry
+		if not is_open(ev.story):
+			if stories.has(ev.story):  # a story told again ("repeat"): the last telling keeps its place in the log
+				stories["%s#%d" % [ev.story, stories.size()]] = stories[ev.story]
+			stories[ev.story] = {"act": 1, "began": Clock.date_string(), "entries": [], "ended": -1.0, "ending": ""}
+		var st: Dictionary = stories[ev.story]
+		st.act = int(ev.act)
+		st.vars = inst.vars.duplicate()
+		st.entries.append("%s, %s. %s" % [res.title, Clock.date_string(), res.text])
 	for o in ch.get("outcomes" if success else "fail_outcomes", []):
 		var line := _apply(_sub(o, vars, false), ctx, inst.vars, res)  # chains carry the roles, not the built-ins
 		if line != "":
@@ -471,6 +539,8 @@ func resolve(inst: Dictionary, index: int, ctx: Dictionary) -> Dictionary:
 		if Ports.state.has(str(inst.vars[k])):
 			named[k] = inst.vars[k]
 	res.effects.append_array(EconomyEffects.apply_all(ch.get("effects" if success else "fail_effects", []), named))
+	if not res.fight.is_empty() and (ch.has("won") or ch.has("lost")):
+		after_fight = {"won": ch.get("won", ""), "lost": ch.get("lost", ""), "vars": inst.vars.duplicate()}
 	res.effects = Array(lines) + res.effects + Voices.heard(ctx.s, inst.get("voices", []), index)
 	_cleanup(inst, ctx)
 	return res
@@ -482,7 +552,7 @@ func _cleanup(inst: Dictionary, ctx: Dictionary) -> void:
 		if events[inst.id].roles[name].from != "new":
 			continue
 		var id: String = inst.vars[name]
-		if not id in ctx.s.crew and not queue.any(func(q): return id in q.vars.values()):
+		if not id in ctx.s.crew and not queue.any(func(q): return id in q.vars.values()) and not id in after_fight.get("vars", {}).values():
 			People.remove(id)
 
 
@@ -646,6 +716,8 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 		"time":
 			Clock.advance(float(a[1]))
 			return "%d days pass" % int(a[1])
+		"ending":
+			return end_story(a[1], a[2])
 		"favour":
 			var who := _who(a[1], ctx, vars)
 			Politics.add_favours(who, s, int(a[2]))
@@ -961,6 +1033,41 @@ func validate() -> PackedStringArray:
 			for tok in _tokens(t):
 				if not (tok in known or tok.trim_suffix("_adj") in known):
 					out.append("%s: text uses an unknown {%s}" % [where, tok])
+		if ev.has("story"):
+			out.append_array(_check_story(ev, where))
+	for sid in story_defs:
+		if not events.values().any(func(ev): return ev.get("story", "") == sid and int(ev.get("act", 0)) == 1):
+			out.append("story '%s' has no act 1 event" % sid)
+	return out
+
+
+## Every choice in a story goes somewhere: on to another of its events, into a battle with won/lost events, or to an ending.
+func _check_story(ev: Dictionary, where: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	if not story_defs.has(ev.story):
+		return PackedStringArray(["%s: unknown story '%s'" % [where, ev.story]])
+	var d: Dictionary = story_defs[ev.story]
+	if int(ev.get("act", 0)) < 1 or int(ev.get("act", 0)) > d.acts.size():
+		out.append("%s: story '%s' has no act %s" % [where, ev.story, ev.get("act", "?")])
+	var ours := func(id: String) -> bool: return events.has(id) and events[id].get("story", "") == ev.story
+	for ch in ev.choices:
+		for k in ["won", "lost"]:
+			if ch.has(k) and not ours.call(ch[k]):
+				out.append("%s: '%s' event '%s' isn't part of story '%s'" % [where, k, ch[k], ev.story])
+		for path in (["outcomes", "fail_outcomes"] if ch.has("check") else ["outcomes"]):
+			var goes := false
+			for o in ch.get(path, []):
+				var a: PackedStringArray = o.split(" ", false)
+				if a[0] == "event" and ours.call(a[1]):
+					goes = true
+				elif a[0] == "fight" and ch.has("won") and ch.has("lost"):
+					goes = true
+				elif a[0] == "ending":
+					goes = true
+					if a[1] != ev.story or not d.endings.has(a[2]):
+						out.append("%s: unknown ending '%s'" % [where, o])
+			if not goes:
+				out.append("%s: choice '%s' leaves the story hanging (chain one of its events, fight with won/lost, or end it)" % [where, ch.get("text", "")])
 	return out
 
 
@@ -969,7 +1076,7 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
 	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base",
-	"town", "life", "towns", "own_town", "sacked", "bounty", "regard", "deed"]
+	"town", "life", "towns", "own_town", "sacked", "bounty", "regard", "deed", "story"]
 const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality", "taxes"]
 const BASE_KEYS := ["loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes"]
 const CAND_KEYS := ["in_town", "loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
@@ -999,11 +1106,12 @@ static func _tokens(t: String) -> Array:
 
 
 func save_state() -> Dictionary:
-	return {"fired": fired, "flags": flags, "queue": queue, "rng": str(rng.state)}
+	return {"fired": fired, "flags": flags, "queue": queue, "stories": stories, "rng": str(rng.state)}
 
 
 func load_state(d: Dictionary) -> void:
 	fired = d.fired
 	flags = d.flags
 	queue = d.queue
+	stories = d.get("stories", {})
 	rng.state = int(d.rng)

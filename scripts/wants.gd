@@ -181,6 +181,10 @@ static func part(s: Dictionary, id: String, how: String) -> String:
 		out.append(Bonds.former_officer(s, id, lvl) + (" They know every weak point of your ship." if lvl <= 0 else ""))
 		Crew.remove_hand(s, id, true)
 		return " ".join(out)
+	if how == "marooned" and c.has("want"):  # one you knew doesn't die on the sandbar: the story "castaway" (data/stories.json)
+		Events.queue.append({"id": "castaway_word", "at": Clock.day + 30.0, "until": Clock.day + 210.0, "vars": {"who": id}})
+		Crew.remove_hand(s, id, true)
+		return " ".join(out)
 	Crew.remove_hand(s, id)
 	return " ".join(out)
 

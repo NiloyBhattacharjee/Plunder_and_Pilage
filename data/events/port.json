@@ -113,7 +113,7 @@
   },
 
   "duel_challenge": {
-    "title": "A challenge",
+    "title": "Satisfaction at dawn",
     "text": "A young {nation_adj} gentleman claims you insulted his honour in the tavern last night. He demands satisfaction at dawn.",
     "where": "port",
     "roles": {"nation": {"from": "nation"}},
