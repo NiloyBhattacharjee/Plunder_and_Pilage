@@ -19,6 +19,7 @@ func _ready() -> void:
 	mat.set_shader_parameter("detail", load("res://assets/map/land_tile.png"))
 	mat.set_shader_parameter("map_size", Vector2(Data.map.size[0], Data.map.size[1]))
 	mat.set_shader_parameter("art_px", float(Data.table("palette").map_pixel))
+	mat.set_shader_parameter("tilt", Geo.TILT)
 	land.material = mat
 	add_child(land)
 
@@ -61,7 +62,7 @@ func _labels() -> void:
 		var pos := Geo.latlon_to_px(l.lat, l.lon)
 		var px := roundi(float(l.size) * zoom)  # world size -> screen pixels, drawn back down under a 1/zoom transform
 		var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-		draw_set_transform(pos, 0.0, Vector2.ONE / zoom)
+		draw_set_transform(pos, 0.0, Geo.UPRIGHT / zoom)
 		draw_string_outline(font, Vector2(-w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, roundi(5 * zoom), Color(0.04, 0.1, 0.2, 0.5))
 		draw_string(font, Vector2(-w / 2.0, 0), l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(0.9, 0.95, 1.0, 0.55))
 	draw_set_transform(Vector2.ZERO)

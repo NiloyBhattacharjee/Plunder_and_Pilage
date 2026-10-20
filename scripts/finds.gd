@@ -98,7 +98,7 @@ func _draw() -> void:
 		var p: Vector2 = (f.pos + Vector2(0, sin(t * 2.0 + f.pos.x) * 0.8)).round()
 		var pulse := fposmod(t * 0.6 + f.pos.y * 0.01, 1.0)
 		draw_arc(p, 8.0 + pulse * 12.0, 0.0, TAU, 24, Color(1.0, 0.95, 0.7, 0.7 * (1.0 - pulse)), 1.5)
-		draw_set_transform(p, 0.0, Vector2(1.6, 1.6))
+		draw_set_transform(p, 0.0, Geo.UPRIGHT * 1.6)
 		_icon(f.kind, Vector2.ZERO, t)
 		draw_set_transform(Vector2.ZERO)
 

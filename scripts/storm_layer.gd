@@ -17,8 +17,10 @@ func _draw() -> void:
 			continue
 		draw_circle(s.pos, s.radius, c)
 		draw_circle(s.pos, s.radius, Color(c, 0.8), false, 2.0)
-		draw_string(Style.font("italic"), s.pos - Vector2(60, 0), Data.rules.storms[s.kind].name,
+		draw_set_transform(s.pos, 0.0, Geo.UPRIGHT)
+		draw_string(Style.font("italic"), Vector2(-60, 0), Data.rules.storms[s.kind].name,
 			HORIZONTAL_ALIGNMENT_CENTER, 120, 20, Color(c, 1.0))
+		draw_set_transform(Vector2.ZERO)
 		if Data.rules.storms[s.kind].hull_damage_per_day > 0:
 			_rain(s, c)
 
@@ -43,4 +45,6 @@ func _fog(s: Dictionary, c: Color) -> void:
 		var r: float = sqrt(rng.randf()) * s.radius * 0.8
 		var p: Vector2 = s.pos + Vector2(cos(a), sin(a)) * r + Vector2(sin(t * 0.2 + i), cos(t * 0.15 + i)) * 4.0
 		draw_circle(p, s.radius * rng.randf_range(0.25, 0.45), Color(c, c.a * 0.35))
-	draw_string(Style.font("italic"), s.pos - Vector2(60, 0), Data.rules.storms[s.kind].name, HORIZONTAL_ALIGNMENT_CENTER, 120, 20, Color(0.4, 0.42, 0.48, 0.9))
+	draw_set_transform(s.pos, 0.0, Geo.UPRIGHT)
+	draw_string(Style.font("italic"), Vector2(-60, 0), Data.rules.storms[s.kind].name, HORIZONTAL_ALIGNMENT_CENTER, 120, 20, Color(0.4, 0.42, 0.48, 0.9))
+	draw_set_transform(Vector2.ZERO)

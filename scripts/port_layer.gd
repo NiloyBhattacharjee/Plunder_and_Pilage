@@ -69,12 +69,13 @@ func _draw() -> void:
 		elif trade_good == "@regard":
 			var word := PortLife.regard_word(id)
 			label += "  regard %+d%s" % [PortLife.regard(id), ", " + word.get_slice(":", 0) if word != "" else ""]
-		var k := 1.5 * s  # the town at a steady size on screen
-		draw_texture_rect(TOWN, Rect2(pos - Vector2(14, 18) * k, Vector2(28, 22) * k), false)
-		var pole := pos + Vector2(11, -14) * k  # a pennant in the nation's colours
-		draw_line(pole, pole + Vector2(0, -9) * k, Style.c("chart_ink"), 1.0 * k)
-		draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -9) * k, pole + Vector2(7, -7) * k, pole + Vector2(0, -5) * k]),
+		draw_set_transform(pos, 0.0, Geo.UPRIGHT * 1.5 * s)  # the town stands up, at a steady size on screen
+		draw_texture_rect(TOWN, Rect2(Vector2(-14, -18), Vector2(28, 22)), false)
+		var pole := Vector2(11, -14)  # a pennant in the nation's colours
+		draw_line(pole, pole + Vector2(0, -9), Style.c("chart_ink"), 1.0)
+		draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -9), pole + Vector2(7, -7), pole + Vector2(0, -5)]),
 			Style.c("wax") if not held.is_empty() else Color(Data.table("factions")[port.faction].color))
+		draw_set_transform(Vector2.ZERO)
 		_text(Style.font("pixel"), text_pos, label, 16, Style.c("chart_ink"), Style.c("chart_paper_light"))
 		var on := PortLife.active(id)  # what's going on there, under the name
 		if not on.is_empty():
@@ -85,7 +86,7 @@ func _draw() -> void:
 ## Text at a steady size on screen. Drawn at full size under a 1/zoom transform, so the glyphs are rasterised at
 ## screen resolution; drawing them at size/zoom instead makes tiny glyphs the camera then magnifies into a blur.
 func _text(font: Font, pos: Vector2, text: String, size: int, color: Color, outline := Color.TRANSPARENT) -> void:
-	draw_set_transform(pos, 0.0, Vector2.ONE / zoom)
+	draw_set_transform(pos, 0.0, Geo.UPRIGHT / zoom)
 	if outline.a > 0.0:
 		draw_string_outline(font, Vector2.ZERO, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, outline)
 	draw_string(font, Vector2.ZERO, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)

@@ -3,6 +3,12 @@ class_name Geo
 ## Projection constants come from data/map/coastline.json (written by tools/build_map.py) so both always match.
 ## Bearings are compass degrees: 0 = north (up the screen), 90 = east. Screen y points down.
 
+## The world map is seen from a camera tilted toward the north: the ground is squashed to TILT of its height on
+## screen (the sine of the camera's elevation: 1 is straight down). Things that stand up (towns, names, icons) are
+## drawn under UPRIGHT to undo it. The land's hills rise by the same angle (assets/map/land.gdshader).
+const TILT := 0.66
+const UPRIGHT := Vector2(1.0, 1.0 / TILT)
+
 const COMPASS := ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
 	"S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
 

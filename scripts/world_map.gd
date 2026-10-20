@@ -66,6 +66,7 @@ func _ready() -> void:
 
 	camera.limit_right = int(Data.map.size[0])
 	camera.limit_bottom = int(Data.map.size[1])
+	_zoom(1.0)  # the tilted view (Geo.TILT)
 
 	ship.terrain = terrain
 	ship.stats_changed.connect(func():
@@ -338,9 +339,9 @@ func _port_near(pos: Vector2, reach := 1.0) -> String:
 
 func _zoom(factor: float) -> void:
 	# Never zoom out past the point where the map stops filling the window.
-	var fit := get_viewport_rect().size / Vector2(Data.map.size[0], Data.map.size[1])
+	var fit := get_viewport_rect().size / (Vector2(Data.map.size[0], Data.map.size[1]) * Vector2(1.0, Geo.TILT))
 	var z := clampf(camera.zoom.x * factor, maxf(fit.x, fit.y), ZOOM_MAX)
-	camera.zoom = Vector2(z, z)
+	camera.zoom = Vector2(z, z * Geo.TILT)  # squashed north-south: a camera tilted toward the north
 	port_layer.zoom = z
 	$MapLayer.zoom = z
 
@@ -863,6 +864,16 @@ func _pixel_layers() -> void:
 	add_child(labels)
 	_overlays = [labels]
 	port_layer.reparent.call_deferred(labels)
+	var focus := CanvasLayer.new()  # HD-2D's miniature look: the far and near edges of the view out of focus
+	focus.layer = 1  # over the world, under the names
+	var blur := ColorRect.new()
+	blur.set_anchors_preset(Control.PRESET_FULL_RECT)
+	blur.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	blur.material = ShaderMaterial.new()
+	blur.material.shader = load("res://assets/map/tilt_shift.gdshader")
+	focus.add_child(blur)
+	add_child(focus)
+	_overlays.append(focus)
 	hud.layer = 5
 	ship.z_index = 2  # above the clouds
 	_daylight = CanvasModulate.new()

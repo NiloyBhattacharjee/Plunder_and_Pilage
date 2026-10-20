@@ -650,8 +650,10 @@ func _draw() -> void:
 			var back := -Geo.from_bearing(n.heading)
 			for k in range(1, 6):  # her wake
 				draw_rect(Rect2(n.pos + back * (6.0 + k * 3.0) - Vector2(1, 1), Vector2(2, 2)), Color(0.95, 0.98, 1.0, 0.6 - k * 0.1))
-			draw_string_outline(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, 4, Color(0.04, 0.08, 0.16, 0.7))
-			draw_string(font, n.pos + Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, Color(0.95, 0.95, 0.9))
+			draw_set_transform(n.pos, 0.0, Geo.UPRIGHT)
+			draw_string_outline(font, Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, 4, Color(0.04, 0.08, 0.16, 0.7))
+			draw_string(font, Vector2(-60, -18), n.enemy.name, HORIZONTAL_ALIGNMENT_CENTER, 120, 12, Color(0.95, 0.95, 0.9))
+			draw_set_transform(Vector2.ZERO)
 			if n.has("fight") and n.fight.attacker:
 				_gunfire(n)
 
