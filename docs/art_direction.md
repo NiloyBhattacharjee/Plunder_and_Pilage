@@ -18,6 +18,7 @@ whole-number scales, small palettes); depth, mood and drama come from real-time 
 | Windows and menus | 9-slice pixel frames, built into the Theme by `scripts/style.gd` | `assets/ui/pixel/` |
 | Portraits | HD pixel-art busts, 96x96, layered (background, clothes, head, eyes, nose, mouth, hair, beard, hat, and the marks a life at sea leaves). Skin and hair are drawn in grey ramps and tinted per character. Clean bands of shading with a thin seam of dither where they meet, a dark outline, light from the upper left. Drawn crisp when shown large, smoothed when shrunk into a small chip. Pirate types to start from (`portraits.json` `presets`) | `assets/portraits/` (`tools/make_pixel_portraits.py`) |
 | Top bar icons | 16 px pixel icons scaled x3 | `assets/icons/hud/` |
+| Painted scenes | 800x450 pictures, shown x2 behind the port screen (with mouse parallax, the hour's tint and lit windows at night, after an opening shot with the town's name) and x1 above a dialog's text, cropped to the middle band. Each port has its own (`port_<id>`, drawn from its tags and nation); events, sightings, sieges and endings point to theirs in `data/scenes.json`, and an event in port shows the port's. A scene is a folder: `back.png`, optional `front.png` (shifts more) and `lights.png` (added on from dusk). `ui/scene_view.gd` shows them | `assets/scenes/` (`tools/make_scenes.py`) |
 
 ## 2. Palette and fonts
 
@@ -47,3 +48,5 @@ English for body text (a period serif reads better in long text, as Octopath's o
 - Every broadside is a flash of light (`OmniLight3D`) on the firing ship; fires flicker orange until they're put out.
 - Glow is soft-light and only for bright things (flashes, fire, glints on the water). Fog thickens toward the horizon.
 - The depth of field blurs both the far horizon and the near water, so the ships read as miniatures.
+- A Break is the battle's big moment: the shields burst in shards, the world flashes white, time slows for a breath, and BREAK stands over her. Damage floats off the ship that took it (crits gold).
+- Storms on the map are drawn by the cloud shader (`paper.gdshader`): dense dark cloud with pixel rain and lightning, a hurricane turning about its eye, fog as a white bank, a calm as a pale sheen.

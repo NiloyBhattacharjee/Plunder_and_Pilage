@@ -232,6 +232,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_3: Clock.set_speed(3)
 			KEY_F: follow_ship = true
 			KEY_C: _open_crew()
+			KEY_M: hud.toggle_mute()
 			KEY_F5: _save()
 			KEY_F9: _load()
 
@@ -304,7 +305,7 @@ func _at_cove(id: String) -> void:
 		Bases.cove(id).description, Data.rules.bases.claim_cost, Data.rules.bases.claim_garrison, Tutorial.note(ship.state, "cove")],
 		[{"text": "Make it ours", "disabled": why != "", "tooltip": why if why != "" else "Shelter %d. %s%s" % [Bases.cove(id).shelter,
 			"Good soil for a plantation. " if Bases.cove(id).soil else "", "A spring: the garrison needs no water brought in." if Bases.cove(id).water else "No fresh water: bring it."]},
-		{"text": "Not now"}])
+		{"text": "Not now"}], SceneView.pick("cove"))
 	if pick == 0:
 		hud.show_message(Bases.claim(ship.state, id))
 		port_layer.queue_redraw()
@@ -377,7 +378,7 @@ func _on_arrived(id: String) -> void:
 		{"text": "Bribe the harbour master (%d gold)" % access.bribe, "disabled": s.gold < access.bribe,
 			"tooltip": "Usually works. Sometimes he takes the money and calls the guard anyway."},
 		{"text": "Lay siege to %s" % p.name, "disabled": Sieges.problem(s, id) != "", "tooltip": Sieges.problem(s, id) if Sieges.problem(s, id) != "" else SiegeFlow.preview(id)},
-	])
+	], "port_" + id)
 	if pick == 3:
 		await SiegeFlow.new(self).run(id)
 		return
@@ -418,7 +419,7 @@ func run_event(inst: Dictionary) -> void:
 	_in_event = true
 	var ctx := _event_ctx()
 	var v := Events.view(inst, ctx)
-	var pick: int = await dialog.ask(v.title, v.text, v.options)
+	var pick: int = await dialog.ask(v.title, v.text, v.options, v.scene)
 	var res := Events.resolve(inst, pick, ctx)
 	ship.refresh_stats()
 	var body: String = res.text
@@ -428,7 +429,7 @@ func run_event(inst: Dictionary) -> void:
 " if body != "" else "") + "
 ".join(res.effects)
 	if body != "":
-		await dialog.ask(v.title, body, [{"text": "Continue"}])
+		await dialog.ask(v.title, body, [{"text": "Continue"}], v.scene)
 	hud.show_message("%s: %s" % [v.title, ", ".join(res.effects.filter(func(e): return not e.begins_with("d20")))] if not res.effects.is_empty() else v.title)
 	if res.mutiny:
 		await run_mutiny()
@@ -450,7 +451,7 @@ func run_mutiny() -> void:
 	if r.outcome != "crushed":
 		await dialog.ask("Mutiny", r.text + "
 
-" + roll, [{"text": "Continue"}])
+" + roll, [{"text": "Continue"}], SceneView.pick("mutiny"))
 		hud.show_message(r.text)
 		return
 	var pick: int = await dialog.ask("The mutiny is crushed", r.text + "
@@ -459,7 +460,7 @@ func run_mutiny() -> void:
 		{"text": "Hang the ringleader", "tooltip": "Fear +3. The other mutineers will hate you a little more."},
 		{"text": "Maroon them all", "tooltip": "Every mutineer is put off the ship. Fear +2. You lose %d hands." % r.rebels.size()},
 		{"text": "Forgive them", "tooltip": "Honour +2. They think better of you; some think you weak."},
-	])
+	], SceneView.pick("mutiny"))
 	hud.show_message(Crew.punish(s, r.rebels, ["hang", "maroon", "forgive"][pick]))
 
 
@@ -493,7 +494,7 @@ Nobody will argue with them, but the crew start out resentful (morale %d)." % Da
 %s
 
 You will play on as the new captain." % [how_text, "
-".join(lines)], options)
+".join(lines)], options, SceneView.pick("succession"))
 	var id: String = winner.id if pick == 0 else force[pick - 1]
 	for m in Crew.make_captain(s, id, winner.how if pick == 0 else "force"):
 		hud.show_message(m)
@@ -567,7 +568,7 @@ func end_game(id: String) -> void:
 	var e := Endings.epitaph(ship.state, id)
 	if ship.state.get("ironman", false):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveGame.QUICKSAVE))
-	await dialog.ask(e.title, e.text, [{"text": "Start a new game"}])
+	await dialog.ask(e.title, e.text, [{"text": "Start a new game"}], SceneView.pick("ending." + id))
 	get_tree().change_scene_to_file("res://ui/new_game.tscn")
 
 
@@ -652,7 +653,7 @@ func hail(npc: Dictionary) -> void:
 			options.append({"text": "Take on hands who want a change of ship (%d)" % vol, "disabled": vol <= 0 or done.has("hands"),
 				"tooltip": "Seasoned men, used to a fight, and to having their say."})
 		options.append({"text": "Wish her a good voyage"})
-		var pick: int = await dialog.ask("Speaking the %s" % e.name, text, options)
+		var pick: int = await dialog.ask("Speaking the %s" % e.name, text, options, SceneView.pick("sail_ho"))
 		if pick == options.size() - 1:
 			break
 		match pick:
@@ -695,7 +696,7 @@ func inspection(npc: Dictionary) -> void:
 		{"text": "Show your commission", "disabled": s.career.marque != f, "tooltip": "A %s letter of marque: they'll wave you through." % Data.table("factions")[f].adjective},
 		{"text": "Offer the officer a gift (%d gold)" % cost, "disabled": s.gold < cost, "tooltip": "%d%% the officer pockets it and finds the hold in order. If not, he searches all the harder." % int(AtSea.cfg().bribe_success * 100)},
 		{"text": "Refuse, and run for it", "tooltip": "She'll chase you as a smuggler. Standing with %s -3." % Career.fname(f)},
-	])
+	], SceneView.pick("sail_ho"))
 	match pick:
 		0:
 			hud.show_message(AtSea.search(s, f, rng))
@@ -743,7 +744,7 @@ func battle_at_sea(npc: Dictionary) -> void:
 			ve.name, ae.name, join.why]},
 		{"text": "Stand off and wait for the winner", "tooltip": "Let them wear each other down, then deal with whoever's left, battered and slow."},
 		{"text": "Keep clear", "tooltip": "Not your fight."},
-	])
+	], SceneView.pick("fight"))
 	match pick:
 		0, 1:
 			var friend: Dictionary = v if pick == 0 else a
@@ -807,7 +808,7 @@ This is the %s you were hired to find." % enemy.name
 			{"text": "Crowd on sail and run", "tooltip": "Start the fight at long range with the weather gauge likely hers. Win a run for it and you're free.\nA fast, handy ship runs better; a shallower keel can lead her onto the shoals.", "voice": {"bold": -1}},
 			{"text": "Strike your colours", "tooltip": "Surrender without a fight. They'll strip your hold and take half your gold.", "voice": {"bold": -2, "greedy": -1}},
 		], [], rng)
-		var pick: int = await dialog.ask("Enemy sail!", said.text, said.options)
+		var pick: int = await dialog.ask("Enemy sail!", said.text, said.options, SceneView.pick("sail_ho"))
 		for m in Voices.heard(s, said.voices, pick):
 			hud.show_message(m)
 		match pick:
@@ -839,7 +840,7 @@ This is the %s you were hired to find." % enemy.name
 			{"text": "Hail her", "disabled": why_not != "", "tooltip": why_not if why_not != "" else "Heave to alongside: swap news, trade over the rail%s." % (", gam with the Brethren" if enemy.behaviour == "aggressive" else "")},
 			{"text": "Let her pass", "tooltip": "Hold your course.", "voice": {"bold": -1}},
 		], [], rng)
-		var pick: int = await dialog.ask("Sail ho!", said.text, said.options)
+		var pick: int = await dialog.ask("Sail ho!", said.text, said.options, SceneView.pick("sail_ho"))
 		for m in Voices.heard(s, said.voices, pick):
 			hud.show_message(m)
 		if pick == 1:
@@ -911,9 +912,8 @@ func _pixel_layers() -> void:
 
 ## The light of the hour: bright noon, gold at dusk and dawn, blue night with lit towns; storms darken it.
 func _update_daylight() -> void:
-	var hour := fposmod(Clock.day, 1.0) * 24.0
-	var night := clampf((absf(hour - 12.5) - 4.0) / 4.0, 0.0, 1.0)  # 0 from 8.30 to 16.30, gold toward 18, night by 20.30
-	var c := Color.WHITE.lerp(Color("#ffcf9a"), clampf(night * 2.0, 0.0, 1.0)).lerp(Color("#5a6cb0"), clampf(night * 2.0 - 1.0, 0.0, 1.0))
+	var night := Weather.night()
+	var c := Weather.tint()
 	if ship.wind.get("storm", "") != "":
 		c = c.darkened(0.3)
 	_daylight.color = c

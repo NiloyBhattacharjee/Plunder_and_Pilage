@@ -67,7 +67,7 @@ func _council(s: Dictionary) -> bool:
 		options.append([{"text": "Storm the town", "tooltip": "Land your men and assault the walls: you'll choose how many, and where."}, "storm"])
 		options.append([{"text": "Lift the siege", "tooltip": "Sail away. Come back within %d days and the damage you've done is still there, less what they repair (%d%% of the fort a day)." % [
 			cfg.memory_days, cfg.fort_repair_per_day]}, "lift"])
-		var pick: int = await world.dialog.ask("The siege of %s, day %d" % [Ports.port(g.port).name, int(Clock.day - g.day) + 1], _status(s), options.map(func(o): return o[0]))
+		var pick: int = await world.dialog.ask("The siege of %s, day %d" % [Ports.port(g.port).name, int(Clock.day - g.day) + 1], _status(s), options.map(func(o): return o[0]), "port_" + g.port)
 		var text := ""
 		match options[pick][1]:
 			"scout":
@@ -126,7 +126,7 @@ func _storm(s: Dictionary) -> Dictionary:
 	var all := _landing(s)
 	var sizes := [maxi(1, all / 3), maxi(1, all / 2), all]
 	var pick: int = await world.dialog.ask("Storm %s" % Ports.port(g.port).name, "How many men go ashore? Those left aboard keep the ship; the more you land, the more you can lose.", [
-		{"text": "A third: %d men" % sizes[0]}, {"text": "Half: %d men" % sizes[1]}, {"text": "Everyone but the ship-keepers: %d men" % sizes[2]}, {"text": "Think better of it"}])
+		{"text": "A third: %d men" % sizes[0]}, {"text": "Half: %d men" % sizes[1]}, {"text": "Everyone but the ship-keepers: %d men" % sizes[2]}, {"text": "Think better of it"}], "port_" + g.port)
 	if pick == 3:
 		return {}
 	var men: int = sizes[pick]
@@ -136,7 +136,7 @@ func _storm(s: Dictionary) -> Dictionary:
 		sides.append({"text": "Attack %s%s" % [Sieges.side_name(i), known], "tooltip": _assault_tip(s, men, i)})
 	sides.append({"text": "Think better of it"})
 	var side: int = await world.dialog.ask("Where do you land?", "Scouts would tell you where the walls are weak. %s" % (
-		"Yours did: %s." % Sieges.side_name(g.weak) if g.scouted else "You haven't scouted: one side is weaker, but you don't know which."), sides)
+		"Yours did: %s." % Sieges.side_name(g.weak) if g.scouted else "You haven't scouted: one side is weaker, but you don't know which."), sides, "port_" + g.port)
 	if side == sides.size() - 1:
 		return {}
 	var r := Sieges.assault(s, g, men, side, world.rng)
@@ -214,7 +214,7 @@ func _after_the_fall(s: Dictionary, id: String) -> void:
 			"tooltip": why if why != "" else "A base with walls, wharves and guns already built, and taxes of about %d gold a day.\nIt counts toward your %d bases. %s will send expeditions to take it back (standing -%d): garrison it and build up its fort." % [
 				Bases.taxes(id) * k.hold.loyalty / 100.0, Data.rules.bases.max, Career.fname(p.faction), k.hold.relation], "voice": {"bold": 1}},
 	], [], world.rng)
-	var pick: int = await world.dialog.ask("%s is yours" % p.name, said.text, said.options)
+	var pick: int = await world.dialog.ask("%s is yours" % p.name, said.text, said.options, SceneView.pick("sack"))
 	for m in Voices.heard(s, said.voices, pick):
 		world.hud.show_message(m)
 	match pick:

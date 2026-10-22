@@ -32,6 +32,9 @@ var _compass: Control
 var _log: Label
 var _portrait_for := ""
 var _ambition: Button
+var _mute: Button
+
+const SETTINGS := "user://settings.cfg"  # kept apart from saves: it's your machine's, not the game's
 
 
 func _ready() -> void:
@@ -104,6 +107,11 @@ func _ready() -> void:
 	_small_button(actions, "Crew & ship (C)", "Your captain, ship, officers, crew and the people you know.").pressed.connect(crew_pressed.emit)
 	_small_button(actions, "Save (F5)", "Quick-save.").pressed.connect(save_pressed.emit)
 	_small_button(actions, "Load (F9)", "Quick-load.").pressed.connect(load_pressed.emit)
+	_mute = _small_button(actions, "", "Music and sound on or off.")
+	_mute.pressed.connect(toggle_mute)
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	_set_mute(cfg.get_value("audio", "muted", false))
 	_ambition = _small_button(actions, "Ambition", "What your captain is striving for. Achieve it for a title, and sometimes a lasting edge.")
 	_ambition.pressed.connect(ambition_pressed.emit)
 	_modes = OptionButton.new()
@@ -196,6 +204,20 @@ func _divider(parent: Node) -> void:
 	d.custom_minimum_size = Vector2(1, 40)
 	d.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	parent.add_child(d)
+
+
+## Mutes the Master bus (map and battle music alike) and remembers it for next time.
+func toggle_mute() -> void:
+	_set_mute(not AudioServer.is_bus_mute(0))
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("audio", "muted", AudioServer.is_bus_mute(0))
+	cfg.save(SETTINGS)
+
+
+func _set_mute(on: bool) -> void:
+	AudioServer.set_bus_mute(0, on)
+	_mute.text = "Sound off (M)" if on else "Sound on (M)"
 
 
 func _small_button(parent: Node, text: String, tip: String) -> Button:

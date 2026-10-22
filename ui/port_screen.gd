@@ -15,9 +15,24 @@ var rumours_left := 0
 var disguised := false  # came in under false colours or by bribe: keep your head down
 var _town: VBoxContainer
 var _done := {}         # happenings you've already taken part in this visit
+var _scene := SceneView.new()  # the harbour behind the window
+var _name := Label.new()       # the town's name over it as you come in
 
 
 func _ready() -> void:
+	_scene.depth = 14.0
+	_scene.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_scene)
+	move_child(_scene, 0)
+	_name.theme_type_variation = &"Title"
+	_name.add_theme_font_size_override("font_size", 64)
+	_name.add_theme_constant_override("outline_size", 10)
+	_name.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	_name.offset_top = 110
+	_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_name)
 	%SetSail.pressed.connect(close)
 	%Hire1.pressed.connect(_act.bind(func(): return Ports.hire(port_id, 1, ship.state, ship.stats.crew_max)))
 	%Hire10.pressed.connect(_act.bind(func(): return Ports.hire(port_id, 10, ship.state, ship.stats.crew_max)))
@@ -53,6 +68,20 @@ func open(id: String, player_ship: Node2D, in_disguise := false) -> void:
 		%Status.text = "Ships in harbour bring news of prices at %d other port%s." % [heard, "" if heard == 1 else "s"]
 	refresh()
 	show()
+	_arrive()
+
+
+## Coming in: the harbour and the town's name first, then the window fades in over it.
+func _arrive() -> void:
+	if not _scene.show_scene("port_" + port_id):
+		return
+	_name.text = Ports.port(port_id).name
+	$Panel.modulate.a = 0.0
+	_name.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_interval(0.7)
+	tw.tween_property($Panel, "modulate:a", 1.0, 0.35)
+	tw.parallel().tween_property(_name, "modulate:a", 0.0, 0.35)
 
 
 ## Back from a happening's event: the same visit, picked up where you left it.

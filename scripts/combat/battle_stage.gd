@@ -297,6 +297,8 @@ func _process(delta: float) -> void:
 		p.y = sin(_t * 1.3 + sh.phase) * 0.08  # bob on the swell
 		sh.root.position = p
 		sh.root.rotation.z = sin(_t * 0.9 + sh.phase) * 0.025  # and roll
+		if sh.flag:  # the colours stream and snap in the wind
+			sh.flag.scale = Vector3(1.0 + sin(_t * 7.0 + sh.phase) * 0.07, 1.0 + sin(_t * 9.5 + sh.phase * 2.0) * 0.05, 1.0)
 		var fl: OmniLight3D = sh.fire_light
 		var target: float = sh.get("fire_target", 0.0)
 		fl.light_energy = lerpf(fl.light_energy, target * (0.7 + randf() * 0.6), minf(1.0, delta * 10.0))
@@ -313,6 +315,53 @@ func _process(delta: float) -> void:
 
 func shake(amount := 0.35) -> void:
 	_shake = maxf(_shake, amount)
+
+
+## A number that jumps off the ship that took the damage and fades as it rises. Crits are bigger and gold.
+func damage_number(i: int, amount: int, crit := false) -> void:
+	var l := _float_text(str(amount) + ("!" if crit else ""), Color("#ffd24a") if crit else Color("#fff4e0"), 96 if crit else 64)
+	l.position = ships[i].root.position + Vector3(randf_range(-0.6, 0.6), 1.0, 1.2)
+	var tw := create_tween().set_parallel()
+	tw.tween_property(l, "position:y", l.position.y + 0.9, 1.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(l, "modulate:a", 0.0, 0.4).set_delay(0.6)
+	tw.chain().tween_callback(l.queue_free)
+
+
+## Side i is Broken: her shields burst in shards, the world flashes white, and BREAK stands over her.
+func break_fx(i: int) -> void:
+	var at: Vector3 = ships[i].root.position + Vector3(0, 1.0, 0.8)
+	_puff(at, Vector3.UP, Color(0.55, 0.85, 1.0, 1.0), 40, 1.0, 0.16)
+	_puff(at, Vector3.UP, Color(1.0, 1.0, 1.0, 1.0), 12, 0.5, 0.1)
+	if _env:
+		var tw := create_tween()
+		_env.adjustment_brightness = 2.4
+		tw.tween_property(_env, "adjustment_brightness", 1.0, 0.45)
+	var l := _float_text("BREAK", Color("#ff5a3c"), 140)
+	l.position = at + Vector3(0, 0.4, 0.4)
+	l.scale = Vector3.ONE * 1.8
+	var tw := create_tween()
+	tw.tween_property(l, "scale", Vector3.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.9)
+	tw.tween_property(l, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(l.queue_free)
+	shake(0.8)
+
+
+func _float_text(text: String, color: Color, px: int) -> Label3D:
+	var l := Label3D.new()
+	l.text = text
+	l.font = Style.font("title")
+	l.font_size = px
+	l.pixel_size = 0.006
+	l.modulate = color
+	l.outline_size = 18
+	l.outline_modulate = Color(0.05, 0.03, 0.08)
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS  # writes depth, so the depth of field keeps it sharp like the ship
+	l.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	l.shaded = false
+	add_child(l)
+	return l
 
 
 ## A broadside from side i (or from an ally, by name): flashes that light the hull, smoke, and splinters or a splash.

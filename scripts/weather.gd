@@ -38,6 +38,17 @@ static func light() -> String:
 	return "night" if hour >= 20.0 or hour < 4.5 else "day"
 
 
+## How dark it is: 0 from 8.30 to 16.30, gold toward 18, full night by 20.30.
+static func night() -> float:
+	return clampf((absf(fposmod(Clock.day, 1.0) * 24.0 - 12.5) - 4.0) / 4.0, 0.0, 1.0)
+
+
+## The light of the hour as a tint: bright noon, gold at dusk and dawn, blue night. The map and the port scenes use it.
+static func tint() -> Color:
+	var n := night()
+	return Color.WHITE.lerp(Color("#ffcf9a"), clampf(n * 2.0, 0.0, 1.0)).lerp(Color("#5a6cb0"), clampf(n * 2.0 - 1.0, 0.0, 1.0))
+
+
 ## How far a lookout sees here, as a share of a clear day's sight: fog, rain and the dark hide ships,
 ## both from you and you from them.
 func visibility(pos: Vector2) -> float:

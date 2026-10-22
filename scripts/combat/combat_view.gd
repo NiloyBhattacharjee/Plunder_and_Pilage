@@ -533,7 +533,7 @@ func _show_entry(e: Dictionary) -> void:
 	var text: String = who + e.text
 	if e.text.begins_with("BREAK"):
 		text = "[b][color=#ff5a3c]%s[/color][/b]" % e.text
-		_shake()
+		_break(e.side)
 	elif e.text.begins_with("Round "):
 		text = "[b]%s[/b]" % e.text
 	elif e.text.begins_with("A weak point"):
@@ -549,18 +549,32 @@ func _show_entry(e: Dictionary) -> void:
 		stage.broadside(0, not e.text.contains("misses"), _ally_named(e.text))
 	elif e.text.begins_with("The fort at "):
 		stage.fort_fire(other_side(e.side), e.text.contains(" hits "))
+	_damage_number(e)
 
 
 static func other_side(i: int) -> int:
 	return 1 - i
 
 
+## The damage a log line reports, floated over the ship that took it: the side's own for fire and leaks
+## ("takes N damage"), otherwise the other side's (a broadside, an ally, the fort).
+func _damage_number(e: Dictionary) -> void:
+	var m := RegEx.create_from_string("(\\d+) damage").search(e.text)
+	if m == null or e.text.begins_with("Their guns answer"):  # that one's aimed at an ally
+		return
+	stage.damage_number(e.side if e.text.contains(" takes ") else (1 if e.side < 0 else other_side(e.side)),
+		int(m.get_string(1)), e.check.get("crit", false))
+
+
+## Breaking a ship is the big moment: the stage bursts her shields, and time slows for a breath.
+func _break(side: int) -> void:
+	stage.break_fx(side)
+	Engine.time_scale = 0.35
+	get_tree().create_timer(0.5, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
+
+
 func _log(text: String) -> void:
 	_log_box.append_text(text + "\n")
-
-
-func _shake() -> void:
-	stage.shake(0.6)
 
 
 func _ally_named(text: String) -> String:

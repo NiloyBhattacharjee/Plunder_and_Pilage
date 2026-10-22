@@ -4,3 +4,4 @@ tools/.venv/
 tools/cache/
 *.tmp
 tools/out/
+__pycache__/

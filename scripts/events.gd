@@ -500,7 +500,10 @@ func view(inst: Dictionary, ctx: Dictionary) -> Dictionary:
 	var title := text(ev.title, vars, ctx)
 	if ev.has("story"):
 		title = "%s: %s" % [story_defs[ev.story].title, title]
-	return {"title": title, "text": said.text, "options": said.options}
+	var scene: String = ev.get("scene", "port_" + ctx.port if ctx.get("port", "") != "" else "")  # in port, the port's own picture
+	if not SceneView.exists(scene):
+		scene = SceneView.pick("event." + ev.category)
+	return {"title": title, "text": said.text, "options": said.options, "scene": scene}
 
 
 ## Applies a choice. Returns {text, effects: [lines], fight: {kind, faction, mode} or {}}.

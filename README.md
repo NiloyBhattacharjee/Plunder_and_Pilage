@@ -10,7 +10,7 @@ Design rule: deep, not wide. Every feature must create a decision for the player
 
 **Screen:** the top bar shows the captain, the ship's resources (hover any of them for the breakdown), the wind, the date and the speed.
 
-**Controls:** left-click the sea or a port to set a course (the route goes around land). Wheel zooms, right/middle-drag pans, F follows the ship. Space pauses, 1/2/3 set the speed to 1x/2x/4x. F5 quick-saves, F9 quick-loads. C opens the crew and ship screen.
+**Controls:** left-click the sea or a port to set a course (the route goes around land). Wheel zooms, right/middle-drag pans, F follows the ship. Space pauses, 1/2/3 set the speed to 1x/2x/4x. F5 quick-saves, F9 quick-loads. C opens the crew and ship screen. M (or the Sound button) mutes the music, and stays that way next time.
 Other ships sail the map: merchants carrying cargo between ports, navy patrols, pirates and pirate hunters. Click a ship to give chase;
 hostile ones chase you. Battles are turn-based, Octopath style: every officer on both ships acts once a round, one at a time,
 in the order shown across the top (next round's too). On your officer's turn pick an action (the menu shows the odds; 1-9 picks).
