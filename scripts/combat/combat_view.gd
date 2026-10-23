@@ -101,7 +101,7 @@ func _advance() -> void:
 		boost = 0
 		_show_turn(t)
 		if t.side == 0 and _carry_on == battle.round_no:
-			await get_tree().create_timer(LINE_PAUSE).timeout
+			await get_tree().create_timer(LINE_PAUSE, false).timeout
 			battle.entries = []
 			battle.act(_repeat_pick(t.post))
 			await _play_entries()
@@ -111,7 +111,7 @@ func _advance() -> void:
 			continue
 		if t.side == 0:
 			break
-		await get_tree().create_timer(AI_PAUSE).timeout
+		await get_tree().create_timer(AI_PAUSE, false).timeout
 		battle.entries = []
 		battle.act_ai()
 		await _play_entries()
@@ -171,7 +171,7 @@ func _play_entries() -> void:
 	battle.entries = []
 	for e in list:
 		_show_entry(e)
-		await get_tree().create_timer(LINE_PAUSE).timeout
+		await get_tree().create_timer(LINE_PAUSE, false).timeout
 	_refresh()
 
 

@@ -202,3 +202,38 @@ func test_events_can_end_a_captaincy():
 	s.erase("succession")
 	res = Events.resolve(inst, 0, ctx)
 	assert_true(res.mutiny, "drawing your sword starts the mutiny")
+
+
+func test_hard_times_turn_the_crew_against_you_down_to_a_floor():
+	Crew.ensure(s)
+	var p := People.person(s.crew[0])
+	p.relations[s.captain] = 0
+	var hard := {"value": 10.0, "parts": [["No rum", -5.0]]}
+	for d in 6:
+		Crew.mood_day(s, hard)
+	assert_eq(Crew.opinion(p, s), 0, "a bad week is forgiven")
+	assert_eq(Crew.mood_day(s, hard).size(), 1, "the seventh day: they start to blame you, and you're told")
+	assert_lt(Crew.opinion(p, s), 0)
+	for d in 200:
+		Crew.mood_day(s, hard)
+	assert_eq(Crew.opinion(p, s), int(Crew.cfg().grudge.floor), "hardship alone stops at the floor")
+	p.relations[s.captain] = -50
+	for d in 30:
+		Crew.mood_day(s, hard)
+	assert_eq(Crew.opinion(p, s), -50, "nor deepens a grudge your deeds earned")
+	Crew.mood_day(s, {"value": 50.0, "parts": []})
+	assert_eq(s.hard_days, 0, "an ordinary day breaks the run")
+	p.relations[s.captain] = 0
+	for d in 200:
+		Crew.mood_day(s, {"value": 90.0, "parts": []})
+	assert_eq(Crew.opinion(p, s), int(Crew.cfg().grudge.good_cap), "good times win them only so far")
+
+
+func test_striking_and_a_bloodbath_are_laid_at_your_door():
+	var p := People.person(s.crew[0])
+	p.relations[s.captain] = 0
+	assert_ne(Crew.after_battle(s, "player_struck", {"casualties": 30.0, "crew_start": 60.0}), "")
+	assert_eq(Crew.opinion(p, s), int(Crew.cfg().grudge.struck) + int(Crew.cfg().grudge.losses))
+	p.relations[s.captain] = 0
+	assert_eq(Crew.after_battle(s, "enemy_struck", {"casualties": 1.0, "crew_start": 60.0}), "")
+	assert_eq(Crew.opinion(p, s), int(Crew.cfg().grudge.prize), "a prize cheaply taken warms them")

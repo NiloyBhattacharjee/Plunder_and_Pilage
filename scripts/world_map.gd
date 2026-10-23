@@ -166,6 +166,8 @@ func _process(delta: float) -> void:
 
 func _daily() -> void:
 	var s: Dictionary = ship.state
+	if int(Clock.day) % SaveGame.AUTOSAVE_DAYS == 0 and not busy() and s.hull > 0:  # before the day's news and events
+		SaveGame.save_game(self, SaveGame.QUICKSAVE if s.get("ironman", false) else SaveGame.AUTOSAVE)
 	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
 	Career.bounty_daily(s)
 	for m in Contracts.daily(s):
@@ -572,9 +574,15 @@ func end_game(id: String) -> void:
 	get_tree().change_scene_to_file("res://ui/new_game.tscn")
 
 
-func _save() -> void:
+func _save() -> Error:
 	var err := SaveGame.save_game(self)
 	hud.show_message("Game saved." if err == OK else "Save failed: %s" % error_string(err))
+	return err
+
+
+## Whether now is a moment to save (the Esc menu asks): not mid-battle, mid-event or mid-dialog.
+func can_save() -> bool:
+	return combat == null and not _in_event and not dialog.visible
 
 
 ## starting: the Continue button on the new-game screen (allowed in ironman: it's the only way back in).
@@ -585,7 +593,7 @@ func _load(starting := false) -> void:
 	for screen in [port_screen, crew_screen]:
 		if screen.visible:
 			screen.close()
-	var err := SaveGame.load_game(self)
+	var err := SaveGame.load_game(self, SaveGame.latest() if starting else SaveGame.QUICKSAVE)
 	port_layer.queue_redraw()
 	match err:
 		OK: hud.show_message("Game loaded (paused).")
@@ -1099,6 +1107,9 @@ func _settle_battle(result: Dictionary) -> void:
 			Crew.add_mod(s, "battle", "Victory over the %s" % e.name, Data.rules.crew.victory, Data.rules.crew.victory_days)
 		"player_struck":
 			Crew.add_mod(s, "battle", "We struck our colours", Data.rules.crew.defeat, Data.rules.crew.defeat_days)
+	var blame := Crew.after_battle(s, result.outcome, result.player)
+	if blame != "":
+		hud.show_message(blame)
 	match result.outcome:
 		"enemy_struck":
 			Ambitions.tally(s, "ships_taken")

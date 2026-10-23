@@ -56,3 +56,14 @@ func test_continue_without_a_valid_save_starts_a_default_game():
 	WorldMap.start_config = {}
 	assert_false(w.ship.state.is_empty())
 	assert_true(People.chars.has(w.ship.state.captain))
+
+
+func test_saving_over_a_save_replaces_it_whole():
+	world.ship.state.gold = 1.0
+	assert_eq(SaveGame.save_game(world, PATH), OK)
+	world.ship.state.gold = 2.0
+	assert_eq(SaveGame.save_game(world, PATH), OK, "the new save is swapped in over the old one")
+	assert_false(FileAccess.file_exists(PATH + ".tmp"), "nothing half-written left behind")
+	world.ship.state.gold = 0.0
+	SaveGame.load_game(world, PATH)
+	assert_eq(world.ship.state.gold, 2.0)

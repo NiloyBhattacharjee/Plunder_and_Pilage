@@ -13,10 +13,10 @@ static func cfg() -> Dictionary:
 
 
 static func ensure(s: Dictionary) -> void:
-	for k in ["articles", "morale_mods", "unrest", "days_at_sea", "last_plunder", "heir", "captains"]:
+	for k in ["articles", "morale_mods", "unrest", "days_at_sea", "last_plunder", "heir", "captains", "hard_days", "good_days"]:
 		if not s.has(k):
 			s[k] = {"articles": {"pay": "wages", "crew_share": 0.25}, "morale_mods": [], "unrest": fresh_unrest(),
-				"days_at_sea": 0, "last_plunder": Clock.day, "heir": "", "captains": []}[k]
+				"days_at_sea": 0, "last_plunder": Clock.day, "heir": "", "captains": [], "hard_days": 0, "good_days": 0}[k]
 
 
 static func fresh_unrest() -> Dictionary:
@@ -176,8 +176,63 @@ static func daily(s: Dictionary, stats: Dictionary, port: String, rng: RandomNum
 			Growth.auto_spend(People.person(id))
 	var msgs := disease_day(s, port, rng)
 	msgs.append_array(social_day(s, rng))
+	msgs.append_array(mood_day(s, morale(s, stats)))
 	msgs.append_array(unrest_day(s, stats, rng))
 	return msgs
+
+
+## Day after day of hard times and the crew start to blame you: each hand's opinion of you falls (the greedy faster
+## while unpaid, drinkers while the rum is gone), but hardship alone stops at a floor; past it, only what you do
+## can sink you. Good times win some of it back, up to a point. m: morale() for today.
+static func mood_day(s: Dictionary, m: Dictionary) -> Array:
+	var g: Dictionary = cfg().grudge
+	var hard: bool = m.value < g.below
+	var good: bool = m.value > g.good_above
+	s.hard_days = int(s.hard_days) + 1 if hard else 0
+	s.good_days = int(s.good_days) + 1 if good else 0
+	var days: int = s.hard_days if hard else s.good_days
+	if not (hard or good) or days < int(g.after_days) or (days - int(g.after_days)) % int(g.every_days) != 0:
+		return []
+	var hurts: Array = m.parts.filter(func(p): return p[1] < 0).map(func(p): return p[0])
+	var unpaid := hurts.any(func(l): return l.begins_with("Wages") or l.begins_with("No prey"))
+	var dry := "No rum" in hurts
+	for p in people(s):
+		var op := opinion(p, s)
+		if good:
+			p.relations[s.captain] = mini(op + 1, maxi(op, int(g.good_cap)))
+			continue
+		var t := tags(p)
+		var n := 1 + (1 if unpaid and "greedy" in t else 0) + (1 if dry and "drinks" in t else 0)
+		p.relations[s.captain] = maxi(op - n, mini(op, int(g.floor)))
+	if days != int(g.after_days):
+		return []
+	if good:
+		return ["Good times aboard: the crew are warming to you."]
+	return ["A hard week, and the crew have started to blame you for it. Their opinion of you will keep falling while morale stays below %d." % g.below]
+
+
+## What a fight leaves in their minds: striking the colours shames every hand, a bloodbath is laid at your door,
+## and a prize taken warms them (up to the good-times cap). after: your side at the end of the battle. Returns news, or "".
+static func after_battle(s: Dictionary, outcome: String, after: Dictionary) -> String:
+	var g: Dictionary = cfg().grudge
+	var n := 0
+	var why := []
+	if outcome == "player_struck":
+		n += int(g.struck)
+		why.append("you struck the colours")
+	if after.get("casualties", 0.0) > after.get("crew_start", INF) * float(g.heavy_losses):
+		n += int(g.losses)
+		why.append("so many dead")
+	if n == 0 and outcome == "enemy_struck":
+		for p in people(s):
+			var op := opinion(p, s)
+			p.relations[s.captain] = mini(op + int(g.prize), maxi(op, int(g.good_cap)))
+		return ""
+	if n == 0:
+		return ""
+	for p in people(s):
+		p.relations[s.captain] = clampi(opinion(p, s) + n, -100, 100)
+	return "The crew blame you: %s (opinion of you %+d)." % [" and ".join(why), n]
 
 
 ## Hands who can work: the sick still eat, but they don't haul on ropes.

@@ -264,6 +264,9 @@
     "reject_below": 0.3, "seize_intimidation": 14, "heir_bonus": 25, "leader_bonus": 40,
     "keep_relations": 0.6, "keep_honour_fear": 0.5, "keep_notoriety": 0.7,
     "elected": 5, "by_force": -20, "new_captain_days": 60,
+    "_grudge": "Hard times and good ones colour what each hand thinks of you (scripts/crew.gd mood_day). After after_days in a row with morale below `below`, every every_days each hand's opinion falls by 1 (by 1 more for the greedy while unpaid or idle of prey, and for drinkers while there's no rum), but hardship alone never takes it below `floor`: past that only your deeds can. After after_days above good_above it rises by 1 every every_days, up to good_cap. Battles (Crew.after_battle): struck the colours, lost more than heavy_losses of the crew, a prize taken (up to good_cap).",
+    "grudge": {"below": 35, "after_days": 7, "every_days": 3, "floor": -20, "good_above": 70, "good_cap": 10,
+               "struck": -5, "heavy_losses": 0.25, "losses": -2, "prize": 1},
     "disease": {
       "scurvy": {"name": "Scurvy", "after_days_at_sea": 40, "chance": 0.004, "death": 0.004, "recover": 0.03, "recover_port": 0.3},
       "flux": {"name": "The flux", "supplies_below_days": 3, "chance": 0.008, "death": 0.012, "recover": 0.1, "recover_port": 0.2},

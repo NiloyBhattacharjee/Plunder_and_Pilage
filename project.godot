@@ -4,6 +4,7 @@ config_version=5
 [application]
 
 config/name="Plunder and Pillage"
+config/version="0.1.0"
 run/main_scene="res://ui/new_game.tscn"
 config/features=PackedStringArray("4.7")
 
@@ -22,11 +23,13 @@ Bonds="*res://scripts/bonds.gd"
 Bases="*res://scripts/bases.gd"
 Contracts="*res://scripts/contracts.gd"
 Events="*res://scripts/events.gd"
+PauseMenu="*res://ui/pause_menu.gd"
 
 [display]
 
 window/size/viewport_width=1600
 window/size/viewport_height=900
+window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
 [editor_plugins]

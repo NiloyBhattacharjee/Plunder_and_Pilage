@@ -32,7 +32,7 @@ func _ready() -> void:
 	%Start.text = "Next: your captain"
 	%Start.pressed.connect(_captain_page)
 	%Continue.pressed.connect(func(): _go({"load": true}))
-	%Continue.disabled = not FileAccess.file_exists(SaveGame.QUICKSAVE)
+	%Continue.disabled = SaveGame.latest() == ""
 	_hints.text = "First-voyage hints"
 	_hints.button_pressed = true
 	_hints.tooltip_text = "A short word the first time you meet each part of the game."
