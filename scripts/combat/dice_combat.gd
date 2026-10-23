@@ -286,6 +286,8 @@ func _gunnery_parts(i: int, ammo: String) -> Array:
 		parts.append(["A steady deck", _mods[i].gunner])
 	if crippled(other(i)):
 		parts.append(["She can't manoeuvre", int(cfg().cripple.to_hit)])
+	if crippled(i):
+		parts.append(["Crippled: the guns won't bear", int(cfg().cripple.own_guns)])
 	return parts
 
 
@@ -692,7 +694,9 @@ func _act(i: int, post: String, id: String) -> void:
 			c = _contest(i, post, a)
 			if c.success:
 				_hit_morale(o, c.margin * cfg().intimidate_per_margin + Dice.roll(rng, 1, 6) + _boost * 3)
-			_note(i, post, "%s: %s. %s" % [who, a.name, "Their nerve cracks (morale %d)." % t.morale if c.success else "They jeer back."], c)
+			else:
+				t.morale += cfg().threat_backfire  # an empty threat heartens them
+			_note(i, post, "%s: %s. %s" % [who, a.name, "Their nerve cracks (morale %d)." % t.morale if c.success else "They jeer back, heartened (morale %d)." % t.morale], c)
 			if c.success:
 				_hit_weak(o, a.hits)
 		"demand":
@@ -781,7 +785,9 @@ func _act(i: int, post: String, id: String) -> void:
 			var honour := int(clampf(s.get("honour", 0) / cfg().quarter_honour_div, 0.0, 10.0))
 			if c.success:
 				_hit_morale(o, c.margin * cfg().quarter_per_margin + honour + _boost * 3)
-			_note(i, post, "%s: %s. %s" % [who, a.name, ("Men are looking at their boats and their colours (morale %d)." % t.morale) if c.success else "Their officers shout you down."], c)
+			else:
+				t.morale += cfg().threat_backfire
+			_note(i, post, "%s: %s. %s" % [who, a.name, ("Men are looking at their boats and their colours (morale %d)." % t.morale) if c.success else "Their officers shout you down (morale %d)." % t.morale], c)
 			if c.success:
 				_hit_weak(o, a.hits)
 
