@@ -37,7 +37,7 @@
     "round":        {"name": "Broadside: round shot", "skill": "gunnery", "dc": 0, "bands": [0, 1, 2, 3], "ammo": "round",
                      "description": "Smash her hull, guns and rudder. Too much and your prize sinks."},
     "chain":        {"name": "Broadside: chain shot", "skill": "gunnery", "dc": 0, "bands": [0, 1, 2], "ammo": "chain",
-                     "description": "Shred her sails and bring down masts. She'll struggle to run or manoeuvre."},
+                     "description": "Shred her sails and bring down masts, and leave her hull whole for a prize. Won't win the fight alone: once she's crippled (sails under half, or a mast gone) she can't run, is easier to hit and to talk into striking, so switch to round or grape."},
     "grape":        {"name": "Broadside: grape shot", "skill": "gunnery", "dc": 0, "bands": [1, 2, 3], "ammo": "grape",
                      "description": "Sweep her deck of men. Softens a crew before boarding."},
     "chase":        {"name": "Fire the chase guns", "skill": "gunnery", "dc": 0, "bands": [0, 1], "ammo": "round", "needs": "chase_guns",

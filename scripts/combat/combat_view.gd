@@ -454,7 +454,7 @@ func _show_turn(t: Dictionary) -> void:
 	UIKit.label(who, "%s %d (%+d)" % [People.SKILL_NAMES.get(skill, skill), DiceCombat.value(m, skill), Dice.mod(DiceCombat.value(m, skill))], "", Style.c("dim"))
 
 	var b: Dictionary = DiceCombat.cfg().boost
-	var tip := "Boost points: one banked each round (not the round after you boost), up to %d. Spend up to %d on an action: +%d to the roll per point, an extra die of damage for a broadside, and an extra shield stripped from a weak point. Q and E to change." % [b.max_points, b.max_spend, b.per_point]
+	var tip := "Boost points: one banked each round (not the round after you boost) and one for every failed roll, up to %d. Spend up to %d on an action: +%d to the roll per point, an extra die of damage for a broadside, and an extra shield stripped from a weak point. Q and E to change." % [b.max_points, b.max_spend, b.per_point]
 	UIKit.label(_boost_row, "Boost ", tip)
 	for k in int(b.max_points):
 		_pip(_boost_row, k < m.bp, Style.c("flash").darkened(0.25), 12, tip, false)

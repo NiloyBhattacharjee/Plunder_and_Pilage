@@ -225,6 +225,8 @@ func _turn_parts(i: int) -> Array:
 				parts.append([Data.table("perks")[id].name, int(r.bonus)])
 	if is_broken(i):
 		parts.append(["Broken", int(cfg().breaks.reeling)])
+	if i == _actor and _actor_action in ["intimidate", "quarter"] and sides[i].get("threats", 0) > 0:
+		parts.append(["They've heard it before", -int(cfg().threat_wear) * sides[i].threats])
 	if i == _actor:
 		for c in conditions:
 			var m := int(c.get("actions", {}).get(_actor_action, 0))
@@ -282,7 +284,15 @@ func _gunnery_parts(i: int, ammo: String) -> Array:
 			parts.append([c.name, g])
 	if _mods[i].gunner != 0:
 		parts.append(["A steady deck", _mods[i].gunner])
+	if crippled(other(i)):
+		parts.append(["She can't manoeuvre", int(cfg().cripple.to_hit)])
 	return parts
+
+
+## Sails in rags or a mast gone: she can't get away, and her crew know it.
+func crippled(i: int) -> bool:
+	var s: Dictionary = sides[i]
+	return s.sails < s.stats.sails * cfg().cripple.sails or s.masts < s.stats.masts
 
 
 func gun_dc(i: int) -> int:
@@ -336,6 +346,8 @@ func _dc_for(i: int, id: String, a: Dictionary) -> int:
 			dc -= sides[0].get("fear", 0) * cfg().demand_fear_per_point
 		if is_broken(other(i)):
 			dc += cfg().breaks.demand_dc
+		if crippled(other(i)):
+			dc += cfg().cripple.demand_dc
 		return int(dc)
 	if id == "close" or id == "open":
 		return cfg().uncontested_dc
@@ -430,6 +442,8 @@ func _do(side: int, post: String, id: String, boost: int) -> void:
 	else:
 		orders[side][post] = id
 		_act(side, post, id)
+		if id in ["intimidate", "quarter"]:
+			sides[side].threats = sides[side].get("threats", 0) + 1  # the next one is harder (_turn_parts)
 	_actor = -1
 	_boost = 0
 	_actor_post = ""
@@ -843,6 +857,10 @@ func _broadside(i: int, post: String, id: String, a: Dictionary) -> void:
 		" + margin" if c.margin >= 2 else "", dmg, dmg * fx.hull, dmg * fx.sails, killed]
 	if c.crit or (ammo in t.weak and rng.randf() < cfg().breaks.weak_crit):  # crits come mostly from weak points
 		text += " " + _crit(o, ammo)
+	if not t.get("crippled", false) and crippled(o):
+		t.crippled = true
+		_hit_morale(o, cfg().cripple.morale)
+		text += " Her rig hangs in ribbons: she can't get away, and her crew know it."
 	_note(i, post, text, c)
 	_hit_weak(o, ammo)
 
@@ -1106,7 +1124,7 @@ func ai_orders(i: int) -> Dictionary:
 					pick = "demand"
 				elif s.morale < 50:
 					pick = "rally"
-				elif can.has("intimidate") and b != "merchant":
+				elif can.has("intimidate") and b != "merchant" and s.get("threats", 0) < 2:
 					pick = "intimidate"
 				else:
 					pick = "steady"
@@ -1168,3 +1186,6 @@ func _xp(i: int, post: String, skill: String, success: bool) -> void:
 
 func _note(side: int, post: String, text: String, c := {}) -> void:
 	entries.append({"side": side, "post": post, "text": text, "check": c})
+	if not c.is_empty() and not c.success and side >= 0 and sides[side].party.has(post):  # a miss charges the next try
+		var m: Dictionary = sides[side].party[post]
+		m.bp = mini(int(cfg().boost.max_points), m.bp + int(cfg().boost.on_fail))

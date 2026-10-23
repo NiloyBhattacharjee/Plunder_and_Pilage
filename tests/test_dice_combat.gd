@@ -323,3 +323,32 @@ func test_crits_fit_the_weak_point():
 		b._crit(1, "chain")
 	assert_lt(b.sides[1].masts, masts, "chain on a lofty rig brings masts down")
 	assert_eq(b.sides[1].leak, 0, "chain doesn't hole her")
+
+
+func test_misses_bank_boost_threats_wear_thin_and_a_crippled_ship_loses_heart():
+	var b := battle("pirate", "attack", 3)
+	var m: Dictionary = b.sides[0].party.captain
+	m.bp = 0
+	b._note(0, "captain", "a miss", {"success": false})
+	assert_eq(m.bp, 1, "a failed roll banks a point")
+	b.band = 2
+	b._actor = 0
+	b._actor_action = "intimidate"
+	assert_false(b._turn_parts(0).any(func(p): return p[0] == "They've heard it before"), "the first threat is free")
+	b.sides[0].threats = 2
+	assert_true(b._turn_parts(0).has(["They've heard it before", -2 * int(Data.rules.dice_combat.threat_wear)]))
+	b._actor = -1
+	var t: Dictionary = b.sides[1]
+	assert_false(b.crippled(1))
+	var dc := b._dc_for(0, "demand", {})
+	t.masts -= 1
+	assert_true(b.crippled(1))
+	assert_lt(b._dc_for(0, "demand", {}), dc, "easier to talk into striking")
+	t.sails = 1.0
+	var before: float = t.morale
+	for k in 30:  # until a broadside lands
+		b._broadside(0, "master_gunner", "round", DiceCombat.actions().master_gunner.round)
+		if t.get("crippled", false):
+			break
+	assert_true(t.get("crippled", false))
+	assert_lt(t.morale, before - Data.rules.dice_combat.cripple.morale + 0.01)
