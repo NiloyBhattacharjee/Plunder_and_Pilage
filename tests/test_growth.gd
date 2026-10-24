@@ -59,6 +59,7 @@ func test_builder_spends_only_captain_skills():
 	assert_eq(NewGame.build_points(page._build).skills, 0, "every skill point spent")
 	for k in page._build.skills:
 		assert_has(Data.rules.growth.build.captain_skills, k)
+	assert_true(Data.table("focus").has(page._focus), "a rolled pirate has a focus")
 
 
 func test_point_buy_captain():

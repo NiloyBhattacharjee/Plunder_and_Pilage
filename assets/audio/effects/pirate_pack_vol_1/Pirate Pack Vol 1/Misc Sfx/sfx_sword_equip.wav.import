@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://6yj8kimymuxy"
+path="res://.godot/imported/sfx_sword_equip.wav-0fed838748d53c94a747aa2fc6e4508c.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Misc Sfx/sfx_sword_equip.wav"
+dest_files=["res://.godot/imported/sfx_sword_equip.wav-0fed838748d53c94a747aa2fc6e4508c.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

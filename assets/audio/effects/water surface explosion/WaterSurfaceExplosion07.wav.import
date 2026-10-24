@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://dihuawr0k3hup"
+path="res://.godot/imported/WaterSurfaceExplosion07.wav-3b7dc32b3187b3e77298839e414ebaf5.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/water surface explosion/WaterSurfaceExplosion07.wav"
+dest_files=["res://.godot/imported/WaterSurfaceExplosion07.wav-3b7dc32b3187b3e77298839e414ebaf5.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

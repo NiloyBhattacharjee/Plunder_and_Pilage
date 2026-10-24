@@ -61,7 +61,7 @@
     "_min_margin": "A merchant sails only for a known price gap of at least this much (after the spreads), and stops buying when the next unit isn't worth it.",
     "keep_home": 0.3,
     "risk_aversion": 1.5,
-    "pirate_loss_per_day": 0.002,
+    "pirate_loss_per_day": 0.004,
     "storm_loss_per_day": [0, 0, 0, 0, 0, 0.001, 0.002, 0.004, 0.005, 0.003, 0.001, 0],
     "loss_risk": {"pirates": 0.12, "storm": 0.03, "player": 0.2, "guarda_costa": 0.06},
     "risk_breeds_pirates": 2.0,
@@ -156,5 +156,46 @@
     "cocoa": {"high": "The cocoa crop is in", "low": "Between cocoa crops"},
     "indigo": {"high": "The indigo vats are full", "low": "Few indigo cakes this time of year"},
     "cotton": {"high": "The cotton is picked", "low": "Little cotton till the picking"}
+  },
+  "piracy": {
+    "_comment": "The pirates as a population (scripts/economy/brethren.gd). Weekly rates. Men come from the idle seamen of the Americas: wars take men into the navies and privateers (war_service, enlist_rate) and the peace pays them off (pay_off_rate), so a long war ends in a crowd of hungry sailors. A war draws men in over war_ramp_weeks: a short war barely dents piracy, a long one empties the seas. Recruits gather at the havens and form a company at new_crew men. Calibrate with tools/economy_sim.gd, which prints the numbers each year: roughly 1,500 men at sea around 1680 (the last of the buccaneers), a few hundred in the war years after 1702, about 2,000 at the peak in 1717-1722, under 200 by 1726 (Marcus Rediker, Villains of All Nations).",
+    "start": {"year": 1680, "men": 1400, "idle": 2500},
+    "war_service": 5000, "war_ramp_weeks": 150, "enlist_rate": 0.04, "pay_off_rate": 0.025,
+    "new_hands": 25, "hired_rate": 0.01,
+    "recruit_rate": 0.0025, "no_haven": 0.8, "war_recruit": 0.25, "lure_per_prize": 0.02, "lure_max": 1.0,
+    "_recruit": "Recruits a week: idle x recruit_rate, x no_haven with no haven open, x war_recruit while privateering pays better, x up to 1 + lure_max when prizes are being taken.",
+    "new_crew": 50, "volunteers": [2, 6],
+    "attrition": 0.006, "disband_below": 15,
+    "split_at": 170, "split_chance": 0.08, "split_share": 0.35, "regroup_chance": 0.12,
+    "north_months": [6, 7, 8, 9], "north_chance": 0.15, "return_month": 11,
+    "_north": "In the hurricane months many companies sailed north to cruise off the Carolinas, Virginia and Newfoundland, and came back in the autumn.",
+    "catch_rate": 0.007, "catch_men": 250, "hanged_share": 0.2, "escaped_share": 0.3,
+    "pardon_take": 0.0025, "east_chance": 0.004, "war_commission": 0.01,
+    "navy_base": {"england": 2, "france": 1, "dutch": 1, "spain": 2},
+    "navy_max": {"england": 14, "france": 5, "dutch": 3, "spain": 6},
+    "ships_per_loss": 0.2, "navy_up": 0.006, "navy_down": 0.005, "war_diversion": 0.3, "navy_fear": 0.3,
+    "_navy": "Men-of-war on station against the pirates: navy_base, plus ships_per_loss for each recent merchant loss (pressure, fading by pressure_decay a week), up to navy_max. The Admiralty is slow: navy_up of the gap closes each week. At war, only war_diversion of them hunt pirates. They hunt where prizes are being taken (heat).",
+    "pressure_decay": 0.98, "heat_decay": 0.93, "heat_floor": 0.5,
+    "threat_men": 300,
+    "_threat": "A route's daily pirate loss is traffic.pirate_loss_per_day x (1 - e^(-men cruising the grounds at either end / threat_men)): it levels off as the grounds get crowded.",
+    "ships": [[75, "sloop"], [110, "brigantine"], [150, "brig"], [9999, "frigate"]],
+    "havens": {
+      "tortuga": {"until": 1697, "name": "Tortuga"},
+      "nassau": {"from": 1713, "name": "Nassau"}
+    },
+    "_havens": "Where pirates sell plunder and recruit. Tortuga's flibustiers were turned into privateers and planters by the Peace of Ryswick (1697); Nassau became the pirates' republic from about 1713, after the French and Spanish raids had emptied it, and stays theirs until a haven_closed effect (Woodes Rogers, 1718, unless you stop him).",
+    "grounds": {
+      "windward_passage": {"name": "the Windward Passage", "ports": ["port_royal", "santo_domingo", "tortuga"]},
+      "florida_straits": {"name": "the Florida Straits", "ports": ["havana", "st_augustine", "nassau"]},
+      "leeward_islands": {"name": "the Leeward Islands", "ports": ["basseterre", "st_eustatius", "saint_pierre", "bridgetown", "san_juan"]},
+      "spanish_main": {"name": "the Spanish Main", "ports": ["cartagena", "portobelo", "maracaibo", "la_guaira", "willemstad"], "quiet_months": [8, 9, 10]},
+      "bay_of_honduras": {"name": "the Bay of Honduras", "ports": ["trujillo", "campeche", "veracruz"]}
+    },
+    "_grounds": "Cruising grounds: the routes into and out of their ports are where a company takes prizes. Companies pick the ground with the most shipping and the fewest men-of-war.",
+    "names": {
+      "first": ["John", "Edward", "Thomas", "William", "Charles", "Richard", "Henry", "Samuel", "Jean", "Pierre", "Jacques", "Michel", "Laurens", "Jan", "Christopher", "Benjamin", "Francis", "George", "Nicholas", "Walter"],
+      "last": ["Harris", "Cole", "Mason", "Bristow", "Wynne", "Brand", "Fowler", "Grey", "Thorne", "Lucas", "Barrow", "Dubois", "Legrand", "Moreau", "Vos", "de Wit", "Hart", "Kemp", "Tyler", "Ashby", "Penn", "Quick", "Sallow", "Reed"],
+      "ships": ["Revenge", "Ranger", "Fortune", "Delivery", "Good Fortune", "Happy Return", "Adventure", "Black Joke", "Night Rambler", "Snap Dragon", "Rising Sun", "Speedwell", "Blessing", "Defiance", "Liberty", "Dragon", "Sea Nymph", "Batchelor's Delight", "Rover", "Squirrel"]
+    }
   }
 }

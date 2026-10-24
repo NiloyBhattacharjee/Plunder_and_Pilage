@@ -11,7 +11,8 @@
       {"text": "Stop their rum for a month", "outcomes": ["opinion {drunk} -5"], "result": "{drunk} takes it badly, but stays awake."},
       {"text": "Talk sense into {drunk}", "check": {"who": "captain", "skill": "charisma", "dc": 13},
        "outcomes": ["untrait {drunk} drunkard", "opinion {drunk} +5"], "result": "{drunk} swears off the bottle, and for once means it.",
-       "fail_outcomes": ["opinion crew -1"], "fail_result": "{drunk} nods along and is drunk again by the dog watch."}
+       "fail_outcomes": ["opinion crew -1"], "fail_result": "{drunk} nods along and is drunk again by the dog watch."},
+      {"text": "Share the next bottle with {drunk}, and say no more about it", "conditions": ["captain_trait.drunkard"], "outcomes": ["opinion {drunk} +10", "opinion crew -2"], "result": "{drunk} would die for you now. The rest of the watch would rather you didn't drink with the lookouts."}
     ]
   },
 
@@ -24,7 +25,8 @@
        "outcomes": ["opinion {loser} +10", "opinion {gambler} -10", "reveal {gambler}"], "result": "Loaded, as sure as sin. {gambler} pays it all back.",
        "fail_outcomes": ["opinion {loser} -5"], "fail_result": "You can't tell. The debt stands, and {loser} thinks you took sides."},
       {"text": "Ban gambling aboard", "outcomes": ["opinion crew -3", "opinion {gambler} -5"], "result": "The dice go over the side. Grumbling for a week."},
-      {"text": "A debt's a debt", "outcomes": ["opinion {loser} -8", "opinion {gambler} +5"], "result": "{loser} pays, and hates you both."}
+      {"text": "A debt's a debt", "outcomes": ["opinion {loser} -8", "opinion {gambler} +5"], "result": "{loser} pays, and hates you both."},
+      {"text": "Play {gambler} yourself, double or nothing, for {loser}'s debt", "conditions": ["captain_trait.gambler"], "check": {"who": "captain", "skill": "experience", "dc": 11}, "outcomes": ["opinion {loser} +10", "opinion {gambler} +3", "opinion crew +2"], "result": "You win {loser}'s debt back, and {gambler} laughs and shakes your hand. Best night below decks in months.", "fail_outcomes": ["gold -30", "opinion {loser} +5"], "fail_result": "You lose too, and pay both debts. {loser} is grateful, at least."}
     ]
   },
 
@@ -51,7 +53,8 @@
     "choices": [
       {"text": "Wait a day", "outcomes": ["time 1", "opinion crew +2"], "result": "Saturday dawns fair."},
       {"text": "We sail now", "check": {"who": "captain", "skill": "authority", "dc": 13},
-       "outcomes": ["fear +1"], "result": "They go to the capstan muttering.", "fail_outcomes": ["opinion crew -5", "opinion {sailor} -8"], "fail_result": "They go, but they'll blame you for every wave."}
+       "outcomes": ["fear +1"], "result": "They go to the capstan muttering.", "fail_outcomes": ["opinion crew -5", "opinion {sailor} -8"], "fail_result": "They go, but they'll blame you for every wave."},
+      {"text": "Look them in the eye, and give the order", "conditions": ["captain.authority >= 15"], "outcomes": ["fear +1"], "result": "Nobody says another word about Fridays."}
     ]
   },
 
@@ -130,7 +133,8 @@
     "choices": [
       {"text": "Moses' Law: thirty-nine lashes", "outcomes": ["opinion {thief} -15", "fear +2", "opinion crew +1"], "result": "The crew approve. Thieves get no sympathy."},
       {"text": "Maroon {thief} on the next cay", "conditions": ["pirate"], "outcomes": ["leave {thief} marooned", "fear +3", "opinion crew +2"], "result": "A pistol, a bottle of water, and a sandbar. Pirate justice."},
-      {"text": "Make {thief} pay it back from their share", "outcomes": ["opinion {thief} -5", "opinion crew -1"], "result": "Lenient. Some think too lenient."}
+      {"text": "Make {thief} pay it back from their share", "outcomes": ["opinion {thief} -5", "opinion crew -1"], "result": "Lenient. Some think too lenient."},
+      {"text": "Ask {thief} why", "conditions": ["captain_trait.merciful"], "outcomes": ["gold -20", "opinion {thief} +10", "untrait {thief} greedy", "opinion crew -1"], "result": "{thief} has been sending the bread ashore to a starving family. You find the money for it instead. Some of the crew think you soft."}
     ]
   },
 
@@ -238,7 +242,8 @@
     "choices": [
       {"text": "Pay what you owe and let them go ashore", "conditions": ["gold >= 100"], "outcomes": ["paywages", "opinion crew +4", "time 2"], "result": "Two days of riot ashore. They come back broke and happy."},
       {"text": "Promise to pay at the next port", "check": {"who": "captain", "skill": "charisma", "dc": 13},
-       "outcomes": ["opinion crew -1"], "result": "They believe you. This time.", "fail_outcomes": ["opinion crew -5", "crew -3"], "fail_result": "Three men take their chances ashore and never come back."}
+       "outcomes": ["opinion crew -1"], "result": "They believe you. This time.", "fail_outcomes": ["opinion crew -5", "crew -3"], "fail_result": "Three men take their chances ashore and never come back."},
+      {"text": "Promise them Tortuga, and make them believe it", "conditions": ["captain.charisma >= 14"], "outcomes": ["opinion crew +2"], "result": "By the time you're done they can taste the rum. Nobody asks about the back pay."}
     ]
   },
 
@@ -273,7 +278,8 @@
     "roles": {"bosun": {"from": "officer", "where": ["post == boatswain", "intimidation >= 10"]}},
     "choices": [
       {"text": "Tell {bosun} to ease off", "outcomes": ["opinion crew +3", "opinion {bosun} -5"], "result": "The beatings stop. Discipline slackens, a little."},
-      {"text": "Back {bosun}: a ship runs on discipline", "outcomes": ["opinion crew -4", "fear +2", "opinion {bosun} +5"], "result": "The men work faster, and hate faster."}
+      {"text": "Back {bosun}: a ship runs on discipline", "outcomes": ["opinion crew -4", "fear +2", "opinion {bosun} +5"], "result": "The men work faster, and hate faster."},
+      {"text": "Show {bosun} how the Navy does it: by the book, and the book is fair", "conditions": ["captain_trait.former_navy"], "outcomes": ["opinion crew +2", "opinion {bosun} +2", "fear +1"], "result": "Punishment by the articles, read aloud, the same for everyone. The men grumble less, and fear it more."}
     ]
   },
 
@@ -308,7 +314,8 @@
     "choices": [
       {"text": "Pay {sailor} off fairly", "conditions": ["gold >= 20"], "outcomes": ["gold -20", "leave {sailor} blessed", "honour +1"], "result": "{sailor} goes ashore with your blessing."},
       {"text": "Articles were signed: {sailor} stays", "check": {"who": "captain", "skill": "authority", "dc": 12},
-       "outcomes": ["opinion {sailor} -10"], "result": "{sailor} stays, sullen.", "fail_outcomes": ["leave {sailor} deserted", "opinion crew -2"], "fail_result": "{sailor} jumps ship that night."}
+       "outcomes": ["opinion {sailor} -10"], "result": "{sailor} stays, sullen.", "fail_outcomes": ["leave {sailor} deserted", "opinion crew -2"], "fail_result": "{sailor} jumps ship that night."},
+      {"text": "Pay {sailor} off with a month extra, for the family (40 gold)", "conditions": ["captain_trait.family_man", "gold >= 40"], "outcomes": ["gold -40", "leave {sailor} blessed", "honour +1", "opinion crew +3"], "result": "You know what it is to have someone waiting. {sailor} goes down the side with tears in their eyes."}
     ]
   },
 

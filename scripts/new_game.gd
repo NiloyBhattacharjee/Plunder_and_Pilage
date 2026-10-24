@@ -3,7 +3,6 @@ class_name NewGame
 ## (same model as any crew member) with a background layered on top, so anyone can succeed them later.
 
 
-## cfg: {name, nationality, background, ship_name}. Returns {state, start_port}.
 ## Point-buy for a new captain: a base, the background's bonuses, and the points spent ({stats: {k: n}, skills: {k: n}}).
 static func build_value(bg: Dictionary, b: Dictionary, key: String) -> int:
 	var g: Dictionary = Data.rules.growth.build
@@ -20,6 +19,8 @@ static func build_points(b: Dictionary) -> Dictionary:
 		"skills": int(g.skill_points) + (int(g.flaw_points) if b.get("flaw", "") != "" else 0) - spent.call(b.get("skills", {}))}
 
 
+## cfg: {name, nationality, background, ship_name, build?, focus? (data/focus.json), night? (open on the background's
+## "night": how you took the ship, data/events/night.json)}. Returns {state, start_port}.
 static func build(cfg: Dictionary) -> Dictionary:
 	People.reset()
 	Bases.reset()
@@ -59,6 +60,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 		var extra: Array = cap.traits.filter(func(t): return not t in bg.traits and not People._conflicts(bg.traits, t))
 		cap.traits = bg.traits.duplicate() + extra.slice(0, 1)
 	cap.hidden = []  # you know yourself
+	cap.focus = cfg.get("focus", "")
 	cap.history.append("Took command, %s." % Clock.date_string())
 	var cap_id := People.add(cap)
 
@@ -97,6 +99,8 @@ static func build(cfg: Dictionary) -> Dictionary:
 	state.bonds = {}
 	state.ironman = cfg.get("ironman", false)
 	state.tutorial = cfg.get("tutorial", false)
+	if cfg.get("night", false):
+		state.night = bg.get("night", "")  # played before anything else (WorldMap._play_night)
 	return {"state": state, "start_port": start_port}
 
 

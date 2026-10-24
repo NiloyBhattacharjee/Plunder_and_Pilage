@@ -1393,6 +1393,17 @@
      "opinion crew -1"
     ],
     "result": "They scatter. Your crew don't enjoy being hated."
+   },
+   {
+    "text": "Kneel at the back of the church and hear the mass for the dead",
+    "conditions": [
+     "captain_trait.devout"
+    ],
+    "outcomes": [
+     "honour +1",
+     "deed amends"
+    ],
+    "result": "Heads turn. Nobody speaks to you. But the next morning the chandler opens his shop."
    }
   ]
  }

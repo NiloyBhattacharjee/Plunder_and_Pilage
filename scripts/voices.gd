@@ -102,7 +102,7 @@ static func heard(s: Dictionary, voices: Array, pick: int) -> Array:
 		var c := People.person(v.id)
 		var heeded: bool = (pick == v.index) == v["for"]
 		var d := int(r.heeded if heeded else r.overruled)
-		c.relations[s.captain] = clampi(c.relations.get(s.captain, 0) + d, -100, 100)
+		Crew.feel(s, c, d, ("Listened to me: " if heeded else "Overruled me: ") + v.choice)
 		if heeded:
 			out.append("%s: you listened (opinion %+d)" % [c.name, d])
 		else:

@@ -68,5 +68,64 @@
       "freed": {"name": "A cut rope", "text": "Somebody cut {friend}'s bonds in the night. The governor has a good idea who."},
       "escaped": {"name": "Away", "text": "{friend} got away, and won't forgive you for coming after them."}
     }
+  },
+
+  "warrant": {
+    "title": "The Warrant",
+    "summary": "Captain {hunter}, the lieutenant you locked in the cable tier, has a warrant for mutiny with your name on it.",
+    "acts": ["The handbill", "The pennant", "The reckoning"],
+    "endings": {
+      "understood": {"name": "Torn in half", "text": "{hunter} heard the truth and tore up the warrant. You still don't know why you told it."},
+      "bought": {"name": "Bought and paid for", "text": "{hunter} had debts. The warrant went into the fire with the receipt."},
+      "killed": {"name": "Settled in an alley", "text": "{hunter} died in an alley in the islands. The navy will send someone else, someday."},
+      "hanged": {"name": "From your yardarm", "text": "You hanged {hunter} from your own yardarm, and {nation} will never forget it."},
+      "spared": {"name": "Spared", "text": "You put {hunter} ashore with their sword. Neither of you knows what that settled."},
+      "dead_on_paper": {"name": "Dead on paper", "text": "{hunter} wrote home that you drowned. Officially, you did."},
+      "beaten": {"name": "Next time, a rope", "text": "{hunter} beat you, took your colours and let you go. Next time, a rope."},
+      "cold": {"name": "Still out there", "text": "{hunter} stopped turning up. The warrant didn't stop being true."}
+    }
+  },
+
+  "brand": {
+    "title": "The Mark",
+    "summary": "{master} still holds your indenture: years left to serve, and a runaway's mark on your shoulder to say whose they are.",
+    "acts": ["The notice", "The slaver", "The answer"],
+    "endings": {
+      "freed": {"name": "Irons over the side", "text": "You freed a ship bound for {master}'s fields, and some of them chose to sail with you."},
+      "landed": {"name": "Where they asked", "text": "You took the people from {master}'s slaver where they asked to go. {master} lost a fortune and gained an enemy."},
+      "failed": {"name": "Beaten off", "text": "You tried to take {master}'s slaver, and failed. There's a price on your head for trying."},
+      "defied": {"name": "Ashes", "text": "You burned {master}'s letter in front of {master}'s lawyer. The warrants are still being bought."},
+      "bought": {"name": "Papers", "text": "You bought out your own indenture from a clerk in {town}. It shouldn't have cost anything."},
+      "threatened": {"name": "One day", "text": "You wrote to {master} that you'd come for them one day. {master} hasn't slept well since."},
+      "cold": {"name": "Still marked", "text": "{master} went quiet. The mark on your shoulder didn't."}
+    }
+  },
+
+  "partner": {
+    "title": "Who Took the Blame",
+    "summary": "{partner} held the quay the night you got away. Now they wait for a rope in the gaol at {town}.",
+    "acts": ["The letter", "The gaol"],
+    "endings": {
+      "freed": {"name": "A key after all", "text": "You bought {partner} out of the gaol at {town}. They sail with you now."},
+      "broke_out": {"name": "Over the wall", "text": "You broke {partner} out of the gaol at {town} in the night. {town} hasn't forgiven it."},
+      "pardoned": {"name": "Through the front door", "text": "You talked the governor of {town} round, and {partner} walked out free."},
+      "lawyer": {"name": "A good lawyer", "text": "You sent a lawyer instead of yourself. You never heard what happened."},
+      "hanged": {"name": "Too late", "text": "You tried to break {partner} out, and failed. They hanged the next morning."},
+      "abandoned": {"name": "Not your problem", "text": "You left {partner} to hang in {town} for what you did."},
+      "cold": {"name": "Somewhere else", "text": "{partner} hanged in {town} on a grey morning. You were somewhere else."}
+    }
+  },
+
+  "promise": {
+    "title": "A Lamp in the Window",
+    "summary": "You promised {dear}, in {town}, that you'd come back. They're still waiting.",
+    "acts": ["The letter", "The door", "The last letter"],
+    "endings": {
+      "house": {"name": "The house on the hill", "text": "There's a house on the hill above {town}, with {dear} and a lamp in the window."},
+      "aboard": {"name": "Aboard", "text": "{dear} sails with you now. Some promises you keep by changing them."},
+      "released": {"name": "Don't wait", "text": "You told {dear} not to wait. They didn't."},
+      "married": {"name": "Married a chandler", "text": "{dear} married a chandler in {town}. They wished you well, and meant it."},
+      "cold": {"name": "The lamp went out", "text": "You never went back to {town}. Eventually, {dear} stopped lighting the lamp."}
+    }
   }
 }

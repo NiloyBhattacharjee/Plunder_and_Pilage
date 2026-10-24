@@ -306,7 +306,7 @@ func _process(_delta: float) -> void:
 	_compass.heading = ship.heading
 	_compass.tooltip_text = _wind.tooltip_text
 	_compass.queue_redraw()
-	_date.text = Clock.date_string()
+	_date.text = "%s\n%s" % [Clock.date_string(), Weather.light().capitalize()]
 	for i in _speeds.size():
 		_speeds[i].disabled = Clock.speed_index == i
 

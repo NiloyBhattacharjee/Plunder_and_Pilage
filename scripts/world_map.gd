@@ -24,7 +24,7 @@ var _attacked := false
 var _overlays: Array = []  # the label layer, hidden with the world
 var _daylight: CanvasModulate
 var _music := AudioStreamPlayer.new()  # the Vandalorum tracks in assets/audio, shuffled; paused while a battle's on
-var _lights: Array = []    # towns' and your lantern's light at night
+var _ambience: AudioStreamPlayer       # the deck creaking, or a storm (_update_daylight); paused with the music
 var at_base := ""         # the cove you're anchored at, if any (a cove isn't a port: you count as at sea)
 var cove_anchors := {}    # cove id -> navigable anchorage
 var _raid_base := ""      # the base you're fighting for
@@ -46,6 +46,8 @@ var finds: Finds          # things floating at sea to sail to
 
 
 func _ready() -> void:
+	_ambience = Sfx.loop(self, "deck", -16.0)  # before the daylight first sets it
+	_ambience.process_mode = Node.PROCESS_MODE_ALWAYS
 	_pixel_layers()
 	_music.process_mode = Node.PROCESS_MODE_ALWAYS  # so hiding the world doesn't cut it; _show_world pauses it instead
 	_music.finished.connect(_next_track)
@@ -141,11 +143,23 @@ func _ready() -> void:
 		_first_port.call_deferred(start_port)
 
 
-## The first port of a new game: a hungry town, a word of welcome on a first voyage, then the port screen.
+## The first port of a new game: the night you took the ship, a hungry town, a word of welcome on a first voyage,
+## then the port screen.
 func _first_port(id: String) -> void:
+	await _play_night()
 	hud.show_message(Ports.start_market_event(id, "famine"))  # a town in need: a first chance to be remembered
 	await Tutorial.show(self, "welcome")
 	port_screen.open(id, ship)
+
+
+## How you came by the ship (data/events/night.json, by background): its scenes back to back, before anything else.
+func _play_night() -> void:
+	var first: String = ship.state.get("night", "")
+	ship.state.erase("night")
+	var inst := Events.instance_of(first, _event_ctx()) if first != "" else {}
+	while not inst.is_empty():
+		await run_event(Events.materialize(inst, _event_ctx()))
+		inst = Events.take_chain("night_", _event_ctx())
 
 
 func _process(delta: float) -> void:
@@ -168,6 +182,8 @@ func _daily() -> void:
 	var s: Dictionary = ship.state
 	if int(Clock.day) % SaveGame.AUTOSAVE_DAYS == 0 and not busy() and s.hull > 0:  # before the day's news and events
 		SaveGame.save_game(self, SaveGame.QUICKSAVE if s.get("ironman", false) else SaveGame.AUTOSAVE)
+	if int(Clock.day) % 7 == 0:
+		Stats.week(s, ship.stats, shipping.npcs)
 	s.reputation.notoriety = maxf(0.0, s.reputation.notoriety - Data.rules.career.notoriety_decay_per_day)
 	Career.bounty_daily(s)
 	for m in Contracts.daily(s):
@@ -178,6 +194,9 @@ func _daily() -> void:
 		hud.show_message(m)
 	for m in Wants.daily(s, rng):
 		hud.show_message(m)
+	var learned := Growth.focus_day(ShipStats.captain(s))
+	if learned != "":
+		hud.show_message(learned)
 	_deliver_news()
 	if ship.anchored_at == "" and not ship.route.is_empty():
 		var found := Bases.look_for_coves(s, ship.position)
@@ -234,6 +253,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_3: Clock.set_speed(3)
 			KEY_F: follow_ship = true
 			KEY_C: _open_crew()
+			KEY_L:
+				_open_crew()
+				crew_screen.show_charts()
 			KEY_M: hud.toggle_mute()
 			KEY_F5: _save()
 			KEY_F9: _load()
@@ -356,6 +378,8 @@ func _on_arrived(id: String) -> void:
 	var access := Career.port_access(ship.state, id)
 	if access.open:
 		hud.show_message("Anchored at %s." % Data.table("ports")[id].name)
+		Sfx.play("wave", -10.0)
+		Sfx.play_after(0.3, "anchor", -6.0)
 		var own := Wants.captain_arrives(ship.state, id)  # the captain's own want, seen to here
 		if own != "":
 			hud.show_message(own)
@@ -865,7 +889,7 @@ This is the %s you were hired to find." % enemy.name
 
 ## The port names and markers sit on a layer of their own (following the camera), so the night doesn't dim them.
 ## The map's own shaders snap to a grid of art pixels in world space, so there's no screen-wide pixel filter
-## to blur things when you zoom out. Day and night tint the world (a CanvasModulate), and lights come on at dusk.
+## to blur things when you zoom out. Storms darken the world (a CanvasModulate).
 func _pixel_layers() -> void:
 	var labels := CanvasLayer.new()
 	labels.layer = 2
@@ -887,46 +911,16 @@ func _pixel_layers() -> void:
 	ship.z_index = 2  # above the clouds
 	_daylight = CanvasModulate.new()
 	add_child(_daylight)
-	var glow := GradientTexture2D.new()
-	glow.fill = GradientTexture2D.FILL_RADIAL
-	glow.fill_from = Vector2(0.5, 0.5)
-	glow.fill_to = Vector2(1.0, 0.5)
-	glow.width = 128
-	glow.height = 128
-	var g := Gradient.new()
-	g.set_color(0, Color.WHITE)
-	g.set_color(1, Color(1, 1, 1, 0))
-	glow.gradient = g
-	_lights = []
-	for id in Data.table("ports"):
-		var l := PointLight2D.new()
-		l.texture = glow
-		l.color = Color("#ffc46b")
-		l.texture_scale = 1.2
-		l.position = Geo.latlon_to_px(Data.table("ports")[id].lat, Data.table("ports")[id].lon)
-		add_child(l)
-		_lights.append(l)
-	var lantern := PointLight2D.new()
-	lantern.texture = glow
-	lantern.color = Color("#ffb85a")
-	lantern.texture_scale = 0.6
-	lantern.energy = 0.0
-	lantern.set_meta("dim", 0.45)  # a lantern, not a lighthouse
-	ship.add_child(lantern)
-	_lights.append(lantern)
 	Clock.ticked.connect(func(_dd): _update_daylight())
 	_update_daylight()
 
 
-## The light of the hour: bright noon, gold at dusk and dawn, blue night with lit towns; storms darken it.
+## One steady light (the hour shows by the date in the HUD, not as the map flashing light and dark); storms darken it.
 func _update_daylight() -> void:
-	var night := Weather.night()
-	var c := Weather.tint()
-	if ship.wind.get("storm", "") != "":
-		c = c.darkened(0.3)
-	_daylight.color = c
-	for l in _lights:
-		l.energy = clampf(night * 1.6 - 0.3, 0.0, 1.2) * l.get_meta("dim", 1.0)
+	var storm: bool = ship.wind.get("storm", "") != ""
+	Sfx.set_loop(_ambience, "storm" if storm else "deck")
+	_ambience.volume_db = -8.0 if storm else -16.0
+	_daylight.color = Color.WHITE.darkened(0.3) if storm else Color.WHITE
 
 
 ## The fleets come and go: the whole Caribbean hears of it.
@@ -1020,6 +1014,7 @@ func _show_world(on: bool) -> void:
 		layer.visible = on
 	process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 	_music.stream_paused = not on
+	_ambience.stream_paused = not on
 
 
 ## Any file in assets/audio starting "vandalorum" is in the rotation; a random one, not the one just played.
@@ -1100,6 +1095,8 @@ func _settle_battle(result: Dictionary) -> void:
 				if n > 0:
 					hud.show_message("Her papers give prices at %d port%s, as they stood when she sailed from %s." % [n, "" if n == 1 else "s", Ports.port(v.origin).name])
 			Economy.lose_voyage(current_npc.voyage, "player")
+		if current_npc.has("company"):  # a pirate company broken by you
+			Economy.model.brethren.lose(current_npc.company, "player")
 		shipping.remove(current_npc)
 	current_npc = {}
 	match result.outcome:

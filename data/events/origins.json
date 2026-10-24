@@ -1,0 +1,201 @@
+{
+  "_comment": "Origin stories: the someone the captain met the night they took the ship (data/events/night.json, by background), whose story finds them in the first weeks. Each act 1 is chain_only, queued from the night with that person's role. Story definitions in data/stories.json. See docs/events.md.",
+
+  "warrant_posted": {
+    "story": "warrant", "act": 1, "chain_only": true, "where": "port",
+    "title": "A warrant",
+    "text": "A handbill on the harbour wall in {port}: a warrant for mutiny and the theft of a King's sloop, signed by Captain {hunter} of the {nation_adj} navy. The lieutenant you locked in the cable tier has been given a ship of their own, and one order. Someone has been asking after the {ship}.",
+    "roles": {"hunter": {"from": "new"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Tear it down and find out who posted it", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["event warrant_meet 20 150"], "result": "A customs clerk, paid to remember, remembers: {hunter} will be back within the month, and wants to talk before hanging you.",
+       "fail_outcomes": ["notoriety +3", "event warrant_frigate 15 150"], "fail_result": "Nobody will say. By evening all of {port} knows the {ship} is wanted, and by whom."},
+      {"text": "Let it be known you'll kill whoever comes for you", "conditions": ["captain.intimidation >= 12"],
+       "outcomes": ["fear +2", "event warrant_frigate 20 150"], "result": "You say it in the loudest tavern in {port}. It will reach {hunter}. You meant it to."},
+      {"text": "Leave it. Old paper, old crimes", "outcomes": ["notoriety +2", "event warrant_frigate 15 150"],
+       "result": "Old paper. But someone put up new copies."}
+    ]
+  },
+  "warrant_frigate": {
+    "story": "warrant", "act": 2, "chain_only": true, "where": "sea",
+    "title": "{hunter}'s pennant",
+    "text": "A frigate has been in the offing since dawn, and she's closing: {hunter}'s pennant at the masthead, {nation_adj} colours at the peak. She means to take you.",
+    "roles": {"hunter": {"from": "new"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Clear for action", "outcomes": ["fight hunter {nation} defend"], "won": "warrant_taken", "lost": "warrant_beaten",
+       "result": "The drums beat to quarters. So be it."},
+      {"text": "Run, and lose her among the cays", "check": {"who": "captain", "skill": "seamanship", "dc": 13},
+       "outcomes": ["event warrant_meet 30 150"], "result": "You take the {ship} through a channel no frigate would dare. By nightfall she's gone. A week later, a note: {hunter} wants to talk.",
+       "fail_outcomes": ["fight hunter {nation} flee"], "won": "warrant_taken", "lost": "warrant_beaten", "fail_result": "She's faster than she looks. Her bow chasers find your range."},
+      {"text": "Signal your old ship's number, and ask for a parley", "conditions": ["captain_trait.former_navy"],
+       "outcomes": ["event warrant_meet 1 60"], "result": "A long silence on the frigate's deck. Then the answering signal: tomorrow, in port, alone."}
+    ]
+  },
+  "warrant_meet": {
+    "story": "warrant", "act": 3, "chain_only": true, "where": "port",
+    "title": "Across the table",
+    "text": "{hunter} sits down across your table in {port}, alone, the sword left at the door. \"I've read your file a hundred times. Tell me why I shouldn't hang you.\"",
+    "roles": {"hunter": {"from": "new"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Tell them the truth, all of it", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["honour +2", "relation {nation} +5", "ending warrant understood"], "result": "{hunter} listens to the end, then tears the warrant in half and leaves without a word.",
+       "fail_outcomes": ["event warrant_frigate 20 150"], "fail_result": "\"That's what they all say.\" {hunter} stands. \"Next time, at sea.\""},
+      {"text": "Buy the warrant (300 gold)", "conditions": ["gold >= 300"],
+       "outcomes": ["gold -300", "ending warrant bought"], "result": "Even honest officers have debts. This one had a lot."},
+      {"text": "Follow them out and settle it in the alley", "conditions": ["captain.swordplay >= 13"],
+       "outcomes": ["fear +3", "notoriety +5", "bounty {nation} +200", "ending warrant killed"], "result": "It's quick. It's not clean. The {nation_adj} navy will want to know who did it."}
+    ]
+  },
+  "warrant_taken": {
+    "story": "warrant", "act": 3, "chain_only": true, "where": "any",
+    "title": "{hunter} in irons",
+    "text": "They bring {hunter} aboard in irons, bloody and furious, and stand them at the mast. Your crew want a hanging.",
+    "roles": {"hunter": {"from": "new"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Hang them from your yardarm", "outcomes": ["fear +4", "notoriety +5", "bounty {nation} +300", "opinion crew +2", "ending warrant hanged"],
+       "result": "The {nation_adj} navy will never forgive it. The crew will never forget it."},
+      {"text": "Put them ashore with their sword", "outcomes": ["honour +3", "ending warrant spared"],
+       "result": "{hunter} goes down the side without looking back. You'll never know if it was the right thing."},
+      {"text": "Make them write home that you drowned", "check": {"who": "captain", "skill": "intimidation", "dc": 12},
+       "outcomes": ["relation {nation} +5", "ending warrant dead_on_paper"], "result": "{hunter} writes it, hand shaking. Officially, you're dead.",
+       "fail_outcomes": ["honour +1", "ending warrant spared"], "fail_result": "{hunter} spits on the paper. In the end you put them ashore anyway."}
+    ]
+  },
+  "warrant_beaten": {
+    "story": "warrant", "act": 3, "chain_only": true, "where": "any",
+    "title": "A promise",
+    "text": "{hunter} stands on your quarterdeck with your colours over one arm. \"I've no room for prisoners. Next time, it's a rope.\" Then they go back to their own ship and leave you drifting.",
+    "roles": {"hunter": {"from": "new"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Swallow it", "outcomes": ["opinion crew -3", "ending warrant beaten"], "result": "Your crew saw it all."}
+    ]
+  },
+
+  "brand_catcher": {
+    "story": "brand", "act": 1, "chain_only": true, "where": "port",
+    "title": "The mark",
+    "text": "A runaway notice on the harbour wall in {port}: a description, a reward and a name: yours. {master} still holds your indenture, with years left to serve and every day you've been gone added on, and wants the sloop back too. The runaway's mark on your shoulder matches the notice.",
+    "roles": {"master": {"from": "new", "pool": "official"}, "town": {"from": "port", "where": ["not here", "faction != pirates"]}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Find the bounty man before he finds you", "conditions": ["captain.swordplay >= 12"],
+       "outcomes": ["fear +1", "event brand_ship 20 150"], "result": "The bounty man won't be catching anyone for a while. But {master} will send another."},
+      {"text": "Pay him to report you dead (120 gold)", "conditions": ["gold >= 120"],
+       "outcomes": ["gold -120", "event brand_ship 30 150"], "result": "He takes the money and, for all you know, the next offer too."},
+      {"text": "Lie low and sail at dawn", "outcomes": ["time 1", "event brand_ship 15 150"],
+       "result": "You leave {port} in the dark, like the last time you ran."}
+    ]
+  },
+  "brand_ship": {
+    "story": "brand", "act": 2, "chain_only": true, "where": "sea",
+    "title": "Bound for {town}",
+    "text": "A ship bound for {town}, low in the water. Not with sugar. With people, chained below, bought on the African coast for {master}'s fields. You worked those fields beside people who came the same way. Your contract had an end; theirs never will. Your crew are looking at you.",
+    "roles": {"master": {"from": "new", "pool": "official"}, "town": {"from": "port"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Take her, and strike off their irons", "outcomes": ["fight merchant {nation} attack"], "won": "brand_freed", "lost": "brand_lost",
+       "result": "You run up your colours and go in."},
+      {"text": "Let her go. You can't free them all", "outcomes": ["opinion crew -1", "event brand_master 40 200"],
+       "result": "You watch her out of sight. It doesn't get easier."}
+    ]
+  },
+  "brand_freed": {
+    "story": "brand", "act": 3, "chain_only": true, "where": "any",
+    "title": "Irons by the rail",
+    "text": "The irons are in a heap by the rail. The people who were in the hold stand on your deck in the sun and look at the coast, then at you. {freed} speaks for them, in the trade Portuguese of the African coast, and asks what you mean to do with them. {master} will hear of this by the next packet.",
+    "roles": {"master": {"from": "new", "pool": "official"}, "town": {"from": "port"}, "nation": {"from": "nation"}, "freed": {"from": "new", "nation": "freed"}},
+    "choices": [
+      {"text": "Offer them a place under the articles", "outcomes": ["crew +8", "hire {freed}", "honour +2", "relation {nation} -5", "ending brand freed"],
+       "result": "{freed} and some of the others make their marks on the articles, for a full share like anyone. The rest ask to be put ashore, and you put them where they ask."},
+      {"text": "Ask {freed} where they want to go, and take them", "outcomes": ["honour +3", "time 3", "ending brand landed"],
+       "result": "Most want the hills, where the runaways live free; a few want any port with a ship bound for home. Three days out of your way. Nobody aboard complains."}
+    ]
+  },
+  "brand_lost": {
+    "story": "brand", "act": 3, "chain_only": true, "where": "any",
+    "title": "Beaten off",
+    "text": "The slaver's guns were heavier than they looked. She sails on for {town} with everyone still aboard, and {master} will know who tried.",
+    "roles": {"master": {"from": "new", "pool": "official"}, "town": {"from": "port"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Next time", "outcomes": ["bounty {nation} +100", "ending brand failed"], "result": "Next time."}
+    ]
+  },
+  "brand_master": {
+    "story": "brand", "act": 3, "chain_only": true, "where": "port",
+    "title": "A letter from {master}",
+    "text": "A lawyer finds you in {port} with a letter from {master}: \"Come home, and I will be merciful. Stay away, and I will buy every warrant in the islands.\"",
+    "roles": {"master": {"from": "new", "pool": "official"}, "town": {"from": "port"}, "nation": {"from": "nation"}},
+    "choices": [
+      {"text": "Burn it in front of the lawyer", "outcomes": ["fear +1", "bounty {nation} +150", "ending brand defied"],
+       "result": "The lawyer watches it curl up and goes to write a report."},
+      {"text": "Buy your own papers, at a planter's price (250 gold)", "conditions": ["captain.trade >= 13", "gold >= 250"],
+       "outcomes": ["gold -250", "ending brand bought"], "result": "You find the one clerk in {town} who can be bought, and buy out your own indenture."},
+      {"text": "Write back: one day you'll come for them", "outcomes": ["fear +2", "ending brand threatened"],
+       "result": "You write it in a careful hand, so there's no mistaking it."}
+    ]
+  },
+
+  "partner_letter": {
+    "story": "partner", "act": 1, "chain_only": true, "where": "port",
+    "title": "A letter from a gaol",
+    "text": "A letter, smuggled out of the gaol in {town} and passed hand to hand until it found you in {port}. {partner} held the quay so you could get away, and they've hung everything you ever did on {partner} too. The rope is set for two months from now. They don't ask you for anything. That's the worst part.",
+    "roles": {"partner": {"from": "new"}, "town": {"from": "port", "where": ["not here", "faction != pirates"]}},
+    "choices": [
+      {"text": "Set a course for {town}", "outcomes": ["event partner_gaol 0 60"], "result": "You show the letter to nobody, and give the navigator a new course."},
+      {"text": "Send money for a lawyer (200 gold)", "conditions": ["gold >= 200"],
+       "outcomes": ["gold -200", "ending partner lawyer"], "result": "A good lawyer. You'll never know if it was enough."},
+      {"text": "Burn it", "outcomes": ["honour -2", "ending partner abandoned"], "result": "It burns like any other letter."}
+    ]
+  },
+  "partner_gaol": {
+    "story": "partner", "act": 2, "chain_only": true, "where": "port",
+    "title": "The gaol at {town}",
+    "text": "The gaol in {town} is an old powder store with a bored sentry and a padlock. Through the grating, {partner} sees you, and laughs, and can't stop.",
+    "conditions": ["port == {town}"],
+    "roles": {"partner": {"from": "new"}, "town": {"from": "port"}},
+    "choices": [
+      {"text": "Bribe the gaoler (150 gold)", "conditions": ["gold >= 150"],
+       "outcomes": ["gold -150", "hire {partner}", "ending partner freed"], "result": "The padlock turns out to have a key after all."},
+      {"text": "Break them out tonight", "check": {"who": "captain", "skill": "swordplay", "dc": 13},
+       "outcomes": ["hire {partner}", "notoriety +5", "relation port -10", "ending partner broke_out"], "result": "The sentry wakes up tied to his own musket. You're at sea by dawn.",
+       "fail_outcomes": ["wound captain", "relation port -10", "ending partner hanged"], "fail_result": "The garrison turns out. You barely get yourself away. They hang {partner} the next morning, early, so you can't try again."},
+      {"text": "Talk to the governor, and make them a deal", "conditions": ["captain.charisma >= 13"],
+       "outcomes": ["hire {partner}", "honour +2", "ending partner pardoned"], "result": "It takes an evening, a promise and a lot of the governor's wine. {partner} walks out through the front door."},
+      {"text": "Walk away", "outcomes": ["honour -3", "ending partner abandoned"], "result": "You don't look back at the grating."}
+    ]
+  },
+
+  "promise_letter": {
+    "story": "promise", "act": 1, "chain_only": true, "where": "port",
+    "title": "A lamp in the window",
+    "text": "A letter waits for you at the harbour office in {port}, in a hand you'd know anywhere: {dear}, who stood on the quay with a lantern the night you left. They've taken a house in {town}, where the {ship} is bound to put in one day. They're still waiting. They want to know if they should.",
+    "roles": {"dear": {"from": "new"}, "town": {"from": "port", "where": ["not here", "faction != pirates"]}},
+    "choices": [
+      {"text": "Write back: wait. You're coming home rich", "outcomes": ["morale 4 30", "event promise_home 0 400"],
+       "result": "You write it three times before it sounds true. The crew notice you whistling."},
+      {"text": "Write back: don't wait", "outcomes": ["honour +1", "ending promise released"], "result": "The kindest thing you've done in years. It doesn't feel like it."},
+      {"text": "Don't answer", "outcomes": ["event promise_married 120 200"], "result": "You put it in your coat. You'll answer it tomorrow."}
+    ]
+  },
+  "promise_home": {
+    "story": "promise", "act": 2, "chain_only": true, "where": "port",
+    "title": "{dear}",
+    "text": "{dear} is at the door before you've knocked. Older. So are you. \"Well? Is it over?\"",
+    "conditions": ["port == {town}"],
+    "roles": {"dear": {"from": "new"}, "town": {"from": "port"}},
+    "choices": [
+      {"text": "Buy the house on the hill (800 gold)", "conditions": ["gold >= 800"],
+       "outcomes": ["gold -800", "honour +2", "morale 10 60", "ending promise house"], "result": "Not over. But there's a house now, and a lamp in its window, and you'll come home between voyages. That's a kind of promise."},
+      {"text": "Bring {dear} aboard", "outcomes": ["hire {dear}", "ending promise aboard"], "result": "\"I thought you'd never ask.\" {dear} has a sea chest packed already."},
+      {"text": "One more voyage", "outcomes": ["event promise_married 90 200"], "result": "{dear} closes the door very gently."}
+    ]
+  },
+  "promise_married": {
+    "story": "promise", "act": 3, "chain_only": true, "where": "port",
+    "title": "A letter from {town}",
+    "text": "A letter from {town}. {dear} has married a chandler. They wish you well, and mean it, and you wish they didn't.",
+    "roles": {"dear": {"from": "new"}, "town": {"from": "port"}},
+    "choices": [
+      {"text": "Drink to them", "outcomes": ["cargo rum -5", "ending promise married"], "result": "The whole crew drinks to {dear}, whoever that is."},
+      {"text": "Burn it", "outcomes": ["fear +1", "ending promise married"], "result": "You're short with everyone for a week."}
+    ]
+  }
+}

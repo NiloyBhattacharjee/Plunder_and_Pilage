@@ -700,7 +700,10 @@ func _act(i: int, post: String, id: String) -> void:
 			if c.success:
 				_hit_weak(o, a.hits)
 		"demand":
-			c = Dice.check(rng, a.name, _base(i, post, a.skill), _dc_for(i, id, a))
+			var parts := _base(i, post, a.skill)
+			if _has_perk(i, post, "dread_name"):
+				parts.append(["Dread name", 3])
+			c = Dice.check(rng, a.name, parts, _dc_for(i, id, a))
 			_xp(i, post, a.skill, c.success)
 			_note(i, post, "%s: %s. %s" % [who, a.name, "They strike their colours!" if c.success else "They answer with a broadside."], c)
 			if c.success:
@@ -1191,7 +1194,7 @@ func _xp(i: int, post: String, skill: String, success: bool) -> void:
 
 
 func _note(side: int, post: String, text: String, c := {}) -> void:
-	entries.append({"side": side, "post": post, "text": text, "check": c})
+	entries.append({"side": side, "post": post, "action": _actor_action, "text": text, "check": c})
 	if not c.is_empty() and not c.success and side >= 0 and sides[side].party.has(post):  # a miss charges the next try
 		var m: Dictionary = sides[side].party[post]
 		m.bp = mini(int(cfg().boost.max_points), m.bp + int(cfg().boost.on_fail))

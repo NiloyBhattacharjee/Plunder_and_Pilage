@@ -125,7 +125,7 @@ static func resolve(s: Dictionary, id: String, how: String) -> String:
 		Ambitions.tally(s, "own_want")
 		return "Captain %s has seen to %s at last." % [c.name, name]
 	if how == "done":
-		c.relations[s.captain] = clampi(c.relations.get(s.captain, 0) + int(r.done_opinion), -100, 100)
+		Crew.feel(s, c, int(r.done_opinion), "Saw to " + name)
 		if not "loyal" in c.traits and not People._conflicts(c.traits, "loyal"):
 			c.traits.append("loyal")
 		c.history.append("Their captain saw to %s, %s." % [name, Clock.date_string()])

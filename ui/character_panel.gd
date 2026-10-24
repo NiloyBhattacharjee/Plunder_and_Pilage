@@ -59,7 +59,21 @@ func _build() -> void:
 			UIKit.button(_body, "%s: %s" % [p.name, p.description], func():
 				Growth.take_perk(c, id)
 				_build(), "Needs %s." % Growth.perk_needs_text(id)).alignment = HORIZONTAL_ALIGNMENT_LEFT
-	var locked: Array = Data.table("perks").keys().filter(func(id): return not id.begins_with("_") and not Growth.has_perk(c, id) and not id in Growth.perks_open(c))
+	if c.has("focus"):  # your captain: a lifestyle to grow into
+		UIKit.label(_body, "Focus", "One at a time. Every day in a focus teaches a little, and in time its perks. Change it whenever you like: what you learned in the others is kept.", Style.c("header"))
+		var row := UIKit.row(_body)
+		for f in Data.table("focus"):
+			if f.begins_with("_"):
+				continue
+			var d: Dictionary = Data.table("focus")[f]
+			var ladder := "\n".join(d.perks.map(func(p): return "%s %s: %s" % ["*" if Growth.has_perk(c, p) else "-", Data.table("perks")[p].name, Data.table("perks")[p].description]))
+			var b := UIKit.button(row, ("> %s <" if c.focus == f else "  %s  ") % d.name, func():
+				c.focus = f
+				_build(), "%s\n\n%s\n\n%s" % [d.description, Growth.focus_text(c, f), ladder])
+			b.disabled = c.focus == f
+		if c.focus != "":
+			UIKit.label(_body, Growth.focus_text(c, c.focus), "", Style.c("dim"))
+	var locked: Array = Data.table("perks").keys().filter(func(id): return Growth.pickable(id) and not Growth.has_perk(c, id) and not id in Growth.perks_open(c))
 	if not locked.is_empty():
 		UIKit.label(_body, "Perks for later: " + ", ".join(locked.map(func(id): return Data.table("perks")[id].name)),
 			"\n".join(locked.map(func(id): return "%s (needs %s): %s" % [Data.table("perks")[id].name, Growth.perk_needs_text(id), Data.table("perks")[id].description])),

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://dbhsjxn0hd8ql"
+path="res://.godot/imported/steps_water_01.wav-ff12922f7c6a3135fe9293b6227e5d05.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Footsteps/steps_water_01.wav"
+dest_files=["res://.godot/imported/steps_water_01.wav-ff12922f7c6a3135fe9293b6227e5d05.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

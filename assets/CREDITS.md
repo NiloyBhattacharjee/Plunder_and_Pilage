@@ -10,6 +10,13 @@ Every third-party asset in the game is listed here. Only licences that allow com
 | Pixelify Sans | `assets/ui/fonts/PixelifySans.ttf` | [Google Fonts](https://fonts.google.com/specimen/Pixelify+Sans) | Stefie Justprince | SIL Open Font License 1.1 (`OFL-PixelifySans.txt`) |
 | Blackmoor Tides Loop (battle music) | `assets/audio/Blackmoor Tides Loop.ogg` | TODO | TODO | TODO |
 | Vandalorum tracks (map music) | `assets/audio/vandalorum_-_*.ogg` | TODO | Vandalorum | TODO |
+| Explosion and gunshot | `assets/audio/effects/ExplosionMetal*.wav`, `GunShot*.wav` | [OpenGameArt](https://opengameart.org) (see `effects/README.txt`) | Iwan Gabovitch (qubodup) | CC0 |
+| Accessory SFX Library (dice, coins) | `assets/audio/effects/accessory/` | [vehiclemusic.eu](http://www.vehiclemusic.eu) | Jan Schupke | CC0 |
+| 80 CC0 RPG SFX (blades, chains, wood, coins) | `assets/audio/effects/80-CC0-RPG-SFX/` | [OpenGameArt](https://opengameart.org/content/80-cc0-rpg-sfx) | rubberduck | CC0 |
+| Waves | `assets/audio/effects/waves/` (converted from FLAC to OGG) | [Freesound](https://freesound.org) #11505, #18363 | transitking, jasinski | CC0 |
+| Pirate Pack Vol 1 | `assets/audio/effects/pirate_pack_vol_1/` | TODO | TODO | TODO |
+| Cannon and ship sounds | `assets/audio/effects/cannon/`, `Ship/` | TODO | TODO | TODO |
+| Gold sack, splash, water explosions | `assets/audio/effects/gold sack/`, `splash/`, `water surface explosion/` | TODO | TODO | TODO |
 | GUT test framework (not shipped art) | `addons/gut/` | [bitwes/Gut](https://github.com/bitwes/Gut) | Butch Wesley | MIT |
 
 ## Our own placeholder art (CC0)

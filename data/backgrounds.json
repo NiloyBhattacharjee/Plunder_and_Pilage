@@ -3,28 +3,28 @@
     "name": "Ex-Navy Officer",
     "description": "You learned gun drill and command on a King's ship. Crews respect your discipline; pirates distrust it.",
     "stats": {"authority": 4, "intimidation": 1}, "skills": {"gunnery": 5, "navigation": 4, "seamanship": 3},
-    "traits": ["former_navy"], "gold": 600, "ship": "sloop", "crew": 40,
+    "traits": ["former_navy"], "gold": 600, "ship": "sloop", "crew": 40, "night": "night_navy",
     "relations": {"own": 10, "pirates": -10}
   },
   "merchant_son": {
     "name": "Merchant's Son",
     "description": "Your father's money bought you a schooner and an education in ledgers. The sea will teach you the rest.",
     "stats": {"charisma": 3}, "skills": {"trade": 7, "navigation": 3},
-    "traits": ["honest"], "gold": 1500, "ship": "schooner", "crew": 20,
+    "traits": ["honest"], "gold": 1500, "ship": "schooner", "crew": 20, "night": "night_merchant",
     "relations": {"own": 5}
   },
   "indentured": {
     "name": "Escaped Indentured Servant",
     "description": "Seven years' labour on a planter's contract, until you ran. You own little but a stolen sloop and a grudge.",
     "stats": {"intimidation": 2, "experience": 1}, "skills": {"swordplay": 5, "seamanship": 4},
-    "traits": ["sea_legs"], "gold": 100, "ship": "sloop", "crew": 30,
+    "traits": ["sea_legs"], "gold": 100, "ship": "sloop", "crew": 30, "night": "night_cane",
     "relations": {"own": -15, "pirates": 10}, "start_port": "tortuga"
   },
   "disgraced_privateer": {
     "name": "Disgraced Privateer",
     "description": "You sailed with a letter of marque until a prize went missing and the Admiralty blamed you. Crews know your name.",
     "stats": {"authority": 2, "intimidation": 2}, "skills": {"gunnery": 3, "swordplay": 4, "navigation": 2},
-    "traits": ["veteran"], "gold": 400, "ship": "sloop", "crew": 55,
+    "traits": ["veteran"], "gold": 400, "ship": "sloop", "crew": 55, "night": "night_quay",
     "relations": {"own": -10, "pirates": 5}
   }
 }

@@ -112,7 +112,7 @@ func _voyages_at_sea(day: int, month: int) -> void:
 				_arrive(v, day)
 			continue
 		var key: String = v.origin + ">" + v.dest
-		if m.rng.randf() < cfg().pirate_loss_per_day * m.world_mult("pirates") * (1.0 + risk.get(key, 0.0) * cfg().risk_breeds_pirates):
+		if m.rng.randf() < cfg().pirate_loss_per_day * m.brethren.threat(v.origin, v.dest) * (1.0 + risk.get(key, 0.0) * cfg().risk_breeds_pirates):
 			lose(v, "pirates", day)
 		elif m.rng.randf() < storm:
 			lose(v, "storm", day)
@@ -138,9 +138,10 @@ func _en_route_from(o: String) -> Dictionary:
 	return out
 
 
-## A voyage that never arrives: its cargo is gone, and the route remembers.
-func lose(v: Dictionary, cause: String, day: int) -> void:
+## A voyage that never arrives: its cargo is gone, and the route remembers. company: the pirates who took her, if known.
+func lose(v: Dictionary, cause: String, day: int, company := "") -> void:
 	voyages.erase(v)
+	m.brethren.on_loss(v, cause, company)
 	var key: String = v.origin + ">" + v.dest
 	risk[key] = minf(1.0, risk.get(key, 0.0) + cfg().loss_risk[cause])
 	if cause != "storm":  # a raider off the port takes ships from every direction
@@ -151,10 +152,10 @@ func lose(v: Dictionary, cause: String, day: int) -> void:
 		lost_log.pop_front()
 
 
-func lose_id(id: String, cause: String, day: int) -> bool:
+func lose_id(id: String, cause: String, day: int, company := "") -> bool:
 	for v in voyages:
 		if v.id == id:
-			lose(v, cause, day)
+			lose(v, cause, day, company)
 			return true
 	return false
 

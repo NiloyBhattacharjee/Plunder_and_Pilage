@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://csjclc2ye6re"
+path="res://.godot/imported/sfx_bottle_cork.wav-a3307e49d7cb2c22d8a5ff86998726cd.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Misc Sfx/sfx_bottle_cork.wav"
+dest_files=["res://.godot/imported/sfx_bottle_cork.wav-a3307e49d7cb2c22d8a5ff86998726cd.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://dsutcta76vmb"
+path="res://.godot/imported/amb_sea_storm.wav-875fd21f062c887700da4c8d8255388b.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Ambiences (Loops)/amb_sea_storm.wav"
+dest_files=["res://.godot/imported/amb_sea_storm.wav-875fd21f062c887700da4c8d8255388b.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://cmd3pm6di5t8x"
+path="res://.godot/imported/sfx_map_handle_02.wav-915a173b3f7d07d9f2672e5723d9f112.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Misc Sfx/sfx_map_handle_02.wav"
+dest_files=["res://.godot/imported/sfx_map_handle_02.wav-915a173b3f7d07d9f2672e5723d9f112.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -176,13 +176,21 @@ func _new_goal(n: Dictionary) -> void:
 		goal = terrain.nearest_sea(world.anchorages[n.home] + Vector2(rng.randf_range(-r, r), rng.randf_range(-r, r)))
 		_set_course(n, goal)
 		return
+	var br: Brethren = Economy.model.brethren
 	match n.kind:
-		"navy":
+		"navy":  # hunting where the pirates have been taking prizes, or showing the flag off her own ports
+			var hot := _hot_ground(br)
 			var own := _ports_of(n.enemy.faction)
-			var a: Vector2 = world.anchorages[own[rng.randi() % own.size()]]
+			var ports: Array = br.cfg().grounds[hot].ports if hot != "" and n.enemy.kind == "navy" and rng.randf() < 0.6 else own
+			ports = ports.filter(func(id): return world.anchorages.has(id))
+			var a: Vector2 = world.anchorages[ports[rng.randi() % ports.size()]] if not ports.is_empty() else n.pos
 			goal = terrain.nearest_sea(a + Vector2(rng.randf_range(-90, 90), rng.randf_range(-90, 90)))
 		"hunter":
 			goal = world.ship.position if rng.randf() < 0.6 else world.anchorages[Ports.state.keys()[rng.randi() % Ports.state.size()]]
+		_ when n.has("company") and not br.find(n.company).is_empty():  # a company works its cruising ground
+			var ports: Array = br.cfg().grounds[br.find(n.company).ground].ports.filter(func(id): return world.anchorages.has(id))
+			var a: Vector2 = world.anchorages[ports[rng.randi() % ports.size()]]
+			goal = terrain.nearest_sea(a + Vector2(rng.randf_range(-120, 120), rng.randf_range(-120, 120)))
 		_:  # pirates lurk somewhere along a trade route
 			var ids: Array = Ports.state.keys()
 			var a: Vector2 = world.anchorages[ids[rng.randi() % ids.size()]]
@@ -205,16 +213,17 @@ func _set_course(n: Dictionary, goal: Vector2) -> void:
 func daily() -> void:
 	for n in npcs.duplicate():
 		n.age += 1
-		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.get("treasure", false) and not n.has("expedition") and not n.has("escort") and not n.has("invasion"):  # contract targets and named captains stay
+		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.has("company") and not n.get("treasure", false) and not n.has("expedition") and not n.has("escort") and not n.has("invasion"):  # contract targets and named captains stay
 			remove(n)
 		elif n.has("expedition") and Bases.bases.get(n.expedition, {}).get("raid", {}).get("npc", "") != n.id:
 			remove(n)  # the expedition is over, one way or the other
 		elif n.has("invasion") and Factions.invasion_at(n.invasion).get("npc", "") != n.id:
 			remove(n)  # the attack is over
-	if count("pirate") < int(round(cfg().pirates * Economy.model.world_mult("pirates"))):
-		spawn("pirate", "pirates")
-	for f in Career.nations():
-		if not _ports_of(f).is_empty() and npcs.filter(func(n): return n.kind == "navy" and n.enemy.faction == f).size() < cfg().navy_per_faction:
+	_companies()
+	var b: Brethren = Economy.model.brethren
+	for f in Career.nations():  # as many men-of-war as the nation has on station against the pirates, up to a few
+		var want := mini(int(cfg().navy_per_faction), roundi(b.navy.get(f, 1.0)))
+		if not _ports_of(f).is_empty() and npcs.filter(func(n): return n.kind == "navy" and n.enemy.faction == f and n.enemy.kind == "navy").size() < want:
 			spawn("navy", f)
 	var s: Dictionary = world.ship.state
 	var price := Career.bounty_total(s)
@@ -360,7 +369,7 @@ func _meetings() -> void:
 					Data.table("factions")[m.enemy.faction].adjective, m.enemy.name, Ports.port(m.dest).name])
 				_fame(p, 2)
 				if m.has("voyage"):
-					Economy.lose_voyage(m.voyage, "pirates")
+					Economy.lose_voyage(m.voyage, "pirates", p.get("company", ""))
 				remove(m)
 	for v in npcs.filter(func(n): return (n.kind == "navy" or n.kind == "hunter") and not n.has("fight") and not n.get("treasure", false)):
 		for p in npcs.filter(func(n): return n.kind == "pirate" and not n.has("contract") and not n.has("captain_id") and not n.has("fight")):
@@ -369,6 +378,8 @@ func _meetings() -> void:
 				break
 			if v.pos.distance_to(p.pos) < nm(cfg().contact_nm) * 2.0:
 				_say(p, "The %s navy ran down the pirate %s." % [Data.table("factions")[v.enemy.faction].adjective, p.enemy.name])
+				if p.has("company"):
+					Economy.model.brethren.lose(p.company, "navy")
 				remove(p)
 
 
@@ -410,10 +421,12 @@ func resolve_fight(a: Dictionary) -> Dictionary:
 			w.enemy.cargo[g] = w.enemy.cargo.get(g, 0) + l.enemy.cargo[g]
 		_say(l, "The pirate %s took the merchantman %s; her cargo will never reach %s." % [w.enemy.name, l.enemy.name, Ports.port(l.dest).name if Ports.state.has(l.dest) else "port"], true)
 		if l.has("voyage"):
-			Economy.lose_voyage(l.voyage, "pirates")
+			Economy.lose_voyage(l.voyage, "pirates", w.get("company", ""))
 		remove(l)
 	elif l.kind == "pirate":
 		_say(l, "The %s ran down the pirate %s. She went down fighting." % [w.enemy.name, l.enemy.name], true)
+		if l.has("company"):
+			Economy.model.brethren.lose(l.company, "navy")
 		remove(l)
 	else:
 		AtSea.hurt(l.enemy, rng.randf_range(0.3, 0.5))
@@ -510,6 +523,53 @@ static func _along(start: Vector2, path: PackedVector2Array, f: float) -> Array:
 		left -= seg
 		prev = path[i]
 	return [prev, PackedVector2Array()]
+
+
+## Every pirate company working the islands is a ship on the map (scripts/economy/brethren.gd): her captain, her
+## name and her men are the company's. One that has gone north, been taken or come in for a pardon sails off once
+## she's out of sight.
+func _companies() -> void:
+	var b: Brethren = Economy.model.brethren
+	var here := {}
+	for n in npcs.duplicate():
+		if not n.has("company"):
+			continue
+		var co := b.find(n.company)
+		if co.is_empty() or co.away:
+			if not _sprites.has(n.id) and not n.has("fight"):
+				remove(n)
+			continue
+		here[co.id] = true
+		n.enemy.crew = mini(co.men, int(ShipStats.effective(n.enemy.type, n.enemy.upgrades).crew_max))
+	for co in b.companies:
+		if not co.away and not here.has(co.id):
+			_spawn_company(co)
+
+
+func _spawn_company(co: Dictionary) -> Dictionary:
+	var e := Encounters.generate("pirates", rng, "pirate", co.ship)
+	e.name = co.name
+	e.captain.name = co.captain
+	e.crew = mini(co.men, int(ShipStats.effective(e.type, e.upgrades).crew_max))
+	var flag: String = Data.table("factions").pirates.flag
+	if rng.randf() < Data.rules.flags.npc_false_flag_chance:
+		var nat: Array = Career.nations()
+		flag = Data.table("factions")[nat[rng.randi() % nat.size()]].flag  # honest-looking colours
+	var ports: Array = ([co.haven] if co.haven != "" else []) + Economy.model.brethren.cfg().grounds[co.ground].ports
+	ports = ports.filter(func(id): return world.anchorages.has(id))
+	var n := _add("pirate", e, terrain.nearest_sea(world.anchorages[ports[0]]), flag)
+	n.company = co.id
+	_new_goal(n)
+	return n
+
+
+## The cruising ground where the most prizes have been taken lately, or "" if none.
+func _hot_ground(b: Brethren) -> String:
+	var best := ""
+	for g in b.heat:
+		if b.heat[g] > 0.5 and (best == "" or b.heat[g] > b.heat[best]):
+			best = g
+	return best
 
 
 ## kind: how she sails (merchant, navy, pirate, hunter); ekind: what she is, if not that (a guarda costa sails as a navy).

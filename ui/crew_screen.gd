@@ -39,10 +39,12 @@ func refresh() -> void:
 	_build_ship()
 	_build_officers()
 	_build_crew()
+	_build_hands()
 	_build_people()
 	_build_fleet()
 	_build_ledger()
 	_build_log()
+	_build_charts()
 
 
 func _build_captain(cap: Dictionary) -> void:
@@ -336,6 +338,48 @@ func _build_crew() -> void:
 	_people_list(box, "Rising stars", green.slice(0, 3), "Young hands already good at something.")
 
 
+## Every hand as a person: what they think of you and why, and what's on their mind. Officers first, then the
+## unhappiest, since they're the ones to watch. Life below decks lately at the top.
+func _build_hands() -> void:
+	var box: VBoxContainer = %HandsBox
+	UIKit.clear(box)
+	var s: Dictionary = ship.state
+	var lately: Array = s.get("aboard", {}).get("log", [])
+	UIKit.label(box, "Below decks lately", "Life aboard between the voyages: who sings, who drinks, who teaches the green hands, who can't stand whom. Each leaves something behind: morale, friendships and feuds, a skill passed on.", Style.c("header"))
+	if lately.is_empty():
+		UIKit.label(box, "  Quiet so far.", "", Style.c("dim"))
+	for e in lately.slice(0, 6):
+		var l := UIKit.label(box, "  %s  %s" % [Clock.date_string_of(e.day), e.text], "", Style.c("ink_soft"))
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UIKit.label(box, "")
+	var officers: Array = s.officers.values()
+	var hands: Array = Crew.people(s)
+	hands.sort_custom(func(a, b):
+		if (a.id in officers) != (b.id in officers):
+			return a.id in officers
+		return Crew.opinion(a, s) < Crew.opinion(b, s))
+	UIKit.label(box, "The hands (%d)" % hands.size(), "Hover a name for who they are, their opinion of you for why they feel it. What's on their mind changes with sickness, plots, feuds, what they want and what you've done lately.", Style.c("header"))
+	var g := UIKit.grid(box, 5)
+	for h in ["", "Name", "Of you", "On their mind", "Best at"]:
+		UIKit.label(g, h, "", Style.c("dim"))
+	for c in hands:
+		var post := _post_of(c.id)
+		g.add_child(Portrait.make(c, "officer" if post != "" else "crew", 32))
+		UIKit.label(g, "%s%s" % [c.name, " (%s)" % Data.rules.officer_roles[post].name if post != "" else ""], People.describe(c))
+		var op := Crew.opinion(c, s)
+		UIKit.label(g, "%+d" % op, Aboard.reasons(c, s), Style.c("good") if op >= 20 else (Style.c("bad") if op < 0 else Color(0, 0, 0, 0)))
+		var mind := Aboard.mind(c, s)
+		var ml := UIKit.label(g, mind.left(1).to_upper() + mind.substr(1), Wants.describe(c), Style.c("ink_soft"))
+		ml.clip_text = true  # a long want is cut short here; the whole of it is in the tooltip
+		ml.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		ml.custom_minimum_size.x = 460
+		var best := ""
+		for sk in People.SKILLS:
+			if best == "" or People.value(c, sk) > People.value(c, best):
+				best = sk
+		UIKit.label(g, "%s %d" % [People.SKILL_NAMES.get(best, best), People.value(c, best)], "", Style.c("dim"))
+
+
 func _people_list(box: Node, title: String, people: Array, tip: String) -> void:
 	UIKit.label(box, "")
 	UIKit.label(box, title, tip, Style.c("header"))
@@ -598,6 +642,117 @@ func _fleet_act(text: String) -> void:
 	%Status.text = text
 	message.emit(text)
 	refresh()
+
+
+# ---- charts -------------------------------------------------------------------------
+
+## The weekly record (Stats) as charts: headline numbers first, then a section each for your fortune, your standing,
+## your crew and the sea. Every chart shows the same weeks, history events and wars, so they line up.
+func _build_charts() -> void:
+	var box: VBoxContainer = %ChartsBox
+	UIKit.clear(box)
+	box.add_theme_constant_override("separation", 10)
+	var s: Dictionary = ship.state
+	var rec: Array = s.get("stats", [])
+	UIKit.label(box, "Charts", "A page of the log is written every week. Hover any chart for that week: its numbers, what you did, and what happened in the world. Gold ticks are history, red bands are wars.", Style.c("header"))
+	if rec.size() < 2:
+		UIKit.label(box, "The charts fill in week by week. Come back in a fortnight.", "", Style.c("dim"))
+		return
+	var ctx := {"days": rec.map(func(w): return w.day), "marks": Stats.history_marks(s), "bands": Stats.war_bands(s),
+		"notes": rec.map(func(w): return w.get("notes", []))}
+	var tiles := UIKit.row(box)
+	tiles.add_theme_constant_override("separation", 10)
+	tiles.add_child(Chart.tile("Gold", Stats.line(s, "gold"), true, "Gold in hand at the end of each week."))
+	tiles.add_child(Chart.tile("Crew morale", Stats.line(s, "morale"), true, "0 to 100. Hover the morale chip on the top bar for why."))
+	tiles.add_child(Chart.tile("Price on your head", Stats.line(s, "bounty"), false, "Bounties from every nation, in gold. Pirate hunters come for it."))
+	tiles.add_child(Chart.tile("Pirates at sea", Stats.line(s, "brethren"), true, "Men on the account across the Caribbean."))
+
+	_section(box, "Your fortune")
+	var grid := _chart_grid(box)
+	var gold := Stats.line(s, "gold")
+	var change := gold.map(func(g): return 0.0)
+	for i in range(1, gold.size()):
+		change[i] = gold[i] - gold[i - 1]
+	_chart(grid, ctx, "Gold in hand", "Gold at the end of each week.", [{"name": "Gold", "values": gold}])
+	_chart(grid, ctx, "Week by week", "How much your gold rose (green) or fell (red) each week.", [{"name": "Change in gold", "values": change, "signed": true}], true)
+	_chart(grid, ctx, "Trade against running costs", "Trade profit is what your sales fetched over what the goods cost; running costs are a week's wages and upkeep.",
+		[{"name": "Trade profit", "values": Stats.line(s, "trade")}, {"name": "Running costs", "values": Stats.line(s, "costs")}])
+
+	_section(box, "Your standing")
+	UIKit.label(box, "With the nations", "How each nation regards you. Piracy, raids and smuggling lower it; service, pardons and hunting their enemies raise it.", Style.c("dim"))
+	_multiples(box, ctx, s.relations.keys().map(func(f): return [Career.fname(f), Stats.line(s, "relations." + f)]))
+	var towns := {}
+	for w in rec:
+		for id in w.regard:
+			towns[id] = true
+	var ranked: Array = towns.keys()
+	ranked.sort_custom(func(a, b): return absf(rec[-1].regard.get(a, 0.0)) > absf(rec[-1].regard.get(b, 0.0)))
+	if not ranked.is_empty():
+		UIKit.label(box, "What the towns remember", "The towns that remember you best: what you did there, for good or ill.", Style.c("dim"))
+		_multiples(box, ctx, ranked.slice(0, 5).map(func(id): return [Ports.port(id).name, Stats.line(s, "regard." + id)]))
+	grid = _chart_grid(box)
+	_chart(grid, ctx, "Your name", "Notoriety is how widely you're known; honour comes from mercy and keeping your word, fear from cruelty.",
+		[{"name": "Notoriety", "values": Stats.line(s, "notoriety")}, {"name": "Honour", "values": Stats.line(s, "honour")},
+		{"name": "Fear", "values": Stats.line(s, "fear")}])
+	_chart(grid, ctx, "The price on your head", "Bounties from every nation, in gold.", [{"name": "Bounty", "values": Stats.line(s, "bounty")}])
+
+	_section(box, "The crew")
+	grid = _chart_grid(box)
+	_chart(grid, ctx, "Morale", "0 to 100. Hover a week to see what you did.", [{"name": "Morale", "values": Stats.line(s, "morale")}])
+	_chart(grid, ctx, "What they think of you", "The hands' average opinion of you.", [{"name": "Opinion", "values": Stats.line(s, "opinion")}])
+
+	_section(box, "The sea")
+	grid = _chart_grid(box)
+	_chart(grid, ctx, "The Brethren", "Men on the account across the Caribbean, and the seamen out of work they recruit from. A long war takes seamen into the navies and privateers; the peace pays them off, and many go pirate.",
+		[{"name": "Pirates", "values": Stats.line(s, "brethren")}, {"name": "Seamen out of work", "values": Stats.line(s, "idle")}])
+	_chart(grid, ctx, "Men-of-war against them", "Men-of-war on station against the pirates. More come, a year or so late, when a nation's merchants are lost.",
+		[{"name": "Men-of-war", "values": Stats.line(s, "navy_ships")}])
+	_chart(grid, ctx, "Merchants lost", "Merchant ships lost each week, to pirates, storms and you.", [{"name": "Lost", "values": Stats.line(s, "losses")}], true)
+	_chart(grid, ctx, "Merchants at sea", "Merchant voyages under way across the Caribbean.", [{"name": "At sea", "values": Stats.line(s, "voyages")}])
+
+
+func _section(box: VBoxContainer, title: String) -> void:
+	UIKit.label(box, "")
+	UIKit.label(box, title, "", Style.c("header"))
+
+
+func _chart_grid(box: VBoxContainer) -> GridContainer:
+	var g := UIKit.grid(box, 2)
+	g.add_theme_constant_override("v_separation", 12)
+	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return g
+
+
+func _chart(parent: Control, ctx: Dictionary, title: String, tip: String, lines: Array, bars := false) -> void:
+	var cell := VBoxContainer.new()
+	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(cell)
+	UIKit.label(cell, title, tip, Style.c("ink_soft"))
+	var c := Chart.make(ctx.days, lines)
+	c.bars = bars
+	c.marks = ctx.marks
+	c.bands = ctx.bands
+	c.notes = ctx.notes
+	cell.add_child(c)
+
+
+## A row of small panels, one per nation or town: [[name, values]], all on one scale so they compare fairly.
+func _multiples(box: VBoxContainer, ctx: Dictionary, rows: Array) -> void:
+	var row := UIKit.row(box)
+	row.add_theme_constant_override("separation", 8)
+	var all: Array = rows.reduce(func(a, r): return a + r[1], [])
+	var span := {"lo": minf(all.min(), 0.0), "hi": maxf(all.max(), 1.0)}
+	for r in rows:
+		var c := Chart.make_mini(ctx.days, r[0], r[1])
+		c.fixed = span
+		c.bands = ctx.bands
+		c.notes = ctx.notes
+		row.add_child(c)
+
+
+## Opens on the Charts tab (L on the map).
+func show_charts() -> void:
+	%Tabs.current_tab = %ChartsBox.get_parent().get_index()
 
 
 # ---- the trade ledger ---------------------------------------------------------------

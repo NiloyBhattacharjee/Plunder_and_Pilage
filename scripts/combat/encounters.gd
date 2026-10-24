@@ -325,7 +325,7 @@ static func prisoner_fate(s: Dictionary, fate: String) -> String:
 				delta += int(f.tags.get(tag, 0))
 			delta += int(f.tags.get(t, 0))  # fates can also name traits directly (e.g. devout)
 		if delta != 0:
-			c.relations[s.captain] = c.relations.get(s.captain, 0) + delta
+			Crew.feel(s, c, delta, f.name)
 			if delta < 0: upset += 1
 			else: pleased += 1
 	var text := "%s." % f.name

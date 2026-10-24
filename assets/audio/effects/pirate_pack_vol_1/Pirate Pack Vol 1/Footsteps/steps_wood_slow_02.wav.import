@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://cvad5px2i30ne"
+path="res://.godot/imported/steps_wood_slow_02.wav-a0527b690e3f0ea42c599d173082ca72.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Footsteps/steps_wood_slow_02.wav"
+dest_files=["res://.godot/imported/steps_wood_slow_02.wav-a0527b690e3f0ea42c599d173082ca72.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

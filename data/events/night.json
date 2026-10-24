@@ -1,0 +1,123 @@
+{
+  "_comment": "The night you took the ship: the first thing a new game plays (WorldMap._play_night), after the captain is built. Each background opens on its own night (backgrounds.json \"night\"), which brings in someone whose story finds you later (data/events/origins.json, queued from here), and chains to night_captain (what you do with the old captain sets your nature) and night_dawn (getting away). Checks test the build you just made. See docs/events.md.",
+
+  "night_navy": {
+    "chain_only": true, "where": "any", "scene": "sea_night",
+    "title": "The lower deck",
+    "text": "Six bells in the middle watch. The King's sloop lies at anchor, her captain drunk in the great cabin and two of the hands still bloody from his last flogging. The lower deck has asked you to lead them. Only the first lieutenant, {hunter}, stands between you and the arms chest, and {hunter} has the keys.",
+    "roles": {"hunter": {"from": "new"}},
+    "choices": [
+      {"text": "Take the keys by force", "check": {"who": "captain", "skill": "swordplay", "dc": 12},
+       "outcomes": ["fear +2", "opinion crew +3", "event night_captain 0 5", "event warrant_posted 20 240"],
+       "result": "It's over in a minute. You lock {hunter} in the cable tier with a cut lip and a look you'll remember.",
+       "fail_outcomes": ["wound captain", "crew -2", "fear +1", "event night_captain 0 5", "event warrant_posted 20 240"],
+       "fail_result": "{hunter} fights like a cornered cat. Two men die before you have the keys and {hunter} is locked in the cable tier, still swearing."},
+      {"text": "Talk {hunter} into handing them over", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["honour +1", "opinion crew +2", "event night_captain 0 5", "event warrant_posted 20 240"],
+       "result": "{hunter} hands you the keys, white-faced, and asks to be locked up so it will look right at the court martial.",
+       "fail_outcomes": ["wound captain", "crew -1", "event night_captain 0 5", "event warrant_posted 20 240"],
+       "fail_result": "{hunter} draws instead of answering. You take the keys in the end, and a cut along your arm with them."},
+      {"text": "Give the order, as if you were already captain", "conditions": ["captain.authority >= 13"],
+       "outcomes": ["opinion crew +5", "fear +1", "event night_captain 0 5", "event warrant_posted 20 240"],
+       "result": "\"The keys, Mr {hunter}.\" Years of drill do the rest: {hunter}'s hand is holding them out before {hunter} knows it."}
+    ]
+  },
+
+  "night_merchant": {
+    "chain_only": true, "where": "any", "scene": "sea_night",
+    "title": "Your father's ship",
+    "text": "The schooner was your father's, and her master has been selling her cargoes on the side for two years. Tonight you're taking her back, and not to the counting house. On the quay, a lantern: {dear} has come down to the water to stop you, or to say goodbye. It isn't clear which.",
+    "roles": {"dear": {"from": "new"}},
+    "choices": [
+      {"text": "Pay the crew double from the strongbox to follow you", "check": {"who": "captain", "skill": "trade", "dc": 12},
+       "outcomes": ["opinion crew +3", "event night_captain 0 5", "event promise_letter 30 240"],
+       "result": "You count it out on the capstan head and they take it, every one. Money is the one thing you were raised to understand.",
+       "fail_outcomes": ["gold -200", "opinion crew +1", "event night_captain 0 5", "event promise_letter 30 240"],
+       "fail_result": "They take it, and then they want more. It costs you twice what you'd planned."},
+      {"text": "Tell the crew what the master has been stealing from them", "conditions": ["captain.charisma >= 12"],
+       "outcomes": ["opinion crew +4", "honour +1", "event night_captain 0 5", "event promise_letter 30 240"],
+       "result": "You read them the second ledger, line by line. By the end they want to hang him."},
+      {"text": "Slip the cable in the dark and take her out yourself", "check": {"who": "captain", "skill": "seamanship", "dc": 12},
+       "outcomes": ["opinion crew +2", "event night_captain 0 5", "event promise_letter 30 240"],
+       "result": "No lights, no noise, the ebb under her. You promise {dear}, across the water, that you'll come back. You mean it.",
+       "fail_outcomes": ["hull -10", "event night_captain 0 5", "event promise_letter 30 240"],
+       "fail_result": "She touches the bar on the way out with a sound like a kicked door. You shout to {dear} that you'll come back. You hope it carried."}
+    ]
+  },
+
+  "night_cane": {
+    "chain_only": true, "where": "any", "scene": "sea_night",
+    "title": "The landing",
+    "text": "The boiling house fires are banked and the overseer is asleep above them. Down at the landing, a sloop waits to carry {master}'s sugar to market in the morning. Thirty of you mean to be aboard her first. The runaway's mark they burned into your shoulder the last time is still raw.",
+    "roles": {"master": {"from": "new", "pool": "official"}},
+    "choices": [
+      {"text": "Fight your way down to the landing", "check": {"who": "captain", "skill": "swordplay", "dc": 12},
+       "outcomes": ["fear +2", "opinion crew +3", "event night_captain 0 5", "event brand_catcher 20 240"],
+       "result": "Cane knives against two drivers and a musket. The musket never fires.",
+       "fail_outcomes": ["wound captain", "crew -3", "fear +1", "event night_captain 0 5", "event brand_catcher 20 240"],
+       "fail_result": "The drivers turn out with dogs. Not all of you reach the landing."},
+      {"text": "Wake the overseer, and make him open the gate himself", "conditions": ["captain.intimidation >= 12"],
+       "outcomes": ["fear +3", "event night_captain 0 5", "event brand_catcher 20 240"],
+       "result": "He opens it with your knife at his throat, weeping, and tells you {master} will hunt you to the end of the world. You believe him."},
+      {"text": "Go down through the cane in silence", "check": {"who": "captain", "skill": "experience", "dc": 12},
+       "outcomes": ["opinion crew +2", "event night_captain 0 5", "event brand_catcher 20 240"],
+       "result": "Not a dog barks. By the time the plantation bell rings, you're past the reef.",
+       "fail_outcomes": ["crew -2", "event night_captain 0 5", "event brand_catcher 20 240"],
+       "fail_result": "Someone steps on a dry stalk. The bell rings while you're still cutting the sloop's lines."}
+    ]
+  },
+
+  "night_quay": {
+    "chain_only": true, "where": "any", "scene": "sea_night",
+    "title": "Soldiers on the quay",
+    "text": "The governor's letter came at sunset: your marque is revoked, your ship is forfeit, and soldiers are coming down the quay with torches to take her. Your quartermaster, {partner}, has a musket and a grin. \"Cast off. I'll hold them.\"",
+    "roles": {"partner": {"from": "new"}},
+    "choices": [
+      {"text": "Let {partner} hold the quay", "outcomes": ["opinion crew +2", "event night_captain 0 5", "event partner_letter 20 240"],
+       "result": "The last you see of {partner} is a musket flash on the quay and the soldiers going down on their faces."},
+      {"text": "Hold it together, and get everyone aboard", "check": {"who": "captain", "skill": "swordplay", "dc": 13},
+       "outcomes": ["fear +2", "opinion crew +4", "event night_captain 0 5", "event partner_letter 20 240"],
+       "result": "Everyone aboard. Everyone but {partner}, who goes back for the powder boy and doesn't come out again.",
+       "fail_outcomes": ["wound captain", "crew -3", "event night_captain 0 5", "event partner_letter 20 240"],
+       "fail_result": "It goes badly. You're dragged aboard bleeding, and {partner} is still on the quay when the lines part."},
+      {"text": "Bluff the soldiers with the old letter of marque", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["honour +1", "event night_captain 0 5", "event partner_letter 20 240"],
+       "result": "The sergeant can't read. He's still puzzling over the seal when you cast off. {partner} stays on the quay to keep him puzzling, and is taken.",
+       "fail_outcomes": ["crew -2", "event night_captain 0 5", "event partner_letter 20 240"],
+       "fail_result": "The sergeant can read. {partner} opens fire to cover you, and doesn't make the boat."}
+    ]
+  },
+
+  "night_captain": {
+    "chain_only": true, "where": "any", "scene": "sea_night",
+    "title": "The old captain",
+    "text": "The ship is yours. Her old captain, {old}, kneels on the deck in a nightshirt with a lantern held to their face. The whole crew has come up to see what kind of captain you'll be.",
+    "roles": {"old": {"from": "new"}},
+    "choices": [
+      {"text": "Over the side", "outcomes": ["trait captain bloodthirsty", "fear +3", "opinion crew +1", "event night_dawn 0 5"],
+       "result": "Nobody hears {old} hit the water. Nobody says a word for the rest of the night, either. They know what you are now."},
+      {"text": "Into the jolly boat, with a purse and a pistol", "outcomes": ["trait captain merciful", "honour +2", "event night_dawn 0 5"],
+       "result": "{old} rows off into the dark without a word of thanks. Some of the crew think you soft. More of them think you decent."},
+      {"text": "Keep them below for ransom", "outcomes": ["trait captain greedy", "gold +150", "event night_dawn 0 5"],
+       "result": "{old}'s family pays within the month, in good coin. The crew notice whose pocket it goes into first."},
+      {"text": "Let the crew vote, and stand by what they say", "outcomes": ["trait captain calm", "opinion crew +4", "event night_dawn 0 5"],
+       "result": "The vote is close. You don't flinch either way. That's what they'll remember about tonight."}
+    ]
+  },
+
+  "night_dawn": {
+    "chain_only": true, "where": "any", "scene": "sea_day",
+    "title": "Dawn",
+    "text": "First light. Behind you a guard sloop has slipped her moorings and is coming out after the {ship} with every sail set. She's faster than she has any right to be.",
+    "choices": [
+      {"text": "Crack on everything she'll carry", "check": {"who": "captain", "skill": "seamanship", "dc": 12},
+       "outcomes": ["opinion crew +2"], "result": "The {ship} flies. By noon the guard sloop is a speck, and by evening she's gone. Three days later you drop anchor at {port}, under a new name and new papers.",
+       "fail_outcomes": ["sails -15", "hull -5"], "fail_result": "A topmast goes over the side, and her bow chaser finds you twice before the squall hides you. You limp into {port} three days later."},
+      {"text": "Run up false colours and wave", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["honour +1"], "result": "She dips her ensign to you, and turns for home. Three days later you drop anchor at {port}, laughing about it still.",
+       "fail_outcomes": ["hull -10", "crew -1"], "fail_result": "She isn't fooled. You get away, but not before she's put a ball through your waist. You limp into {port} three days later."},
+      {"text": "Run out the guns, and show her your teeth", "conditions": ["captain.intimidation >= 13"],
+       "outcomes": ["fear +1"], "result": "Her captain takes one look and decides it isn't worth it. Three days later you drop anchor at {port}."}
+    ]
+  }
+}

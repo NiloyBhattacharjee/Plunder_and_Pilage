@@ -1,7 +1,8 @@
 extends Control
 ## New-game screen: choose the captain's name, nationality and background, and name the ship.
 ## Background sets starting stats, skills, traits, money, ship, crew and how the nations regard you.
-## The second page builds the captain: looks, points into stats and skills, an extra trait and an optional flaw.
+## The second page builds the captain: looks, points into stats and skills, a focus and an optional flaw. Then the game
+## opens on the night you took the ship (data/events/night.json), which decides the rest.
 
 @onready var name_edit: LineEdit = %CaptainName
 @onready var nation_pick: OptionButton = %Nationality
@@ -9,6 +10,7 @@ extends Control
 @onready var ship_edit: LineEdit = %ShipName
 
 var _build := {}
+var _focus := ""       # data/focus.json
 var _cap := {}         # a stand-in captain for the looks preview
 var _looks: LooksEditor
 var _nick: OptionButton
@@ -87,7 +89,7 @@ func _start() -> void:
 	var b := _build.duplicate(true)
 	b.portrait = _cap.portrait
 	_go({"name": _full_name(), "nationality": nation_pick.get_selected_metadata(),
-		"background": bg_pick.get_selected_metadata(), "ship_name": ship_edit.text.strip_edges(), "build": b,
+		"background": bg_pick.get_selected_metadata(), "ship_name": ship_edit.text.strip_edges(), "build": b, "focus": _focus, "night": true,
 		"ironman": _ironman.button_pressed, "tutorial": _hints.button_pressed})
 
 
@@ -96,6 +98,7 @@ func _start() -> void:
 func _captain_page() -> void:
 	$Panel.hide()
 	_build = {"stats": {}, "skills": {}, "traits": [], "flaw": ""}
+	_focus = ""
 	_cap = People.generate({"nationality": nation_pick.get_selected_metadata()})
 	_cap.name = name_edit.text
 	_cap.background = bg_pick.get_selected_metadata()
@@ -123,7 +126,7 @@ func _captain_page() -> void:
 		_nick.set_item_metadata(_nick.item_count - 1, e)
 	_nick.item_selected.connect(func(_i): _title.text = "Captain " + _full_name())
 	head.add_child(_nick)
-	UIKit.button(head, "  Roll a whole pirate  ", _roll_pirate, "A random face, a random pirate type, a nickname, and points spent for you. Change anything after.")
+	UIKit.button(head, "  Roll a whole pirate  ", _roll_pirate, "A random face, a random pirate type, a nickname, a focus, and points spent for you. Change anything after.")
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 30)
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -165,13 +168,38 @@ func _build_sheet() -> void:
 	var traits := Data.table("traits")
 	var taken: Array = bg.traits + _build.traits + ([_build.flaw] if _build.flaw != "" else [])
 	UIKit.label(_sheet, "")
-	UIKit.label(_sheet, "From your background: " + ", ".join(bg.traits.map(func(x): return traits[x].name)), "", Style.c("dim"))
-	_trait_pick("An extra trait", traits.keys().filter(func(x): return traits[x].pools.has("crew") and not x in g.flaws and not x in bg.traits),
-		_build.traits[0] if not _build.traits.is_empty() else "", taken, func(id): _build.traits = [] if id == "" else [id])
+	UIKit.label(_sheet, "From your background: " + ", ".join(bg.traits.map(func(x): return traits[x].name)),
+		"What kind of captain you are, you'll find out the night you take the ship.", Style.c("dim"))
+	_focus_pick()
 	_trait_pick("A flaw (+%d skill points)" % g.flaw_points, g.flaws.filter(func(x): return not x in bg.traits), _build.flaw, taken,
 		func(id):
 			_build.flaw = id
 			_trim_skills())
+
+
+## What the captain has given their life to: every day in it teaches, and in time brings its perks.
+func _focus_pick() -> void:
+	var row := UIKit.row(_sheet)
+	UIKit.label(row, "Focus:  ", "Change it any time from the captain's sheet. Each focus teaches its perks over the months, in order.")
+	var pick := OptionButton.new()
+	pick.add_item("(choose later)")
+	pick.set_item_metadata(0, "")
+	for id in Data.table("focus"):
+		if id.begins_with("_"):
+			continue
+		var f: Dictionary = Data.table("focus")[id]
+		pick.add_item(f.name)
+		pick.set_item_metadata(pick.item_count - 1, id)
+		pick.set_item_tooltip(pick.item_count - 1, "%s\n\n%s" % [f.description, "\n".join(f.perks.map(func(p): return "%s: %s" % [Data.table("perks")[p].name, Data.table("perks")[p].description]))])
+		if id == _focus:
+			pick.select(pick.item_count - 1)
+	pick.item_selected.connect(func(i):
+		_focus = pick.get_item_metadata(i)
+		_build_sheet())
+	row.add_child(pick)
+	if _focus != "":
+		var f: Dictionary = Data.table("focus")[_focus]
+		UIKit.label(_sheet, "In time: " + ", then ".join(f.perks.map(func(p): return Data.table("perks")[p].name)), f.description, Style.c("dim"))
 
 
 func _trait_pick(label: String, ids: Array, now: String, taken: Array, on_pick: Callable) -> void:
@@ -207,6 +235,8 @@ func _roll_pirate() -> void:
 	_nick.select(randi() % _nick.item_count)
 	_title.text = "Captain " + _full_name()
 	_build = {"stats": {}, "skills": {}, "traits": [], "flaw": ""}
+	var foci: Array = Data.table("focus").keys().filter(func(k): return not k.begins_with("_"))
+	_focus = foci[randi() % foci.size()]
 	var g: Dictionary = Data.rules.growth.build
 	var bg: Dictionary = Data.table("backgrounds")[bg_pick.get_selected_metadata()]
 	for pool in ["stats", "skills"]:

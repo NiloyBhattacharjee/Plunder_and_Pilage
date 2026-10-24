@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://b5oimxesbpvws"
+path="res://.godot/imported/amb_cave.wav-4e61add7ffa5f017180908936f0b435c.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Ambiences (Loops)/amb_cave.wav"
+dest_files=["res://.godot/imported/amb_cave.wav-4e61add7ffa5f017180908936f0b435c.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

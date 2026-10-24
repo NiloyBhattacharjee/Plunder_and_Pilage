@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://d3ew0k2o42l3n"
+path="res://.godot/imported/sfx_cannon_fire_03.wav-cb7b80c935aa96a6839d0fe536b256be.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Misc Sfx/sfx_cannon_fire_03.wav"
+dest_files=["res://.godot/imported/sfx_cannon_fire_03.wav-cb7b80c935aa96a6839d0fe536b256be.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

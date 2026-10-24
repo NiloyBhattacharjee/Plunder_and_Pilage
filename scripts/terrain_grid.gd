@@ -59,7 +59,7 @@ func _cell_type(c: Vector2i) -> int:
 
 ## Nearest navigable cell centre to `pos`, searching outward ring by ring. Returns pos if none nearby.
 func nearest_sea(pos: Vector2, max_cells := 12) -> Vector2:
-	var c := to_cell(pos)
+	var c := to_cell(pos).clamp(astar.region.position, astar.region.end - Vector2i.ONE)  # a point off the map searches from its edge
 	for r in max_cells + 1:
 		for dy in range(-r, r + 1):
 			for dx in range(-r, r + 1):
@@ -72,6 +72,8 @@ func nearest_sea(pos: Vector2, max_cells := 12) -> Vector2:
 func find_path(from: Vector2, to: Vector2) -> PackedVector2Array:
 	var a := to_cell(nearest_sea(from))
 	var b := to_cell(nearest_sea(to))
+	if not astar.region.has_point(a) or not astar.region.has_point(b):
+		return PackedVector2Array()  # no sea anywhere near
 	if a == b or astar.is_point_solid(b):
 		return PackedVector2Array([to]) if at(to) != LAND else PackedVector2Array()
 	var raw := astar.get_point_path(a, b)

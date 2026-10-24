@@ -1,0 +1,11 @@
+{
+  "_comment": "The captain's focus, like a CK3 lifestyle (scripts/growth.gd focus_*). One at a time, changed from the captain's sheet; progress in each is kept. Every day in it brings focus experience (rules growth.focus) and a little practice in its skill; at each of rules growth.focus.ranks the next of its perks (data/perks.json, \"focus\": this id) is learned. Events can ask \"focus == ID\" and give \"focus N\".",
+  "blade": {"name": "The Blade", "skill": "swordplay", "perks": ["hardened", "dread_name", "duellist"],
+            "description": "Steel and nerve. You fight in front, and everyone knows it."},
+  "purse": {"name": "The Purse", "skill": "trade", "perks": ["ledger_mind", "haggler", "open_palm"],
+            "description": "The price of everything. Gold is a weapon too, and it doesn't need reloading."},
+  "command": {"name": "Command", "skill": "seamanship", "perks": ["presence", "paymaster", "iron_will"],
+              "description": "The ship and the people in it. A crew that would follow you into a hurricane."},
+  "whisper": {"name": "The Whisper", "skill": "", "perks": ["good_ear", "silver_tongue", "two_faces"],
+              "description": "Knowing things. Who owes whom, who sleeps where, and what the harbour master wants."}
+}

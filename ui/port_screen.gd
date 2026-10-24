@@ -629,9 +629,9 @@ func _build_council(box: Node, s: Dictionary) -> void:
 		UIKit.label(line, "%s of the %s%s.  Opinion of you %+d.%s" % [c.name, c.ship, " (leader)" if id == lead else "", c.relations.get(s.captain, 0),
 			"  Owes you %d." % owed if owed > 0 else ""], People.describe(c))
 		_bond_buttons(line, id, s)
-		var b := UIKit.button(line, "Buy their vote (%d)" % Data.table("politics").council.bribe, _act.bind(func(): return {"ok": true, "text": Politics.bribe(s, id)}),
+		var b := UIKit.button(line, "Buy their vote (%d)" % Politics.bribe_cost(s), _act.bind(func(): return {"ok": true, "text": Politics.bribe(s, id)}),
 			"Gold talks: their opinion of you +%d." % Data.table("politics").council.bribe_opinion)
-		b.disabled = s.gold < Data.table("politics").council.bribe
+		b.disabled = s.gold < Politics.bribe_cost(s)
 	var row := UIKit.row(box)
 	if not s.get("council_member", false):
 		var why := Politics.council_problem(s)
@@ -757,7 +757,10 @@ func _build_town() -> void:
 
 
 func _act(action: Callable) -> void:
+	var gold: float = ship.state.gold
 	var result: Dictionary = action.call()
+	if result.ok and ship.state.gold != gold:
+		Sfx.play("coins", -6.0)
 	%Status.text = result.text
 	if result.ok:
 		message.emit("%s: %s" % [Ports.port(port_id).name, result.text])

@@ -460,8 +460,12 @@ static func council_problem(s: Dictionary) -> String:
 	return ""
 
 
+func bribe_cost(s: Dictionary) -> int:
+	return int(cfg().council.bribe * (0.5 if Growth.captain_has(s, "open_palm") else 1.0))
+
+
 func bribe(s: Dictionary, id: String) -> String:
-	var cost: int = cfg().council.bribe
+	var cost := bribe_cost(s)
 	if s.gold < cost:
 		return "That takes %d gold." % cost
 	s.gold -= cost

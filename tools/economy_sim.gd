@@ -43,6 +43,8 @@ func _process(_delta: float) -> bool:
 					m.traffic.lose(v, "player", m.day)
 		_history(m, date)
 		m.step(date.month, date.year)
+		if date.month == 1 and date.day == 1:
+			_brethren_line(m, date.year)
 		at_sea += m.traffic.voyages.size()
 		if d % 7 != 0:
 			continue
@@ -88,9 +90,12 @@ func _history(m: EconomyModel, date: Dictionary) -> void:
 	var stamp := "%04d-%02d-%02d" % [date.year, date.month, date.day]
 	for id in Data.table("history"):
 		var ev = Data.table("history")[id]
-		if id.begins_with("_") or _applied.has(id) or ev.date > stamp or not ev.has("effects"):
+		if id.begins_with("_") or _applied.has(id) or ev.date > stamp:
 			continue
 		_applied[id] = true
+		_wars_and_pardons(m, ev)  # what Factions does in the game
+		if not ev.has("effects"):
+			continue
 		if ev.date < "%04d-01-01" % (date.year - 1):
 			continue  # long before this run began
 		for e in ev.effects:
@@ -105,6 +110,35 @@ func _history(m: EconomyModel, date: Dictionary) -> void:
 				"fleet_blocked": m.set_world("fleet_blocked:" + e.fleet, true, int(e.days))
 				"fair_access": m.set_world("fair_access:" + e.faction, true, int(e.get("days", -1)))
 		print("  %s: %s" % [stamp, id])
+
+
+func _wars_and_pardons(m: EconomyModel, ev: Dictionary) -> void:
+	match ev.kind:
+		"war", "peace":
+			for a in ev.sides[0]:
+				for b in ev.sides[1]:
+					var pair := [a, b] if a < b else [b, a]
+					if ev.kind == "war" and not pair in m.traffic.wars:
+						m.traffic.wars.append(pair)
+					elif ev.kind == "peace":
+						m.traffic.wars.erase(pair)
+		"pardon":
+			m.brethren.pardons.append_array(ev.factions)
+		"pardon_end":
+			for f in ev.factions:
+				m.brethren.pardons.erase(f)
+
+
+## The pirates and the navy each year, against the historical numbers.
+func _brethren_line(m: EconomyModel, year: int) -> void:
+	var b := m.brethren
+	var navy := 0.0
+	for f in b.navy:
+		navy += b.navy[f]
+	var at_home := b.companies.filter(func(co): return not co.away).size()
+	print("  %d  pirates %5d in %2d companies (%2d in the islands)  idle seamen %5d  in service %5d  men-of-war %4.1f  %s  hanged %d, pardoned %d" % [
+		year, b.men(), b.companies.size(), at_home, int(b.idle), int(b.service), navy, "war" if not m.traffic.wars.is_empty() else "   ",
+		b.tally.hanged, b.tally.pardoned])
 
 
 func _report(stats: Dictionary) -> void:

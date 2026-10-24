@@ -38,6 +38,29 @@ static func opinion(c: Dictionary, s: Dictionary) -> int:
 	return c.relations.get(s.captain, 0)
 
 
+## A hand's opinion of the captain changes, and they remember why: the newest reasons first, a reason that comes
+## again adding up, the last few kept (rules crew.memories). The roster shows them.
+static func feel(s: Dictionary, c: Dictionary, n: int, why: String) -> void:
+	c.relations[s.captain] = clampi(opinion(c, s) + n, -100, 100)
+	if n == 0 or why == "":
+		return
+	var mem: Array = c.get("memories", [])
+	c.memories = mem
+	var same := mem.filter(func(m): return m.why == why and m.of == s.captain)
+	var m: Dictionary = same[0] if not same.is_empty() else {"why": why, "n": 0, "of": s.captain}
+	mem.erase(m)
+	m.n += n
+	m.day = int(Clock.day)
+	mem.push_front(m)
+	if mem.size() > int(cfg().memories):
+		mem.pop_back()
+
+
+## What a hand remembers of this captain, newest first: [{why, n, day}].
+static func memories(c: Dictionary, s: Dictionary) -> Array:
+	return c.get("memories", []).filter(func(m): return m.of == s.captain)
+
+
 # ---- morale ----------------------------------------------------------------------
 
 ## The crew's mood, 0-100, with every part of it explained: {value, parts: [[label, value]], text}.
@@ -176,6 +199,7 @@ static func daily(s: Dictionary, stats: Dictionary, port: String, rng: RandomNum
 			Growth.auto_spend(People.person(id))
 	var msgs := disease_day(s, port, rng)
 	msgs.append_array(social_day(s, rng))
+	msgs.append_array(Aboard.day(s, port, rng))
 	msgs.append_array(mood_day(s, morale(s, stats)))
 	msgs.append_array(unrest_day(s, stats, rng))
 	return msgs
@@ -199,11 +223,12 @@ static func mood_day(s: Dictionary, m: Dictionary) -> Array:
 	for p in people(s):
 		var op := opinion(p, s)
 		if good:
-			p.relations[s.captain] = mini(op + 1, maxi(op, int(g.good_cap)))
+			feel(s, p, mini(op + 1, maxi(op, int(g.good_cap))) - op, "Good times aboard")
 			continue
 		var t := tags(p)
 		var n := 1 + (1 if unpaid and "greedy" in t else 0) + (1 if dry and "drinks" in t else 0)
-		p.relations[s.captain] = maxi(op - n, mini(op, int(g.floor)))
+		var why: String = "Unpaid" if unpaid and "greedy" in t else ("No rum aboard" if dry and "drinks" in t else "Hard times: " + (hurts[0] if not hurts.is_empty() else "low spirits").to_lower())
+		feel(s, p, maxi(op - n, mini(op, int(g.floor))) - op, why)
 	if days != int(g.after_days):
 		return []
 	if good:
@@ -226,12 +251,12 @@ static func after_battle(s: Dictionary, outcome: String, after: Dictionary) -> S
 	if n == 0 and outcome == "enemy_struck":
 		for p in people(s):
 			var op := opinion(p, s)
-			p.relations[s.captain] = mini(op + int(g.prize), maxi(op, int(g.good_cap)))
+			feel(s, p, mini(op + int(g.prize), maxi(op, int(g.good_cap))) - op, "A prize taken")
 		return ""
 	if n == 0:
 		return ""
 	for p in people(s):
-		p.relations[s.captain] = clampi(opinion(p, s) + n, -100, 100)
+		feel(s, p, n, " and ".join(why).capitalize())
 	return "The crew blame you: %s (opinion of you %+d)." % [" and ".join(why), n]
 
 
@@ -458,7 +483,7 @@ static func calm(s: Dictionary, n: int) -> void:
 		if others.is_empty():
 			break
 		u.support.erase(others[0])
-		People.person(others[0]).relations[s.captain] = People.person(others[0]).relations.get(s.captain, 0) + 5
+		feel(s, People.person(others[0]), 5, "Won back from the plotters")
 
 
 ## Someone's money in the forecastle: n more hands join the plotters (and if nobody leads them yet, someone will).
@@ -521,7 +546,7 @@ static func punish(s: Dictionary, rebels: Array, how: String) -> String:
 			s.reputation.fear += 3
 			for id in rebels:
 				if id in s.crew:
-					People.person(id).relations[s.captain] = People.person(id).relations.get(s.captain, 0) - 5
+					feel(s, People.person(id), -5, "Hanged a shipmate")
 		"maroon":
 			text = "%d mutineers are left on a sandbar with a cask of water." % rebels.size()
 			for id in rebels:
@@ -533,7 +558,7 @@ static func punish(s: Dictionary, rebels: Array, how: String) -> String:
 		"forgive":
 			for id in rebels:
 				if id in s.crew:
-					People.person(id).relations[s.captain] = People.person(id).relations.get(s.captain, 0) + 10
+					feel(s, People.person(id), 10, "Forgave the mutiny")
 			s.reputation.honour += 2
 			text = "You forgive them, every one. Some will remember it; some will think you weak."
 	s.unrest = fresh_unrest()
@@ -640,6 +665,7 @@ static func make_captain(s: Dictionary, id: String, how: String) -> Array:
 	s.captain = id
 	People.remove(old.id)
 	new_cap.hidden = []  # you know yourself
+	new_cap.focus = new_cap.get("focus", "")  # a captain chooses a focus (data/focus.json)
 	new_cap.history.append("Took command of the %s (%s), %s." % [s.name, {"elected": "elected by the crew", "command": "by the chain of command",
 		"force": "by force"}[how], Clock.date_string()])
 	for f in s.relations:

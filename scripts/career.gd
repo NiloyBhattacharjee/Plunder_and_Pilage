@@ -266,7 +266,7 @@ static func pardon(s: Dictionary, f: String, free := false, port_id := "") -> Ar
 		for t in c.traits:
 			tags.append_array(Data.table("traits")[t].get("tags", []))
 		if tags.any(func(t): return t in p.resent_tags):
-			c.relations[s.captain] = c.relations.get(s.captain, 0) - 5
+			Crew.feel(s, c, -5, "Took the King's pardon")
 			resent += 1
 	ShipStats.captain(s).history.append("Pardoned by %s, %s." % [fname(f), Clock.date_string()])
 	Ambitions.tally(s, "pardons")
@@ -300,8 +300,10 @@ static func port_access(s: Dictionary, port_id: String) -> Dictionary:
 	var detect := clampf(pa.detect_base + s.reputation.notoriety * pa.detect_per_notoriety
 		+ Ports.state[port_id].laws.vigilance * pa.detect_per_vigilance, 0.05, 0.9)
 	var harsh: float = 1.0 - minf(0.0, Ports.state[port_id].laws.get("pirates", 0.0))  # a hanging town's harbour master costs more
+	if Growth.captain_has(s, "two_faces"):
+		detect *= 0.5
 	return {"open": reason == "", "reason": reason, "detect": detect,
-		"bribe": int((pa.bribe_base + s.reputation.notoriety * pa.bribe_per_notoriety) * harsh)}
+		"bribe": int((pa.bribe_base + s.reputation.notoriety * pa.bribe_per_notoriety) * harsh * (0.5 if Growth.captain_has(s, "open_palm") else 1.0))}
 
 
 ## Can these colours get you past this port's fort? A flag of a nation not at war with the port.

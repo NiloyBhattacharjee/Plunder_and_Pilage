@@ -16,5 +16,23 @@
   "sawbones":    {"name": "Sawbones", "needs": {"medicine": 10}, "description": "Tending the wounded sends twice as many back to their stations."},
   "shipwright":  {"name": "Shipwright", "needs": {"carpentry": 10}, "description": "Plugging the shot holes patches twice as much hull."},
   "beloved":     {"name": "Beloved", "needs": {"charisma": 10}, "description": "While captain or an officer: +3 to the crew's morale."},
-  "quick_study": {"name": "Quick study", "needs": {}, "description": "Learns half as fast again: +50% experience in every skill."}
+  "quick_study": {"name": "Quick study", "needs": {}, "description": "Learns half as fast again: +50% experience in every skill."},
+
+  "_focus_comment": "Learned from the captain's focus (data/focus.json), never chosen at a level-up. effects: added to the stat or skill like a trait's. checks: added to the event checks this character rolls. haggler in ShipStats.spread_mult, open_palm in every bribe, paymaster in ShipStats.daily_cost, two_faces in Career.port_access, dread_name also in the battle demand to strike.",
+  "hardened":      {"name": "Hardened", "focus": "blade", "needs": {}, "effects": {"swordplay": 2, "intimidation": 1},
+                    "description": "Swordplay +2, Intimidation +1."},
+  "dread_name":    {"name": "Dread name", "focus": "blade", "needs": {}, "checks": {"intimidation": 3},
+                    "description": "+3 to Intimidation checks, and to demanding a ship strike her colours."},
+  "ledger_mind":   {"name": "Ledger mind", "focus": "purse", "needs": {}, "effects": {"trade": 2, "experience": 1},
+                    "description": "Trade +2, Experience +1."},
+  "haggler":       {"name": "Haggler", "focus": "purse", "needs": {}, "description": "Merchants' spread on every deal narrows by a fifth."},
+  "open_palm":     {"name": "Open palm", "focus": "purse", "needs": {}, "description": "Bribes cost half: harbour masters, boarding officers, councillors."},
+  "presence":      {"name": "Presence", "focus": "command", "needs": {}, "effects": {"authority": 2, "seamanship": 1},
+                    "description": "Authority +2, Seamanship +1."},
+  "paymaster":     {"name": "Paymaster", "focus": "command", "needs": {}, "description": "The crew sign on for a fifth less in wages."},
+  "good_ear":      {"name": "Good ear", "focus": "whisper", "needs": {}, "effects": {"charisma": 2, "experience": 1},
+                    "description": "Charisma +2, Experience +1."},
+  "silver_tongue": {"name": "Silver tongue", "focus": "whisper", "needs": {}, "checks": {"charisma": 3, "trade": 1},
+                    "description": "+3 to Charisma checks and +1 to Trade checks."},
+  "two_faces":     {"name": "Two faces", "focus": "whisper", "needs": {}, "description": "Under a false flag, harbour masters see through you half as often."}
 }

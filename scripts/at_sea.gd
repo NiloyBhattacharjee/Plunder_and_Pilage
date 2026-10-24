@@ -153,7 +153,7 @@ static func wants_search(s: Dictionary, f: String, rng: RandomNumberGenerator) -
 
 
 static func bribe_cost(s: Dictionary, f: String) -> int:
-	return int(cfg().bribe_base + suspect_value(s, f) * float(cfg().bribe_share))
+	return int((cfg().bribe_base + suspect_value(s, f) * float(cfg().bribe_share)) * (0.5 if Growth.captain_has(s, "open_palm") else 1.0))
 
 
 ## The boarding officer goes through the hold. Returns what happened.

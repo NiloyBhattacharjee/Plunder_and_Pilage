@@ -19,6 +19,11 @@ func test_every_referenced_art_file_exists():
 		assert_true(ResourceLoader.exists(Data.table("palette").fonts[kind]), kind)
 
 
+func test_every_sound_has_files():
+	for id in Sfx.SOUNDS:
+		assert_false(Sfx.files(id).is_empty(), id)
+
+
 func test_portrait_rebuilds_identically_from_its_seed():
 	var c := People.generate({"nationality": "french"})
 	var a := Portraits.layers(c, ["crew"]).map(func(l): return l.id)

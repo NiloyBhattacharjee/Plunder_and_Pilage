@@ -1,5 +1,5 @@
 {
-  "_comment": "The whole look in one place. scripts/style.gd builds the UI Theme from this. UI colours (Octopath-style navy glass and gold) are the plain names; the sea chart keeps its own ink-and-parchment under chart_*. Map, combat and UI read colours by name.",
+  "_comment": "Charts (ui/chart.gd) draw on viz_surface with series_1-3, the first three slots of a categorical palette validated for colour-blind readers against that surface (all pairs, dark mode); more series than three become small multiples. The whole look in one place. scripts/style.gd builds the UI Theme from this. UI colours (Octopath-style navy glass and gold) are the plain names; the sea chart keeps its own ink-and-parchment under chart_*. Map, combat and UI read colours by name.",
   "colors": {
     "parchment": "#0e1224",
     "parchment_light": "#1d2440",
@@ -26,7 +26,7 @@
     "splash": "#f3f0e6",
     "chart_paper": "#ead9b0",
     "chart_paper_light": "#f3e8cc",
-    "chart_ink": "#3b2a1a"
+    "chart_ink": "#3b2a1a", "viz_surface": "#0b0e1c", "viz_grid": "#22273a", "series_1": "#3987e5", "series_2": "#d95926", "series_3": "#199e70"
   },
   "fonts": {
     "body": "res://assets/ui/fonts/IMFellEnglish-Regular.ttf",

@@ -32,8 +32,11 @@ func reset(seed := -1) -> void:
 
 func _on_day(d: int) -> void:
 	model.traffic.wars = _wars()
+	model.brethren.pardons = Factions.pardons.duplicate()
 	var date := Clock.date_of(d)
 	model.step(date.month, date.year)
+	for ev in model.brethren.take_events():
+		add_news(ev.text, ev.port)
 	for ev in model.fleets.take_events():
 		fleet_event.emit(ev)
 	for ev in model.shocks.take_events():
@@ -176,8 +179,8 @@ func voyages() -> Array:
 
 
 ## A voyage ends without arriving: taken by the player or by pirates, or sunk.
-func lose_voyage(id: String, cause: String) -> void:
-	model.traffic.lose_id(id, cause, model.day)
+func lose_voyage(id: String, cause: String, company := "") -> void:
+	model.traffic.lose_id(id, cause, model.day, company)
 
 
 ## How far along her voyage a ship is, 0 at the origin and 1 at the destination.

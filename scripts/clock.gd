@@ -50,10 +50,14 @@ static func date_of(d: int) -> Dictionary:
 
 
 func date_string() -> String:
-	var d := date()
+	return date_string_of(int(day))
+
+
+static func date_string_of(d: int) -> String:
+	var t := date_of(d)
 	var months := ["January", "February", "March", "April", "May", "June", "July",
 		"August", "September", "October", "November", "December"]
-	return "%d %s %d" % [d.day, months[d.month - 1], d.year]
+	return "%d %s %d" % [t.day, months[t.month - 1], t.year]
 
 
 func save_state() -> Dictionary:

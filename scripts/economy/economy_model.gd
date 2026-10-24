@@ -19,6 +19,7 @@ var params := {}     # port -> good -> {make, use, imp, exp, normal}, fixed by t
 var traffic: Traffic # merchant voyages between the ports (scripts/economy/traffic.gd)
 var fleets: Fleets   # the treasure fleets and sugar convoys (scripts/economy/fleets.gd)
 var shocks: Shocks   # random shocks: hurricanes, epidemics, fires... (scripts/economy/shocks.gd)
+var brethren: Brethren # the pirates: companies, the idle seamen they recruit from, the navy against them (scripts/economy/brethren.gd)
 var world := {}      # key -> {value, until}: world conditions in force (pirates, sailings:<faction or port>,
                      # imports:<faction>, spread:<port>, fleet_blocked:<fleet>, fair_access:<faction>, state:<key>)
 var day := 0         # days the model has run
@@ -58,6 +59,7 @@ func setup(goods_t: Dictionary, ports_t: Dictionary, cfg_t: Dictionary, seed: in
 	fleets = Fleets.new(self)
 	shocks = Shocks.new(self)
 	world = {}
+	brethren = Brethren.new(self)
 
 
 func traded() -> Array:
@@ -181,6 +183,7 @@ func step(month: int, year := -1) -> void:
 	shocks.step(day, month)
 	traffic.step(day, month)
 	fleets.step(day, month, year if year > 0 else 1000 + day / 365)
+	brethren.step(day, month, year if year > 0 else 1000 + day / 365)
 	for id in stock:
 		for g in _traded:
 			var f := flows(id, g, month)
@@ -239,6 +242,8 @@ func world_has(key: String) -> bool:
 ## fades as trade restores supply.
 func apply_effect(id: String, e: Dictionary) -> bool:
 	match e.type:
+		"haven_closed":  # no more fences or recruits for pirates here (Brethren.havens)
+			set_world("haven_closed:" + id, true, -1)
 		"market_shock":  # price_multiplier on goods for days: the stock falls (or rises) to match, supply stays short
 			var p: float = float(e.get("price_multiplier", 1.0))
 			for g in _goods_of(id, e.get("goods", [])):
@@ -375,7 +380,7 @@ func breakdown(id: String, g: String, month: int, spread_mult := 1.0, duty := 0.
 
 func save_state() -> Dictionary:
 	return {"rng": str(rng.state), "stock": stock, "mods": mods, "history": history, "day": day, "traffic": traffic.save_state(),
-		"fleets": fleets.save_state(), "world": world}
+		"fleets": fleets.save_state(), "world": world, "brethren": brethren.save_state()}
 
 
 func load_state(d: Dictionary) -> void:
@@ -397,3 +402,5 @@ func load_state(d: Dictionary) -> void:
 	world = d.get("world", {})
 	for k in world:
 		world[k].until = int(world[k].until)
+	if d.has("brethren"):
+		brethren.load_state(d.brethren)

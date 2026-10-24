@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bt2tcxkggtpc"
+path="res://.godot/imported/sfx_compass_clicks_02.wav-22bfb88dab3c37e29e01754fa6425e27.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Misc Sfx/sfx_compass_clicks_02.wav"
+dest_files=["res://.godot/imported/sfx_compass_clicks_02.wav-22bfb88dab3c37e29e01754fa6425e27.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

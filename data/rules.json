@@ -156,9 +156,13 @@
   "growth": {
     "xp_per_level": 20, "max_level": 20, "perk_every": 3, "max_skill": 20,
     "build": {"stat_base": 7, "skill_base": 3, "stat_points": 8, "skill_points": 12, "max_start": 15,
-              "extra_traits": 1, "flaw_points": 3, "captain_skills": ["seamanship", "swordplay", "trade"], "flaws": ["cowardly", "drunkard", "seasick", "hated", "green", "gambler", "hot_headed"]},
-    "looks_need_port": true
+              "flaw_points": 3, "captain_skills": ["seamanship", "swordplay", "trade"], "flaws": ["cowardly", "drunkard", "seasick", "hated", "green", "gambler", "hot_headed"]},
+    "looks_need_port": true,
+    "focus": {"xp_per_day": 1.0, "skill_xp_per_day": 0.25, "ranks": [30, 100, 220], "event_xp": 15}
   },
+  "nature": {"_comment": "The captain's nature (scripts/nature.gd): a choice a trait cares about (voices.json traits x the choice's stances) is in or against it. Against it `strain` times and the trait is gone; lean the same way `drift` times and you take on the trait.",
+    "min": 2, "strain": 3, "drift": 5,
+    "drift_traits": {"cruel+": "bloodthirsty", "cruel-": "merciful", "decent+": "honest", "decent-": "schemer", "greedy+": "greedy", "bold+": "brave", "bold-": "calm"}},
 
   "people": {
     "stat_mean": 6, "stat_spread": 2.5,
@@ -187,7 +191,8 @@
       "spain":   {"spanish": 65, "portuguese": 15, "afro_caribbean": 20},
       "france":  {"french": 65, "irish": 5, "dutch": 5, "afro_caribbean": 25},
       "dutch":   {"dutch": 45, "english": 10, "portuguese": 10, "spanish": 10, "afro_caribbean": 25},
-      "pirates": {"english": 30, "irish": 10, "scottish": 10, "french": 15, "dutch": 5, "spanish": 5, "afro_caribbean": 25}
+      "pirates": {"english": 30, "irish": 10, "scottish": 10, "french": 15, "dutch": 5, "spanish": 5, "afro_caribbean": 25},
+      "freed":   {"afro_caribbean": 100}
     }
   },
   "ship_names": ["Revenge", "Fancy", "Ranger", "Whydah", "Adventure", "Royal Fortune", "Kingston", "Delight", "Speedwell",
@@ -197,7 +202,7 @@
   "fence": {"legal_mult": 0.5, "fence_mult": 0.85, "trust_per_gold": 0.00003, "trust_per_point": 100, "dependence_per_point": 0.01, "cash": {"small": 1500, "medium": 3000, "large": 5000},
             "cash_regen": 0.05, "treasure_legal_mult": 0.7,
             "_comment": "Stolen goods: an honest port pays legal_mult of the price; a fence pays fence_mult, rising toward full price as you do business (trust_per_gold), but has only so much cash (refilling cash_regen of it a day). Silver and gold sold outside Spanish ports and fences fetch treasure_legal_mult."},
-  "encounters": {"daily_chance": 0.12, "hostile_relation": -25, "friendly_pirate_relation": 20},
+  "encounters": {"daily_chance": 0.12, "hostile_relation": -25, "friendly_pirate_relation": -10},
   "bases": {
     "max": 4, "claim_cost": 150, "claim_garrison": 5, "discover_nm": 30, "discover_dc": 9,
     "storage_without_warehouse": 60, "garrison_wage": 0.15, "food_per_man": 0.1, "recruits_cap": 20,
@@ -253,6 +258,7 @@
     "no_food": -20, "no_water": -25, "rum": 5, "rum_per_crew": 0.02, "comfort": 2.0, "sick": 40,
     "captain_per_point": 0.5, "opinion_weight": 0.3, "share_mod_per_gold": 0.8, "shares_max_mod": 15, "shares_days": 25,
     "victory": 10, "victory_days": 30, "defeat": -15, "defeat_days": 40, "mourning_base": 2, "mourning_days": 20,
+    "memories": 6, "_memories": "How many reasons each hand keeps for how they feel about the captain (Crew.feel).",
     "social_chance": 0.05, "friend": 25, "rival": -25, "rival_fight_chance": 0.02,
     "desert_morale": 30, "desert_per_point": 0.004,
     "unrest_morale": 40, "leader_chance": 0.1, "leader_min_stat": 9, "discontent": 15, "recruit_chance": 0.03, "stage_days": 7,
@@ -395,7 +401,8 @@
     "npc_false_flag_chance": 0.3
   },
   "shipping": {
-    "pirates": 4, "navy_per_faction": 2,
+    "_pirates": "Pirate ships on the map are the companies of the pirate model (economy.json piracy). navy_per_faction caps each nation's men-of-war on the map; how many it has comes from the same model.",
+    "navy_per_faction": 4,
     "hunters_max": 2, "hunter_spawn_chance": 0.15,
     "_traders": "Other ships besides the economy's merchants: smugglers running a Spanish port's contraband in from the Dutch and English islands, coasters carrying a port's own goods to a neighbour, and Spanish guarda costas.",
     "smugglers": 2, "coasters": 3, "guarda_costas": 2,

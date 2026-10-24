@@ -11,7 +11,8 @@
        "outcomes": ["opinion crew +4", "fear +1"], "result": "The {nation_adj} sailors are thrown into the harbour. Your men will drink to this for a year.",
        "fail_outcomes": ["opinion crew +1", "wound captain"], "fail_result": "You win, but someone breaks a bottle over your head."},
       {"text": "Pay the landlord and drag your men out", "conditions": ["gold >= 40"], "outcomes": ["gold -40", "opinion crew -2"], "result": "Your men think you've gone soft."},
-      {"text": "Let the watch sort it out", "outcomes": ["crew -2", "relation port -2"], "result": "Two of your men spend a week in the gaol, and decide to stay ashore."}
+      {"text": "Let the watch sort it out", "outcomes": ["crew -2", "relation port -2"], "result": "Two of your men spend a week in the gaol, and decide to stay ashore."},
+      {"text": "Stand on a table and roar", "conditions": ["captain.intimidation >= 14"], "outcomes": ["fear +1", "opinion crew +2"], "result": "The room goes quiet. The {nation_adj} sailors decide to drink somewhere else."}
     ]
   },
 
@@ -23,7 +24,8 @@
     "choices": [
       {"text": "Keep the men aboard", "outcomes": ["opinion crew -2"], "result": "No shore leave. The men grumble, but they're safe."},
       {"text": "Bribe the lieutenant", "conditions": ["gold >= 60"], "outcomes": ["gold -60"], "result": "He finds other ships more interesting."},
-      {"text": "Let them take their chances ashore", "outcomes": ["crew -3", "opinion crew +1"], "result": "Three don't come back."}
+      {"text": "Let them take their chances ashore", "outcomes": ["crew -3", "opinion crew +1"], "result": "Three don't come back."},
+      {"text": "Remind the lieutenant what the Navy does to officers who press protected men", "conditions": ["captain_trait.former_navy"], "outcomes": ["opinion crew +2"], "result": "You quote him the regulation, chapter and article. He goes pale and takes his gang down the quay."}
     ]
   },
 
@@ -60,7 +62,8 @@
       {"text": "Cross her palm with silver", "check": {"who": "captain", "skill": "charisma", "dc": 10},
        "outcomes": ["gold -5", "opinion crew +2"], "result": "'Gold and glory, Captain, and a long life.' The crew are delighted.",
        "fail_outcomes": ["gold -5", "opinion crew -2"], "fail_result": "'I see drowning.' The men go pale."},
-      {"text": "Walk on", "outcomes": [], "result": "She curses you, cheerfully."}
+      {"text": "Walk on", "outcomes": [], "result": "She curses you, cheerfully."},
+      {"text": "Ask her what the sea wants from you, and listen", "conditions": ["captain_trait.superstitious"], "outcomes": ["gold -5", "opinion crew +3", "morale 5 20"], "result": "She tells you. You believe her. So, watching your face, do the crew."}
     ]
   },
 
@@ -73,7 +76,8 @@
     "choices": [
       {"text": "Pay up", "outcomes": ["gold -{fee}"], "result": "{fee} gold, receipted."},
       {"text": "Argue every line of it", "check": {"who": "captain", "skill": "trade", "dc": 12},
-       "outcomes": [], "result": "He gives up and waives the lot.", "fail_outcomes": ["gold -{fee}", "relation port -2"], "fail_result": "You pay, and he makes a note of your name."}
+       "outcomes": [], "result": "He gives up and waives the lot.", "fail_outcomes": ["gold -{fee}", "relation port -2"], "fail_result": "You pay, and he makes a note of your name."},
+      {"text": "Find the clerk's mistake in the ledger", "conditions": ["captain.trade >= 13"], "outcomes": ["relation port +1"], "result": "There's always a mistake. This one is in your favour, and the harbour master is grateful you mention it quietly."}
     ]
   },
 
@@ -135,7 +139,8 @@
     "choices": [
       {"text": "Play for {stake} a hand", "check": {"who": "captain", "skill": "experience", "dc": 12},
        "outcomes": ["gold +{stake}"], "result": "You leave {stake} richer and he leaves annoyed.", "fail_outcomes": ["gold -{stake}"], "fail_result": "He takes {stake} off you, smiling."},
-      {"text": "Decline politely", "outcomes": [], "result": "He shrugs and finds another pigeon."}
+      {"text": "Decline politely", "outcomes": [], "result": "He shrugs and finds another pigeon."},
+      {"text": "Play your own game: you know every trick at this table", "conditions": ["captain_trait.gambler"], "check": {"who": "captain", "skill": "experience", "dc": 9}, "outcomes": ["gold +{stake}"], "result": "The planter never sees it coming. Neither does his purse.", "fail_outcomes": ["gold -{stake}"], "fail_result": "He knows the same tricks."}
     ]
   },
 
@@ -183,7 +188,8 @@
       {"text": "Bribe the senior officer", "conditions": ["gold >= 80"], "check": {"who": "captain", "skill": "trade", "dc": 11},
        "outcomes": ["gold -80"], "result": "He signs the report: nothing found.", "fail_outcomes": ["gold -80", "relation port -5"], "fail_result": "He takes the money and reports you anyway."},
       {"text": "Bluff: those goods were bought honestly", "check": {"who": "captain", "skill": "charisma", "dc": 14},
-       "outcomes": [], "result": "Your paperwork is a masterpiece of invention. They leave.", "fail_outcomes": ["gold -10%", "relation port -8", "notoriety +2"], "fail_result": "They fine you, and your name goes in a book."}
+       "outcomes": [], "result": "Your paperwork is a masterpiece of invention. They leave.", "fail_outcomes": ["gold -10%", "relation port -8", "notoriety +2"], "fail_result": "They fine you, and your name goes in a book."},
+      {"text": "Open your books: every bale has a bill of sale", "conditions": ["captain_trait.honest", "stolen <= 0"], "outcomes": ["relation port +3"], "result": "The senior officer reads every line, and apologises. Whoever informed on you will have some explaining to do."}
     ]
   },
 
@@ -258,7 +264,8 @@
     "weight": 5,
     "choices": [
       {"text": "Pay for the blessing", "outcomes": ["gold -25", "opinion crew +2"], "result": "Holy water on the bow. The superstitious hands breathe easier."},
-      {"text": "Decline", "outcomes": [], "result": "He blesses you anyway, rather pointedly."}
+      {"text": "Decline", "outcomes": [], "result": "He blesses you anyway, rather pointedly."},
+      {"text": "Kneel at the rail with the crew while he blesses her (25 gold)", "conditions": ["captain_trait.devout", "gold >= 25"], "outcomes": ["gold -25", "opinion crew +4", "morale 4 30"], "result": "The crew have never seen their captain kneel. It stays with them."}
     ]
   }
 }

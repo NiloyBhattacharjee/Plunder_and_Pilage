@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://stxp1on530mx"
+path="res://.godot/imported/cannon_hit_cannon (1).ogg-fff4ae5b1750371aabddbb6a225d6baa.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/audio/effects/cannon/cannon_hit_cannon (1).ogg"
+dest_files=["res://.godot/imported/cannon_hit_cannon (1).ogg-fff4ae5b1750371aabddbb6a225d6baa.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

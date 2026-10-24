@@ -1,0 +1,265 @@
+{
+  "_comment": "The captain's own life: events that ask who the captain is (captain_trait.X) and what they've given their life to (focus == X, data/focus.json). Choices that a trait cares about are tagged in the dialog and wear the trait down or build it up (scripts/nature.gd); \"voice\" here marks a stance the outcomes don't show. See docs/events.md.",
+
+  "cap_drunk_morning": {
+    "title": "The morning after",
+    "text": "You wake on the cabin floor with the sun in your eyes. The mate says you came on deck in the middle watch, gave orders nobody could understand, and fell asleep against the binnacle.",
+    "conditions": ["captain_trait.drunkard", "at_sea"],
+    "choices": [
+      {"text": "Laugh it off", "outcomes": ["opinion crew -2"], "result": "Some of them laugh with you. Not many."},
+      {"text": "Swear off the bottle, in front of all of them", "check": {"who": "captain", "skill": "authority", "dc": 14},
+       "outcomes": ["untrait captain drunkard", "opinion crew +3"], "result": "It's the longest month of your life. But it holds.",
+       "fail_outcomes": ["opinion crew -3"], "fail_result": "It lasts four days. Everyone knows it lasted four days."},
+      {"text": "Hair of the dog", "outcomes": ["opinion crew -1"], "result": "The second bottle is better than the first."}
+    ]
+  },
+  "cap_gambler_table": {
+    "title": "The back room",
+    "where": "port",
+    "text": "There's a game in the back room of the best tavern in {port}: planters, a colonel, and stakes you could lose a ship on. You can hear the dice from the street.",
+    "conditions": ["captain_trait.gambler", "gold >= 200"],
+    "roles": {"stake": {"from": "number", "range": [80, 200]}},
+    "choices": [
+      {"text": "Sit down and play for {stake} a throw", "check": {"who": "captain", "skill": "experience", "dc": 13},
+       "outcomes": ["gold +{stake}", "gold +{stake}"], "result": "The colonel signs you a note for what he can't pay. You'll never see it. You don't care.",
+       "fail_outcomes": ["gold -{stake}", "gold -{stake}"], "fail_result": "You lose, and double, and lose again."},
+      {"text": "Walk away. Just this once", "check": {"who": "captain", "skill": "authority", "dc": 12}, "voice": {"greedy": -1},
+       "outcomes": [], "result": "You walk away. Your hands shake all the way back to the boat.",
+       "fail_outcomes": ["gold -{stake}"], "fail_result": "You get as far as the door."}
+    ]
+  },
+  "cap_devout_feast": {
+    "title": "A feast day",
+    "where": "port",
+    "text": "It's a saint's day in {port} and the bells have rung since dawn. A devout captain doesn't work on a feast day, and your crew know you're one.",
+    "conditions": ["captain_trait.devout"],
+    "choices": [
+      {"text": "Keep the feast: mass ashore, and no work", "outcomes": ["time 1", "opinion crew +2", "morale 4 20"], "result": "The whole crew stands at the back of the church, scrubbed and awkward."},
+      {"text": "Work through it. God understands cargo", "voice": {"decent": -2}, "outcomes": ["opinion crew -1"], "result": "The bells go on ringing while you load. It sounds like an accusation."}
+    ]
+  },
+  "cap_superstitious_bird": {
+    "title": "The white bird",
+    "text": "A white bird has followed the {ship} for three days, always off the starboard quarter. You don't like it. You don't like it at all.",
+    "conditions": ["captain_trait.superstitious", "at_sea"],
+    "choices": [
+      {"text": "Shoot it", "outcomes": ["morale -5 20"], "result": "The crew go very quiet. You feel better. They don't."},
+      {"text": "Heave to for a day, and let it go its way", "outcomes": ["time 1", "opinion crew +1"], "result": "On the second morning it's gone. Everyone breathes."},
+      {"text": "Ignore it", "check": {"who": "captain", "skill": "authority", "dc": 13},
+       "outcomes": [], "result": "It's a bird. It's only a bird. You say so, and they believe you.",
+       "fail_outcomes": ["morale -4 15"], "fail_result": "You keep looking at it. So do they."}
+    ]
+  },
+  "cap_hot_head_insult": {
+    "title": "Words at the next table",
+    "where": "port",
+    "text": "A merchant captain at the next table in {port} says something about your ship, and your mother, and laughs.",
+    "conditions": ["captain_trait.hot_headed"],
+    "choices": [
+      {"text": "Hit him", "voice": {"bold": 2}, "check": {"who": "captain", "skill": "swordplay", "dc": 11},
+       "outcomes": ["fear +1", "relation port -3", "opinion crew +2"], "result": "He doesn't laugh again. Neither does anyone else in the room.",
+       "fail_outcomes": ["wound captain", "relation port -3"], "fail_result": "He's a better brawler than he looked."},
+      {"text": "Swallow it", "voice": {"bold": -2}, "check": {"who": "captain", "skill": "authority", "dc": 14},
+       "outcomes": ["honour +1"], "result": "You finish your drink and leave. It's harder than any fight.",
+       "fail_outcomes": ["fear +1", "relation port -3", "opinion crew +1"], "fail_result": "You didn't mean to throw the table."}
+    ]
+  },
+  "cap_coward_sail": {
+    "title": "A sail at dawn",
+    "text": "A strange sail at dawn, hull down and coming on. Probably nothing. Your hands are sweating, and the crew are watching your hands.",
+    "conditions": ["captain_trait.cowardly", "at_sea"],
+    "choices": [
+      {"text": "Run before she's hull up", "voice": {"bold": -2}, "outcomes": ["opinion crew -3"], "result": "She was a fishing smack. Everyone saw her through the glass by noon."},
+      {"text": "Hold your course and let her come", "voice": {"bold": 2}, "check": {"who": "captain", "skill": "authority", "dc": 13},
+       "outcomes": ["opinion crew +3"], "result": "She was a fishing smack. You held your course anyway, and they saw that too.",
+       "fail_outcomes": ["opinion crew -4"], "fail_result": "Your voice cracks on the order. Nobody mentions it, all day."}
+    ]
+  },
+  "cap_greedy_ledger": {
+    "title": "Counting twice",
+    "text": "The quartermaster has seen you counting the plunder twice, and the second count always comes out smaller.",
+    "conditions": ["captain_trait.greedy", "gold >= 100"],
+    "choices": [
+      {"text": "Take a captain's share and a half", "outcomes": ["gold +10%", "opinion crew -4"], "result": "Nobody says anything to your face."},
+      {"text": "Square the books, fair to the penny", "outcomes": ["gold -5%", "opinion crew +3"], "result": "It hurts. The crew notice it hurts, and like you better for it."}
+    ]
+  },
+  "cap_merciful_gallows": {
+    "title": "A hanging in the square",
+    "where": "port",
+    "text": "They're hanging a boy in the square at {port}: {boy}, a cabin hand off a pirate sloop, fourteen at most. The crowd is in a holiday mood.",
+    "conditions": ["captain_trait.merciful", "port_faction != pirates"],
+    "roles": {"boy": {"from": "new"}},
+    "choices": [
+      {"text": "Pay the hangman to cut the rope early (100 gold)", "conditions": ["gold >= 100"],
+       "outcomes": ["gold -100", "hire {boy}", "honour +2", "relation port -3"], "result": "The rope parts, somehow, and in the confusion {boy} ends up in your boat."},
+      {"text": "Talk to the magistrate", "conditions": ["captain.charisma >= 13"],
+       "outcomes": ["hire {boy}", "honour +2"], "result": "You talk about youth and mercy and the price of rope. The magistrate releases {boy} into your custody, to be rid of you."},
+      {"text": "Walk away", "voice": {"cruel": 1}, "outcomes": ["opinion crew -1"], "result": "You hear the drop from the quay."}
+    ]
+  },
+  "cap_butcher_name": {
+    "title": "The Butcher",
+    "text": "The crew have started calling you the Butcher. Not where you can hear it, but you hear it.",
+    "conditions": ["captain_trait.bloodthirsty", "at_sea"],
+    "choices": [
+      {"text": "Wear it", "outcomes": ["fear +3", "opinion crew -1"], "result": "By the next port they're saying it where you can hear it, and they're saying it with pride."},
+      {"text": "Show them otherwise", "voice": {"cruel": -1}, "outcomes": ["honour +1", "fear -1"], "result": "You let the next prisoner go with a coat and a purse. Nobody knows what to make of it."}
+    ]
+  },
+  "cap_old_messmate": {
+    "title": "An old messmate",
+    "where": "port",
+    "text": "A {nation_adj} lieutenant stops dead in the street in {port}. You served together years ago, on the same gundeck, before you took to this.",
+    "conditions": ["captain_trait.former_navy"],
+    "roles": {"nation": {"from": "nation", "where": ["mine"]}},
+    "choices": [
+      {"text": "Buy them a drink and talk about old times", "outcomes": ["patrols {nation} 30"], "result": "Over the third bottle you learn where the squadron will be all month. Neither of you says why you're asking."},
+      {"text": "Ask them to forget your face", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["relation {nation} +3"], "result": "\"What face?\"", "fail_outcomes": ["notoriety +3"], "fail_result": "Duty is duty. Your description is in the admiral's letters by the week's end."},
+      {"text": "Pretend you've never seen them before", "outcomes": [], "result": "They let you. That hurts more than you expected."}
+    ]
+  },
+  "cap_family_letter": {
+    "title": "A letter from home",
+    "where": "port",
+    "text": "A letter from home has caught up with you in {port}. Everyone is well, the roof leaks, and the money you sent last time is gone.",
+    "conditions": ["captain_trait.family_man"],
+    "choices": [
+      {"text": "Send home 150 gold", "conditions": ["gold >= 150"], "outcomes": ["gold -150", "morale 3 30", "honour +1"], "result": "You write a long letter with it. You're cheerful for a week."},
+      {"text": "Send what you can (40 gold)", "conditions": ["gold >= 40"], "outcomes": ["gold -40"], "result": "It's what you can."},
+      {"text": "Not this time", "outcomes": [], "result": "You read it twice more and put it away."}
+    ]
+  },
+  "cap_seasick_storm": {
+    "title": "At the lee rail",
+    "text": "The storm has you on your knees at the lee rail, in front of the whole watch.",
+    "conditions": ["captain_trait.seasick", "at_sea", "storm"],
+    "choices": [
+      {"text": "Stay on deck, white as a sail", "check": {"who": "captain", "skill": "authority", "dc": 13},
+       "outcomes": ["opinion crew +3"], "result": "Sick or not, you never leave the deck. They respect that more than a strong stomach.",
+       "fail_outcomes": ["opinion crew -3"], "fail_result": "You last an hour, and then you don't."},
+      {"text": "Go below and leave it to the boatswain", "outcomes": ["opinion crew -2"], "result": "The boatswain brings her through. The crew will remember who did."}
+    ]
+  },
+  "cap_honest_oath": {
+    "title": "A small lie",
+    "where": "port",
+    "text": "A merchant in {port} asks you to swear to the customs house that his cargo came over in your hold from Jamaica. It didn't. He'll pay well.",
+    "conditions": ["captain_trait.honest"],
+    "choices": [
+      {"text": "Swear it (80 gold)", "voice": {"decent": -2}, "outcomes": ["gold +80"], "result": "The words come out easily. That's what bothers you."},
+      {"text": "Refuse", "outcomes": ["honour +1"], "result": "He calls you a fool. He's probably right."}
+    ]
+  },
+  "cap_schemer_letter": {
+    "title": "The wrong letter",
+    "where": "port",
+    "text": "A letter is delivered to your boat in {port} by mistake, sealed with the governor's arms.",
+    "conditions": ["captain_trait.schemer"],
+    "choices": [
+      {"text": "Lift the seal with a hot knife", "voice": {"decent": -2}, "outcomes": ["secret letters"], "result": "You reseal it so well that even you can't tell."},
+      {"text": "Send it on, unopened", "voice": {"decent": 2}, "outcomes": ["honour +1"], "result": "It goes on its way. You wonder about it for days."}
+    ]
+  },
+
+  "focus_blade_master": {
+    "title": "A fencing master",
+    "where": "port",
+    "text": "A fencing master in {port} has watched you fight, and found a dozen things wrong. He offers lessons. Hard ones.",
+    "conditions": ["focus == blade"],
+    "choices": [
+      {"text": "Take the lessons (60 gold)", "conditions": ["gold >= 60"], "outcomes": ["gold -60", "skill captain swordplay +1", "focus 15"],
+       "result": "A week of bruises. Then, one morning, you touch him first."},
+      {"text": "Spar with him on the quay, for the crew to see", "check": {"who": "captain", "skill": "swordplay", "dc": 13},
+       "outcomes": ["opinion crew +3", "fear +1", "focus 20"], "result": "The crew cheer every touch. So, in the end, does he.",
+       "fail_outcomes": ["wound captain", "focus 10"], "fail_result": "He wasn't lying about the dozen things."},
+      {"text": "Decline", "outcomes": [], "result": "He shrugs. His loss."}
+    ]
+  },
+  "focus_blade_challenge": {
+    "title": "A challenge on the main deck",
+    "text": "The biggest hand aboard says, in front of the whole watch, that a captain who fights in front ought to be able to put him down.",
+    "conditions": ["focus == blade", "at_sea", "crew >= 10"],
+    "choices": [
+      {"text": "Fists, now, on the main deck", "check": {"who": "captain", "skill": "swordplay", "dc": 12},
+       "outcomes": ["opinion crew +3", "fear +1", "focus 15"], "result": "It doesn't take long. You help him up afterwards.",
+       "fail_outcomes": ["opinion crew -2", "focus 5"], "fail_result": "It takes a long time, and you're the one who gets helped up."},
+      {"text": "Just look at him", "conditions": ["captain.intimidation >= 13"], "outcomes": ["fear +2", "focus 10"],
+       "result": "He finds he has work to do somewhere else."},
+      {"text": "Laugh, and give him an extra tot", "outcomes": ["opinion crew +1"], "result": "Everyone laughs. Nobody's sure who won."}
+    ]
+  },
+  "focus_purse_ledger": {
+    "title": "Forty years of prices",
+    "where": "port",
+    "text": "A merchant in {port} who has lost everything offers to sell you his book: forty years of who pays what, where, and who can be leaned on.",
+    "conditions": ["focus == purse"],
+    "choices": [
+      {"text": "Buy it (80 gold)", "conditions": ["gold >= 80"], "outcomes": ["gold -80", "skill captain trade +1", "focus 20"], "result": "You read it every night for a month."},
+      {"text": "Haggle him down to 30", "conditions": ["captain.trade >= 12", "gold >= 30"], "outcomes": ["gold -30", "skill captain trade +1", "focus 20"],
+       "result": "He sells it cheap, and almost thanks you. The book would have approved."},
+      {"text": "No", "outcomes": [], "result": "He'll find another buyer. Probably."}
+    ]
+  },
+  "focus_purse_venture": {
+    "title": "A share in a venture",
+    "where": "port",
+    "text": "A syndicate of merchants in {port} is sending a cargo of logwood to Amsterdam, and wants a partner with a fast ship and a good head for figures.",
+    "conditions": ["focus == purse", "gold >= 150"],
+    "choices": [
+      {"text": "Buy a share (150 gold)", "check": {"who": "captain", "skill": "trade", "dc": 12},
+       "outcomes": ["gold +150", "focus 20"], "result": "The logwood sells high. Your share comes back doubled, with a letter asking you to join the next one.",
+       "fail_outcomes": ["gold -150", "focus 10"], "fail_result": "The ship is lost off the Azores. So is your money. You learn something about syndicates."},
+      {"text": "Decline", "outcomes": [], "result": "There will be other ventures."}
+    ]
+  },
+  "focus_command_drill": {
+    "title": "Slow aloft",
+    "text": "The new hands are slow aloft and slower on the braces. In a fight it will cost lives.",
+    "conditions": ["focus == command", "at_sea"],
+    "choices": [
+      {"text": "Drill them, watch on watch, until they're fast", "outcomes": ["opinion crew -2", "skill captain seamanship +1", "focus 15"],
+       "result": "They curse you for a week. Then they're the fastest topmen you've had."},
+      {"text": "Go aloft yourself and show them", "check": {"who": "captain", "skill": "seamanship", "dc": 12},
+       "outcomes": ["opinion crew +3", "focus 20"], "result": "The captain at the masthead, in a stiff breeze, laughing. They'll follow you up anything now.",
+       "fail_outcomes": ["wound captain", "focus 5"], "fail_result": "The footrope is wet. The deck is hard."},
+      {"text": "They'll learn", "outcomes": [], "result": "They will. Or they won't."}
+    ]
+  },
+  "focus_command_table": {
+    "title": "The captain's table",
+    "text": "Your officers have stopped eating together. They pass each other on deck without a word.",
+    "conditions": ["focus == command", "at_sea"],
+    "choices": [
+      {"text": "Dine them all in your cabin, and keep the wine coming", "conditions": ["cargo.food >= 5"], "outcomes": ["cargo food -5", "opinion crew +2", "focus 15"],
+       "result": "By the end of the night they're arguing about a battle twenty years ago, all on the same side."},
+      {"text": "Let them sort it out", "outcomes": [], "result": "They don't."}
+    ]
+  },
+  "focus_whisper_maid": {
+    "title": "The governor's maid",
+    "where": "port",
+    "text": "A maid at the governor's house in {port} is sweet on one of your sailors, and very talkative.",
+    "conditions": ["focus == whisper", "port_faction != pirates"],
+    "choices": [
+      {"text": "Buy her ribbons, and listen (20 gold)", "conditions": ["gold >= 20"], "outcomes": ["gold -20", "secret letters", "focus 20"],
+       "result": "Ribbons are cheap. What she tells you isn't."},
+      {"text": "Charm her yourself", "conditions": ["captain.charisma >= 13"], "outcomes": ["secret ledger", "focus 20"],
+       "result": "She tells you about the governor's accounts, and the second set of accounts."},
+      {"text": "Leave it", "outcomes": [], "result": "Your sailor is disappointed."}
+    ]
+  },
+  "focus_whisper_tavern": {
+    "title": "Clerks in their cups",
+    "where": "port",
+    "text": "Two clerks from the harbour office are drinking in a corner of a tavern in {port}, and talking too loudly about the navy's sailing orders.",
+    "conditions": ["focus == whisper", "port_faction != pirates"],
+    "choices": [
+      {"text": "Stand them drinks, and keep them talking", "check": {"who": "captain", "skill": "charisma", "dc": 12},
+       "outcomes": ["gold -10", "patrols port 30", "focus 15"], "result": "By midnight you know where every patrol will be for a month.",
+       "fail_outcomes": ["gold -10", "focus 5"], "fail_result": "They clam up when they see who's buying."},
+      {"text": "Leave them to it", "outcomes": [], "result": "Loose talk. Someone else will hear it."}
+    ]
+  }
+}

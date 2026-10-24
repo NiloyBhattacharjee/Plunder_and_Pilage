@@ -218,3 +218,17 @@ Solo developer, not an artist. Art should look good and stay consistent, relying
 - **M3:** layered portrait system with placeholder parts; portrait seed on every character.
 - **M4:** ship sprites with separate hull, sail and flag layers; basic combat effects.
 - **Around M5:** stop and help choose the final art style; list the assets needed with rough counts (make, buy or commission).
+
+---
+
+## Addition 4: The Golden Age, simulated
+
+### Goal
+Simulate the Golden Age of Piracy accurately, and show it the way Paradox does: a ledger of charts the player can read. Being accurate means three things: model the forces that caused the period, tune the model against real numbers, and check it with the headless sims.
+
+### Steps (stop after each one)
+1. **The Ledger.** A `Stats` autoload records a weekly snapshot (saved with the game); one `Chart` control (a `_draw()` control like `ui/price_spark.gd`: lines, stacked areas, bars, hover tooltips) draws it. Tabs: Economy (price index per port, trade volume, your income and costs), Opinion (faction standing, town regard, crew mood, with markers for the events that moved them), The Sea (pirates at large, navy strength, the price on your head, wars as bands). History events are marked on every chart.
+2. **Pirates as a population, and the navy's answer.** Pirates at sea grow with out-of-work sailors (a jump after every peace, Utrecht most of all) and mutinies, and shrink with pardons, hangings and death. That number drives pirate spawns and merchant losses. Merchant losses push insurance up and bring more navy station ships and hunters, so the Golden Age ends because of what pirates did, not because of a date.
+3. **Real captains.** Hornigold, Blackbeard, Vane, Rackham, Bonny and Read, Bellamy, Roberts, La Buse appear on their real dates from their real bases, through the roster-captain system, and keep to their histories only if you don't get in the way.
+4. **Living towns and the Maroons.** Port populations change (fever, sugar booms, arrivals). Slavery sits in the economy as plantation labour and the asiento's ships, never as a market good; follow `docs/representation.md`. The **Maroons** are a faction in the hills of Jamaica and Hispaniola: people who escaped slavery and fought for their freedom. You can trade with them, ally with them, land freed captives with them, or betray them to the governor, through the existing faction, bond and event systems.
+5. **Calibration.** `data/calibration.json` lists historical targets with sources (pirate numbers by year after Rediker, Nassau 1713-1718 after Woodard, sugar prices, treasure fleet sizes). `tools/balance_sim.gd` runs many seeds and prints simulated against historical numbers; the same charts plot them.

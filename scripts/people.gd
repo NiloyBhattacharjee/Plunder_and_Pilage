@@ -91,11 +91,13 @@ func generate(opts := {}) -> Dictionary:
 	return c
 
 
-## Effective value of a stat or skill: base plus every trait's modifier (hidden ones too), 0..20.
+## Effective value of a stat or skill: base plus every trait's and perk's modifier (hidden ones too), 0..20.
 func value(c: Dictionary, key: String) -> int:
 	var v: int = c.stats[key] if key in STATS else c.skills[key]
 	for t in c.traits:
 		v += Data.table("traits")[t].get("effects", {}).get(key, 0)
+	for p in c.get("perks", []):  # what a focus taught them
+		v += Data.table("perks")[p].get("effects", {}).get(key, 0)
 	return clampi(v, 0, 20)
 
 
@@ -114,6 +116,10 @@ func breakdown(c: Dictionary, key: String) -> String:
 			lines.append("%s: %+d" % [Data.table("traits")[t].name, mod])
 	if unknown != 0:
 		lines.append("Something you don't know about them: %+d" % unknown)
+	for p in c.get("perks", []):
+		var pm: int = Data.table("perks")[p].get("effects", {}).get(key, 0)
+		if pm != 0:
+			lines.append("%s: %+d" % [Data.table("perks")[p].name, pm])
 	if key in SKILLS and value(c, key) < 20:
 		lines.append("Progress to next level: %d / %d" % [c.xp.get(key, 0.0), xp_needed(c.skills[key])])
 	lines.append("")

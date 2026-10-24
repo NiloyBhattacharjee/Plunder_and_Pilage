@@ -219,7 +219,7 @@ static func hardship(s: Dictionary, stats: Dictionary, port_id: String, rng: Ran
 		var dead := 0
 		for id in s.crew.duplicate():
 			var c := People.person(id)
-			c.relations[s.captain] = c.relations.get(s.captain, 0) - int(ceil(h.starving_grudge * relief))
+			Crew.feel(s, c, -int(ceil(h.starving_grudge * relief)), "Starving" if hungry else "Dying of thirst")
 			if rng.randf() < rate:
 				Crew.mourn(s, id)
 				_remove_hand(s, id)

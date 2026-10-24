@@ -51,6 +51,7 @@ func start(player_data: Dictionary, enemy: Dictionary, mode: String, _wind_dir: 
 	music.finished.connect(music.play)  # loop it; freed with the battle screen, so it stops when the battle ends
 	add_child(music)
 	music.play()
+	Sfx.loop(self, "deck", -14.0)
 	_log("[i]The %s %s. Find her weak points, break her, and make her strike.[/i]" % [enemy.label, enemy.name])
 	if Wants.knows_you(enemy) != "":  # a former officer of yours: they know where to hit you
 		battle.sides[0].known = battle.sides[0].weak.duplicate()
@@ -550,6 +551,44 @@ func _show_entry(e: Dictionary) -> void:
 	elif e.text.begins_with("The fort at "):
 		stage.fort_fire(other_side(e.side), e.text.contains(" hits "))
 	_damage_number(e)
+	_sound(e)
+
+
+## What a log line sounds like: the guns, then the shot landing a moment later; steel and pistols hand to hand.
+## Their guns are quieter than yours, an ally's and the fort's quieter still.
+func _sound(e: Dictionary) -> void:
+	var ok: bool = e.check.get("success", false)
+	var guns := ""
+	if e.post == "master_gunner" and not e.check.is_empty():
+		guns = "yours" if e.side == 0 else "theirs"
+	elif e.text.begins_with("Your ally the ") or e.text.begins_with("The fort at "):
+		guns = "far"
+		ok = e.text.contains(" hits ") if e.text.begins_with("The fort at ") else not e.text.contains("misses")
+	if guns != "":
+		var db: float = {"yours": 0.0, "theirs": -4.0, "far": -8.0}[guns]
+		if e.check.get("fumble", false):
+			Sfx.play("gun_bursts", db)
+			return
+		Sfx.play("cannon", db - (6.0 if e.action == "chase" else 0.0))
+		if guns != "far" and e.action == "grape":
+			Sfx.play("musket", db - 6.0)
+		Sfx.play_after(0.5, "shot_hits" if ok else "shot_misses", db - 3.0)
+		return
+	if e.text.begins_with("BREAK"):
+		Sfx.play("break")
+	elif e.post == "@melee" or e.action in ["push", "hold_rail", "duel"]:
+		Sfx.play("blades", -4.0)
+		Sfx.play_after(0.2, "musket", -10.0)
+	elif e.action in ["close", "open", "gauge", "flee", "hold", "cut_loose"]:
+		Sfx.play("rigging", -8.0)
+	elif e.action == "grapple":
+		Sfx.play("ships_meet" if ok else "rigging", -6.0)
+	elif e.action == "arm":
+		Sfx.play("draw_sword", -6.0)
+	elif e.action in ["plug", "rigging", "remount"]:
+		Sfx.play("hammer", -8.0)
+	if e.side == 0 and e.post != "" and not e.check.is_empty():
+		Sfx.play("dice", -12.0)
 
 
 static func other_side(i: int) -> int:
@@ -600,6 +639,7 @@ func _end() -> void:
 	}
 	var me: Dictionary = battle.sides[0]
 	if battle.result.ends_with("sunk"):
+		Sfx.play("sinks", -2.0)
 		await stage.sink(1 if battle.result == "enemy_sunk" else 0).finished
 	var text: String = texts[battle.result] + "\n\nRounds fought: %d.  Your casualties: %d.  Hull %d, sails %d." % [battle.round_no, me.casualties, me.hull, me.sails]
 	if me.captain_wounded:

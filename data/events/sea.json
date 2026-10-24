@@ -14,7 +14,8 @@
       {"text": "Throw a line and hope", "check": {"who": "{sailor}", "skill": "seamanship", "dc": 14},
        "outcomes": ["opinion {sailor} +5"], "result": "{sailor} catches the line and is dragged aboard like a gaffed fish.",
        "fail_outcomes": ["kill {sailor}", "opinion crew -2"], "fail_result": "The line falls short."},
-      {"text": "Hold your course", "outcomes": ["kill {sailor}", "opinion crew -5"], "result": "Nobody speaks at mess that night."}
+      {"text": "Hold your course", "outcomes": ["kill {sailor}", "opinion crew -5"], "result": "Nobody speaks at mess that night."},
+      {"text": "Go over the side yourself, with a line round your waist", "conditions": ["captain.seamanship >= 13"], "outcomes": ["opinion crew +6", "opinion {sailor} +25", "time 1"], "result": "You go into the sea and come back up with {sailor} by the collar. Nobody on this ship will forget it."}
     ]
   },
 
@@ -28,7 +29,8 @@
       {"text": "Wait it out and ration the water", "outcomes": ["time 3", "opinion crew -3"], "result": "Three days of glass-flat sea before a cat's-paw ruffles the water."},
       {"text": "Whistle for a wind (the old sailors swear by it)", "check": {"who": "captain", "skill": "experience", "dc": 13},
        "outcomes": ["opinion crew +2", "time 1"], "result": "A breeze comes up by the afternoon watch. The superstitious are delighted.",
-       "fail_outcomes": ["time 4", "opinion crew -2"], "fail_result": "Nothing. Four days of it."}
+       "fail_outcomes": ["time 4", "opinion crew -2"], "fail_result": "Nothing. Four days of it."},
+      {"text": "Rig every scrap of canvas to catch the cat's-paws", "conditions": ["captain.seamanship >= 14"], "outcomes": ["opinion crew +1"], "result": "You find a breath of wind nobody else could feel, and then another. By evening she's moving."}
     ]
   },
 
@@ -64,7 +66,8 @@
       {"text": "Tell them it's a blessing: the saint watches over us", "check": {"who": "captain", "skill": "charisma", "dc": 11},
        "outcomes": ["opinion crew +3"], "result": "The fear turns to wonder.", "fail_outcomes": ["opinion crew -3"], "fail_result": "Nobody believes you. They mutter about ill omens all night."},
       {"text": "Order silence and get on with the work", "check": {"who": "captain", "skill": "authority", "dc": 12},
-       "outcomes": ["fear +1"], "result": "Work goes on, fire or no fire.", "fail_outcomes": ["opinion crew -4", "opinion {sailor} -5"], "fail_result": "{sailor} has half the watch convinced the ship is doomed."}
+       "outcomes": ["fear +1"], "result": "Work goes on, fire or no fire.", "fail_outcomes": ["opinion crew -4", "opinion {sailor} -5"], "fail_result": "{sailor} has half the watch convinced the ship is doomed."},
+      {"text": "Lead them in the litany, there under the flames", "conditions": ["captain_trait.devout"], "outcomes": ["opinion crew +5", "opinion {sailor} +5"], "result": "The whole crew kneels on the wet deck. When the flames go out, it feels like an answer."}
     ]
   },
 
@@ -280,7 +283,8 @@
        "outcomes": [], "result": "Bribes, paperwork and a good deal of shrugging. They leave empty-handed.",
        "fail_outcomes": ["gold -15%", "relation spain -5"], "fail_result": "They find enough to fine you heavily."},
       {"text": "Run for it", "outcomes": ["fight navy spain flee", "relation spain -5"], "result": "She's fast."},
-      {"text": "Fight", "outcomes": ["fight navy spain defend", "relation spain -10"], "result": "You run out your guns."}
+      {"text": "Fight", "outcomes": ["fight navy spain defend", "relation spain -10"], "result": "You run out your guns."},
+      {"text": "Run out your guns, and invite them to come and look", "conditions": ["captain.intimidation >= 13"], "outcomes": ["fear +2", "relation spain -2"], "result": "The guarda costa looks at your open gunports for a long minute, then goes about."}
     ]
   },
 
@@ -305,7 +309,8 @@
       {"text": "Argue: your men are protected", "check": {"who": "captain", "skill": "authority", "dc": 14, "bonus": [["privateer", "Your commission", 3]]},
        "outcomes": ["opinion crew +3"], "result": "He backs down, with bad grace.", "fail_outcomes": ["crew -5", "opinion crew -5"], "fail_result": "He takes five, and the best of them."},
       {"text": "Hide the best hands below", "check": {"who": "captain", "skill": "charisma", "dc": 12},
-       "outcomes": ["crew -1"], "result": "He finds one old man and gives up.", "fail_outcomes": ["crew -4", "relation {nation} -5"], "fail_result": "He finds them, and is not amused."}
+       "outcomes": ["crew -1"], "result": "He finds one old man and gives up.", "fail_outcomes": ["crew -4", "relation {nation} -5"], "fail_result": "He finds them, and is not amused."},
+      {"text": "Name your old ship and your old captain", "conditions": ["captain_trait.former_navy"], "outcomes": ["opinion crew +2"], "result": "The lieutenant served under the same admiral. He takes a glass of wine in your cabin and leaves your men alone."}
     ]
   }
 }

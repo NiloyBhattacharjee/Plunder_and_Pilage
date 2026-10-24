@@ -97,13 +97,15 @@ static func grounding_risk(state: Dictionary, stats: Dictionary, reef := false) 
 ## Multiplier on the merchant's spread: the better haggler of captain and quartermaster narrows it.
 static func spread_mult(state: Dictionary) -> float:
 	var trade := maxi(People.value(captain(state), "trade"), officer_skill(state, "quartermaster"))
-	return maxf(0.2, 1.0 - trade * Data.rules.people.trade_spread_reduction_per_point)
+	return maxf(0.2, 1.0 - trade * Data.rules.people.trade_spread_reduction_per_point) * (0.8 if Growth.captain_has(state, "haggler") else 1.0)
 
 
 static func daily_cost(state: Dictionary, stats: Dictionary) -> float:
 	var u: Dictionary = Data.rules.upkeep
 	var officers: int = state.officers.size()
 	var wages: float = ((state.crew.size() - officers) * u.wage_per_crew + officers * u.wage_per_crew * u.officer_wage_mult) * (1.0 + Civics.bonus(state, "wages"))
+	if Growth.captain_has(state, "paymaster"):
+		wages *= 0.8
 	return wages + stats.upkeep + Fleet.daily_cost(state)
 
 

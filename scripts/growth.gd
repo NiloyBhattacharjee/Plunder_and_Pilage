@@ -53,11 +53,16 @@ static func has_perk(c: Dictionary, id: String) -> bool:
 	return id in c.get("perks", [])
 
 
+## Perks chosen at a level-up: not the ones a focus teaches.
+static func pickable(id: String) -> bool:
+	return not id.begins_with("_") and not Data.table("perks")[id].has("focus")
+
+
 ## Perks this character could take now: not taken, and the needs met.
 static func perks_open(c: Dictionary) -> Array:
 	var out := []
 	for id in Data.table("perks"):
-		if id.begins_with("_") or has_perk(c, id):
+		if not pickable(id) or has_perk(c, id):
 			continue
 		var p: Dictionary = Data.table("perks")[id]
 		if p.needs.keys().all(func(k): return People.value(c, k) >= int(p.needs[k])):
@@ -75,6 +80,60 @@ static func take_perk(c: Dictionary, id: String) -> void:
 		return
 	c.perks = c.get("perks", []) + [id]
 	c.perk_picks -= 1
+
+
+## What this character's perks add to an event check in `skill` (data/perks.json "checks").
+static func check_bonus(c: Dictionary, skill: String) -> int:
+	return c.get("perks", []).reduce(func(a, p): return a + int(Data.table("perks")[p].get("checks", {}).get(skill, 0)), 0)
+
+
+## Does the captain of this ship have the perk?
+static func captain_has(s: Dictionary, id: String) -> bool:
+	return has_perk(ShipStats.captain(s), id)
+
+
+# ---- focus (data/focus.json): the captain's lifestyle ---------------------------------
+
+static func focus_rank(c: Dictionary, f: String) -> int:
+	var xp: float = c.get("focus_xp", {}).get(f, 0.0)
+	return cfg().focus.ranks.filter(func(r): return xp >= float(r)).size()
+
+
+## Focus experience into the current focus. Returns the news of a perk learned, or "".
+static func focus_gain(c: Dictionary, amount: float) -> String:
+	var f: String = c.get("focus", "")
+	if f == "":
+		return ""
+	c.focus_xp = c.get("focus_xp", {})
+	c.focus_xp[f] = c.focus_xp.get(f, 0.0) + amount
+	var news := PackedStringArray()
+	var perks: Array = Data.table("focus")[f].perks
+	for i in mini(focus_rank(c, f), perks.size()):
+		if not has_perk(c, perks[i]):
+			c.perks = c.get("perks", []) + [perks[i]]
+			news.append("%s has learned %s (%s): %s" % [c.name, Data.table("perks")[perks[i]].name, Data.table("focus")[f].name, Data.table("perks")[perks[i]].description])
+	return " ".join(news)
+
+
+## A day in the focus: experience toward its next perk, and a little practice in its skill.
+static func focus_day(c: Dictionary) -> String:
+	var f: String = c.get("focus", "")
+	if f == "":
+		return ""
+	var sk: String = Data.table("focus")[f].skill
+	if sk != "":
+		People.gain_xp(c, sk, float(cfg().focus.skill_xp_per_day))
+	return focus_gain(c, float(cfg().focus.xp_per_day))
+
+
+## "The Blade: 2 of 3 learned, 40 / 100 to Dread name".
+static func focus_text(c: Dictionary, f: String) -> String:
+	var d: Dictionary = Data.table("focus")[f]
+	var r := focus_rank(c, f)
+	var out := "%s: %d of %d learned" % [d.name, mini(r, d.perks.size()), d.perks.size()]
+	if r < d.perks.size():
+		out += ", %d / %d to %s" % [c.get("focus_xp", {}).get(f, 0.0), cfg().focus.ranks[r], Data.table("perks")[d.perks[r]].name]
+	return out
 
 
 ## Ordinary hands put their points into their best skill and take the first perk they can.

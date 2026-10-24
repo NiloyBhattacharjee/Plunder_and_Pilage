@@ -24,7 +24,7 @@ const VERBS := {  # verb: [min args, max args]
 	"bond": [2, 2], "rivalry": [2, 2], "strain": [1, 1], "betray": [1, 1], "peace": [1, 1], "own_ship": [2, 2],
 	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
 	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1], "bounty": [2, 2],
-	"patrols": [2, 2], "town": [2, 2], "deed": [1, 1], "want": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1], "ending": [2, 2],
+	"patrols": [2, 2], "town": [2, 2], "deed": [1, 1], "want": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1], "ending": [2, 2], "focus": [1, 1],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
 	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc", "base"]
@@ -107,6 +107,16 @@ func pick(where: String, ctx: Dictionary) -> Dictionary:
 		return {}
 	var inst := _draw(where, ctx)
 	return _materialize(inst, ctx) if not inst.is_empty() else {}
+
+
+## The next chained event whose id begins with `prefix` and whose moment has come, taken off the queue, or {}:
+## for scenes played back to back (the opening night, data/events/night.json).
+func take_chain(prefix: String, ctx: Dictionary) -> Dictionary:
+	for q in queue:
+		if q.id.begins_with(prefix) and Clock.day >= q.at:
+			queue.erase(q)
+			return _instance(events[q.id], ctx, q.vars)
+	return {}
 
 
 ## Something to put on the map for the player to find (an event with a "find" key), not yet happening:
@@ -358,6 +368,7 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"relation": return s.relations.get(_faction(rest, ctx), 0)
 		"captain": return People.value(ShipStats.captain(s), rest)
 		"captain_trait": return rest in ShipStats.captain(s).traits
+		"focus": return ShipStats.captain(s).get("focus", "")  # the captain's lifestyle (data/focus.json)
 		"has_officer": return s.officers.has(rest)
 		"at_sea": return ctx.port == ""
 		"in_port": return ctx.port != ""
@@ -497,6 +508,8 @@ func view(inst: Dictionary, ctx: Dictionary) -> Dictionary:
 			"voice": ch.get("voice", Voices.infer(ch.get("outcomes", [])))})
 	var said := Voices.dress(ctx.s, text(ev.text, vars, ctx), options, inst.vars.values(), rng)  # your people speak up
 	inst.voices = said.voices
+	for i in said.options.size():  # what the choice asks of you, and what it says about you: [Swordplay 12] [Merciful]
+		said.options[i].text = tags(ev.choices[i], ctx, vars) + Nature.tag(ShipStats.captain(ctx.s), said.options[i].voice) + said.options[i].text
 	var title := text(ev.title, vars, ctx)
 	if ev.has("story"):
 		title = "%s: %s" % [story_defs[ev.story].title, title]
@@ -545,6 +558,7 @@ func resolve(inst: Dictionary, index: int, ctx: Dictionary) -> Dictionary:
 	if not res.fight.is_empty() and (ch.has("won") or ch.has("lost")):
 		after_fight = {"won": ch.get("won", ""), "lost": ch.get("lost", ""), "vars": inst.vars.duplicate()}
 	res.effects = Array(lines) + res.effects + Voices.heard(ctx.s, inst.get("voices", []), index)
+	res.effects.append_array(Nature.chose(ShipStats.captain(ctx.s), ch.get("voice", Voices.infer(ch.get("outcomes", [])))))  # who you are, and who you're becoming
 	_cleanup(inst, ctx)
 	return res
 
@@ -563,6 +577,8 @@ func check_parts(check: Dictionary, ctx: Dictionary, vars: Dictionary) -> Array:
 	var who := _who(check.get("who", "captain"), ctx, vars)
 	var c := People.person(who)
 	var parts := [["%s %s" % [c.name.get_slice(" ", 0), People.SKILL_NAMES.get(check.skill, check.skill)], Dice.mod(People.value(c, check.skill))]]
+	if Growth.check_bonus(c, check.skill) != 0:
+		parts.append(["Perks", Growth.check_bonus(c, check.skill)])
 	for b in check.get("bonus", []):  # [condition, label, modifier]
 		if test(b[0], ctx, vars):
 			parts.append([b[1], int(b[2])])
@@ -634,8 +650,7 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			var n := int(a[1 + 1])
 			var ids: Array = s.crew if a[1] == "crew" else [_who(a[1], ctx, vars)]
 			for id in ids:
-				var c := People.person(id)
-				c.relations[s.captain] = clampi(c.relations.get(s.captain, 0) + n, -100, 100)
+				Crew.feel(s, People.person(id), n, res.get("title", ""))
 			return "%s's opinion of you %+d" % ["The crew" if a[1] == "crew" else People.person(ids[0]).name, n]
 		"relation":
 			var f := _faction(a[1], ctx)
@@ -721,6 +736,8 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			return "%d days pass" % int(a[1])
 		"ending":
 			return end_story(a[1], a[2])
+		"focus":  # experience in the captain's focus
+			return Growth.focus_gain(ShipStats.captain(s), float(a[1]))
 		"favour":
 			var who := _who(a[1], ctx, vars)
 			Politics.add_favours(who, s, int(a[2]))
@@ -956,6 +973,23 @@ func _preview(outcomes: Array, vars: Dictionary) -> String:
 	return ", ".join(out)
 
 
+## Fallout-style tags for what a choice asks of the captain: [Swordplay 12] for a skill it needs, [Devout] for a
+## trait, [Charisma 65%] for a check.
+func tags(ch: Dictionary, ctx: Dictionary, vars: Dictionary) -> String:
+	var out := ""
+	for c in ch.get("conditions", []):
+		var parts: PackedStringArray = c.split(" ", false)
+		var key: String = parts[0]
+		if key.begins_with("captain.") and parts.size() == 3 and parts[1] == ">=":
+			out += "[%s %s] " % [People.SKILL_NAMES.get(key.substr(8), key.substr(8)), parts[2]]
+		elif key.begins_with("captain_trait.") and Data.table("traits").has(key.substr(14)):
+			out += "[%s] " % Data.table("traits")[key.substr(14)].name
+	if ch.has("check"):
+		var pc := check_parts(ch.check, ctx, vars)
+		out += "[%s %d%%] " % [People.SKILL_NAMES.get(ch.check.skill, ch.check.skill), int(Dice.chance(Dice.sum_parts(pc), int(ch.check.dc)) * 100)]
+	return out
+
+
 static func humanize(cond: String) -> String:
 	return cond.replace("_", " ").replace(".", " ").replace(" >= ", " at least ").replace(" <= ", " at most ").replace(" == ", " is ").replace(" != ", " is not ")
 
@@ -1079,8 +1113,8 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
 	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base",
-	"town", "life", "towns", "own_town", "sacked", "bounty", "regard", "deed", "story"]
-const TEXT_KEYS := ["office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality", "taxes"]
+	"town", "life", "towns", "own_town", "sacked", "bounty", "regard", "deed", "story", "focus"]
+const TEXT_KEYS := ["focus", "office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality", "taxes"]
 const BASE_KEYS := ["loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes"]
 const CAND_KEYS := ["in_town", "loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",
 	"here", "contraband", "shipyard", "at_war", "mine", "standing", "price", "held", "want", "want_here", "asset"]

@@ -68,7 +68,17 @@ Yes/no: `own_town` (you hold the town you're in), `sacked` (you sacked the town 
 
 Stories: `story.ID` (the act an open story is at, 0 if it isn't running).
 
-Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `marque`, `home`.
+Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `marque`, `home`, `focus` (the captain's focus, data/focus.json: `"focus == blade"`).
+
+The dialog tags what a choice asks of the captain, Fallout-style: `captain.SKILL >= N` shows as `[Swordplay 12]`, `captain_trait.T`
+as `[Devout]`, and a check as `[Charisma 65%]`. A choice that fails its conditions is still shown, greyed out, so a player sees what
+a different captain could have done. Prefer a guaranteed outcome behind a skill or trait to another dice check: that's what makes
+the build matter.
+
+The captain's nature (scripts/nature.gd): a choice's stances (its `voice`, or inferred from its outcomes) are scored against the
+captain's traits with the `traits` table in data/voices.json. In their nature, it's tagged `[Merciful]`; against it, `[Against: Bloodthirsty]`.
+Going against a trait `rules.json` `nature.strain` times wears it away; leaning one way `nature.drift` times gives the trait in
+`nature.drift_traits`. Set `"voice"` on a choice whose stance the outcomes don't show (`{"decent": -2}` for a small lie).
 
 ## Outcomes
 
@@ -101,6 +111,7 @@ Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `m
 | `fight KIND [faction] [mode]` | A battle: `merchant`, `pirate`, `navy`, `hunter`; mode `defend` (default), `attack`, `ambush`, `flee` |
 | `market PORT shortage` | Sets off a market shock from `economy.json` `shocks` (`shortage`, `glut`, `bad_harvest`, `hurricane`, `epidemic`, `warehouse_fire`, `garrison_reinforced`, `coin_shortage`, `piracy_wave`, `bankruptcy`) |
 | `time 3` | Days pass |
+| `focus 15` | Experience in the captain's focus (data/focus.json): its next perk may follow |
 | `want {r} done`, `want {r} ignored` | A person's want (data/wants.json) seen to (they're yours: opinion up, loyal) or let go (they remember) |
 | `deed fed_hungry` | The town you're in remembers what you did: its regard for you moves (data/port_life.json `_memory` `deeds`) |
 
@@ -116,6 +127,11 @@ so each one must declare the roles it uses again. A choice that starts a battle 
 somewhere: on to another of its events, into a fight with `won` and `lost`, or to `ending STORY KEY`; the validator checks it.
 If a chain runs out before its next act can happen (the window passes, someone in it dies), the story goes cold. The ship's log
 lists every story, the act it's at and what's happened so far.
+
+A new game opens on the night you took the ship (`data/events/night.json`): the background's `night` event, then `night_captain`
+(the old captain's fate sets the captain's nature trait) and `night_dawn`, played back to back by WorldMap._play_night. Each
+background's night brings in someone (a role) and queues their origin story (`data/events/origins.json`, act 1 `chain_only`)
+for the first weeks. An ending keyed `cold` replaces the default "the trail went cold".
 
 ## Structured effects (the market and the world)
 

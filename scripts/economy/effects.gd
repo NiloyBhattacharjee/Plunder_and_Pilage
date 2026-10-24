@@ -11,7 +11,7 @@ const MARKET := ["market_shock", "open_market", "port_closed_days", "port_damage
 	"sell_items", "buy_provisions", "rep_with_smugglers", "treat_ships_from", "faction_port_hostility",
 	"burn_ships_in_road", "bombard_port", "repair_discount", "free_supplies", "merchant_resistance_multiplier"]
 const WORLD := ["war", "world_state", "pirate_spawn_rate_multiplier", "letter_of_marque", "revoke_letter_of_marque"]
-const HISTORY := ["fleet_blocked", "trade_slump", "fair_access", "port_laws", "flows", "stock", "spread", "sailings", "route_risk"]
+const HISTORY := ["haven_closed", "fleet_blocked", "trade_slump", "fair_access", "port_laws", "flows", "stock", "spread", "sailings", "route_risk"]
 const MONEY := ["gold", "gold_percent", "cargo_percent", "provisions"]
 const SKIPPED := ["start_land_raid"]  # known, but not the market's business: logged and skipped
 
@@ -46,7 +46,7 @@ static func apply(e: Dictionary, ctx: Dictionary) -> String:
 	var m: EconomyModel = Economy.model
 	match type:
 		# ---- the market itself ----
-		"market_shock", "port_damage", "flows", "stock", "spread", "sailings", "route_risk":
+		"market_shock", "port_damage", "flows", "stock", "spread", "sailings", "route_risk", "haven_closed":
 			if port == "":
 				return _skip(type, "no port")
 			var eff := e.duplicate(true)
@@ -56,7 +56,7 @@ static func apply(e: Dictionary, ctx: Dictionary) -> String:
 			if e.has("text"):
 				Economy.add_news(e.text, port)
 			return {"market_shock": "Prices in %s will climb" if float(e.get("price_multiplier", 1.0)) > 1.0 else "Prices in %s will fall",
-				"port_damage": "%s is badly damaged"}.get(type, "The market in %s shifts") % Ports.port(port).name
+				"port_damage": "%s is badly damaged", "haven_closed": "%s is no haven for pirates any more"}.get(type, "The market in %s shifts") % Ports.port(port).name
 		"bombard_port":
 			if port == "":
 				return _skip(type, "no port")

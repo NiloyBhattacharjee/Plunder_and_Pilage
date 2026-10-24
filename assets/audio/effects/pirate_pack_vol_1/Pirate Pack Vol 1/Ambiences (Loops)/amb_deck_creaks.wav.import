@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://cbyh1ald50sb8"
+path="res://.godot/imported/amb_deck_creaks.wav-028e7f6e71fc32b051372396c8881e78.sample"
+
+[deps]
+
+source_file="res://assets/audio/effects/pirate_pack_vol_1/Pirate Pack Vol 1/Ambiences (Loops)/amb_deck_creaks.wav"
+dest_files=["res://.godot/imported/amb_deck_creaks.wav-028e7f6e71fc32b051372396c8881e78.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2
