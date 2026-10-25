@@ -1,46 +1,108 @@
-# Plunder and Pillage
+<h1 align="center">Plunder and Pillage</h1>
 
-A single-player Caribbean piracy and trade game (1650 to 1730), Godot 4.7 / GDScript.
-Design rule: deep, not wide. Every feature must create a decision for the player.
+<p align="center"><b>A single-player pirate life in the Caribbean, 1680 to 1730.</b><br>
+Trade, raid, take towns, and keep a crew of real people from cutting your throat.</p>
 
-## Run
+**Take the ship and see where it leads.** You start on the night you took a ship, and the people from that night come back later in your story. From there you decide what kind of captain you are. Carry sugar under a letter of marque, smuggle into Spanish ports, hunt the treasure fleet, take a town and rule it, or retire rich before the gallows catch up with you.
 
-- Open the project in Godot 4.7 (the editor in `bin/` works: `bin/Godot_v4.7.2-stable_win64.exe --path . -e`), then press F5.
-- Or run without the editor: `bin/Godot_v4.7.2-stable_win64.exe --path .`
+Like a Paradox grand strategy game, the world runs whether or not you're watching. Prices move with real merchant traffic, nations go to war and towns change hands, pirate companies rise and fall with the peace, and every number has a tooltip that says why. Time is pausable. The look is HD-2D, in the style of Octopath Traveler: pixel art lit in 3D for battles, and a tilted pixel-art chart of the Caribbean for the world.
 
-**Screen:** the top bar shows the captain, the ship's resources (hover any of them for the breakdown), the wind, the date and the speed.
+![The world map: Jamaica, Cuba and Hispaniola, forests rising on the hills, clouds drifting over a pixel sea](docs/screenshots/map.png)
 
-**Controls:** left-click the sea or a port to set a course (the route goes around land). Wheel zooms, right/middle-drag pans, F follows the ship. Space pauses, 1/2/3 set the speed to 1x/2x/4x. F5 quick-saves, F9 quick-loads. C opens the crew and ship screen (its Hands tab: every hand, what they think of you and why, what's on their mind, and life below decks lately); L opens it on the Charts tab (a weekly record of your gold, standing with the nations, what the towns remember, the crew's mood, your name and bounty, and the traffic at sea, with history events and wars marked; hover a week for its numbers and what you did). M (or the Sound button) mutes the music and sound effects, and stays that way next time.
-Other ships sail the map: merchants carrying cargo between ports, navy patrols, pirates and pirate hunters. Click a ship to give chase;
-hostile ones chase you. Battles are turn-based, Octopath style: every officer on both ships acts once a round, one at a time,
-in the order shown across the top (next round's too). On your officer's turn pick an action (the menu shows the odds; 1-9 picks).
-Every roll is logged as d20 + modifiers against a DC or the enemy's roll. Each ship has weak points (light timbers, a lofty rig,
-crowded decks, a shaky crew, few fighting men, a sluggish helm) and shields: hitting a weak point strips a shield, and at none
-she is Broken and loses her turns this round and next. Officers bank a boost point a round and spend up to 3 (Q/E) on one action.
-R repeats an officer's last order; A carries on for the rest of the round. Allies, the boarding melee, and fire and leaks take turns too.
-Intelligence (captured logs, a deserter's tale, spying on a rival, ships you've fought before) reveals weak points before the first shot.
-The battle is an HD-2D diorama: pixel ships in a lit 3D sea, lit by their own cannon fire, at the clock's time of day.
-**Your people:** the second new-game page builds your captain (looks, points into stats and skills, an extra trait, an optional flaw for more points).
-Experience raises levels: each brings a point to spend, every third a perk (`data/perks.json`). Spend them for the captain and officers from the crew
-screen (Level buttons); in port or at your base you can also rename them and change their looks. Ordinary hands improve on their own.
-**Your squadron:** prizes become a fleet of up to 4 more ships (crew screen, Fleet tab). Give one hands and a captain and she fights beside you, drawing fire;
-shift your flag between ships, move cargo between holds. A captain who hates you may sail off with her. Upgrades take limited fitting slots
-(hull, rigging, hold, deck); shipyards also sell paint, sail colours (black sails frighten, but kill false colours) and figureheads.
-With a shipyard at your base you can lay down new hulls.
-The ships fight at a range band (long, medium, close, grappled); the weather gauge gives +2.
-The game starts on the new-game screen (captain name, nationality, background, ship name); Continue loads the quicksave.
-Arriving at a port opens the port screen (market, shipyard, tavern, governor, contracts); time stops while it's open. Hover over a price to see why it is what it is. The market shows each good's stock (plenty, normal, scarce), why it's unusual ("Glut after the harvest", "Foreign goods are banned"), what you paid, a 26-week price line, and the best price you know elsewhere. The map-mode dropdown shows the last prices you know for a good at every port. The crew screen's Ledger tab keeps every trade and its profit.
+*Built in Godot 4.7. In development (version 0.1.0): everything below is playable, and the balance and art are still moving.*
 
-Design docs: `docs/brief.md` (main brief) and `docs/brief_additions.md` (political intrigue, alliances and rivalries).
+## What you do
 
-## Tests
+### Sail a living Caribbean
+
+The map is the real Caribbean, drawn from Natural Earth coastlines. You can't see past the horizon, so merchants, navy patrols, pirate hunters and other pirates turn up as sails. Most of them are ships of the economy itself: taking one is a real loss to that trade route. Hurricanes come in season, fog hides you, and reefs and shoals wreck ships that draw too much water.
+
+![Close in on Port Royal: palms, jungle, shallows and the ship at anchor](docs/screenshots/map_close.png)
+
+### Trade on what you know
+
+Every port produces and consumes goods, every day. You only know live prices where you are. Everything else is old news, carried in by other ships and as stale as their voyage. Spain bans foreign goods, so you smuggle. Fences in Tortuga and Nassau take stolen cargo. The treasure fleets flood the Spanish Main with goods, and the sugar convoys empty the islands.
+
+![The market at Port Royal: stock, prices, a 26-week trend, and the best price you know elsewhere](docs/screenshots/market.png)
+
+### Fight turn by turn
+
+Battles are turn-based, like Octopath Traveler: every officer on both ships acts once a round, rolling a d20 that you can see. Find the enemy's weak points to strip her shields and Break her, bank boost and spend it on one big broadside, then close to board. Night, weather, the weather gauge and a nearby fort all change the odds.
+
+![A battle off Port Royal: turn order across the top, both ships' shields and weak points, the gunner's orders and the dice log](docs/screenshots/battle.png)
+
+### Lead people, not stats
+
+Your captain, crew, officials and rivals are all characters, with traits, wants, friendships and grudges. Officers speak up for or against your choices, and overruling them costs you. Put someone ashore and their friends resent it. Someone you dismiss may come back as a rival who knows your weak points. Starve or cheat your crew and they mutiny, and a pirate crew votes on its next captain.
+
+![The captain's page: leadership, skills, traits, standing with every nation, and how it ends](docs/screenshots/crew.png)
+
+### Stories, not random events
+
+There are 306 events, many of them chained into stories with a start, a peak and an ending. Choices are tagged with the skill or trait they test, like `[Swordplay 40%]`, and acting against your nature slowly changes who your captain is.
+
+![The night you took the ship: the first lieutenant has the keys, and your officers argue over what to do](docs/screenshots/event.png)
+
+### Towns that remember
+
+Each port has wealth, hunger, order and piety, a governor and interest groups who set its laws, and a memory of what you did there. Bring food to a starving town and it remembers. Sack it and it remembers that too. Lay siege to a town, take it, and run it yourself: your laws, your taxes, and a rising if you get it wrong.
+
+![Port Royal's town page: hungry and on the edge of riot](docs/screenshots/port.png)
+
+### And more
+
+- **Careers:** letters of marque, pardons, false colours, a bounty from each nation and the hunters it sends.
+- **Politics:** blackmail, favours, rival officials, and Nassau's council of captains.
+- **Alliances and feuds** with named captains who sail the map and grow with their fame.
+- **Bases:** hidden coves you can build up with storehouses, shipyards and forts.
+- **A squadron of up to four consorts,** each with a captain who may desert you.
+- **Wars between the nations,** with invasion squadrons you can catch at sea.
+- **Ambitions and titles, endings** (retire rich, a governorship, a pirate republic, or the noose), and an **ironman** mode.
+
+![The new-game screen: captain, nationality, background and ship](docs/screenshots/new_game.png)
+
+## Play
+
+There's no download yet: a Windows build for itch.io is on the way. To play from source:
+
+1. Install [Godot 4.7](https://godotengine.org/download) (the standard build, not .NET).
+2. Clone this repo, then run `godot --path .` in it. Or open `project.godot` in the editor and press F5.
+
+On Windows, if you put the Godot exe in `bin/`, `play.bat` starts the game with a double-click.
+
+## Controls
+
+| Key / mouse | Does |
+|---|---|
+| left-click the sea or a port | set a course (the route goes around land) |
+| click a ship | give chase |
+| wheel, right/middle-drag | zoom, pan |
+| `F` | follow the ship |
+| `Space`, `1` `2` `3` | pause, speed 1x / 2x / 4x |
+| `C`, `L` | crew and ship screen; the same on its Charts tab |
+| `F5`, `F9` | quick-save, quick-load |
+| `M` | mute (remembered next time) |
+| `Esc` | pause menu |
+| in battle: `1`-`9`, `Q`/`E`, `R`, `A` | pick an action, spend boost, repeat the last order, carry on for the rest of the round |
+
+Hover over anything with a number on it to see where the number comes from.
+
+## For developers
+
+Everything below is about how the game is put together.
+
+Design rule: **deep, not wide.** Every feature has to create a decision for the player, and new features reuse existing systems. Design docs: `docs/brief.md` (the main brief), `docs/brief_additions.md` (political intrigue, alliances and rivalries), `docs/art_direction.md`, `docs/events.md` (how to write events) and `docs/representation.md`.
+
+Screenshots: `bin/Godot_v4.7.2-stable_win64_console.exe --path . -s tools/screenshots.gd` starts a new game in a window and rewrites `docs/screenshots/`.
+
+### Tests
 
 ```
 bin/Godot_v4.7.2-stable_win64_console.exe --headless --path . -s addons/gut/gut_cmdln.gd
 ```
 Or in the editor: GUT panel (bottom dock) > Run All. Tests live in `tests/`, config in `.gutconfig.json`.
 
-## Layout
+### Layout
 
 | Folder | What |
 |---|---|
@@ -54,7 +116,7 @@ Or in the editor: GUT panel (bottom dock) > Run All. Tests live in `tests/`, con
 | `tools/` | Offline Python tools (ignored by Godot through `.gdignore`). |
 | `addons/gut/` | GUT test framework (MIT). |
 
-## Data
+### Data
 
 JSON, not Godot `.tres` Resources: it's easy to write in any editor, compare in git, and generate in batches (for example, hundreds of events from a script).
 Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` listing the required fields and cross-references. A bad entry fails at startup with the file, the entry and the field. Add a table to `SCHEMA` when it gains required fields.
@@ -116,13 +178,13 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
 - Endings (`scripts/endings.gd`, `rules.json` `endings`): retire rich, a governorship, a pirate republic at Nassau (chosen from the
   crew screen); hanged, lost at sea, or no one left (they choose you). The crew screen's Log tab reads back the line of captains.
   New games can be ironman (one save, written in every port, gone at the end) and have first-voyage hints (`data/tutorial.json`).
-- `events/*.json`: random and historical events (128 so far, in batches by category). `scripts/events.gd` is the engine;
+- `events/*.json`: random and historical events (306 so far, in batches by category). `scripts/events.gd` is the engine;
   `docs/events.md` explains the format for writing more. Every event is checked at startup and by the tests. Tuning in `rules.json` `events`.
 - `encounters.json`: who you meet at sea (ship types, crew, morale, cargo, how hostile, prisoner willingness). Battle actions per officer post are in `combat_actions.json`; dice, damage, morale and AI crews are tuned in `rules.json` `dice_combat`. Prisoner fates and prize rules: `prisoners`, `prizes`, `fence`.
 - `traits.json`, `nations.json` (names and recruiting), `backgrounds.json` (captain starts). `pools` says who can roll a trait: `crew`, `official` or both.
 - `events/night.json`: the night you took the ship, the first thing a new game plays (one per background, `backgrounds.json` `night`): it sets your nature and brings in someone whose story (`events/origins.json`) finds you later. `focus.json`: the captain's focus, a CK3-style lifestyle that teaches its perks (in `perks.json`) over time. `rules.json` `nature`: how acting against a trait wears it away and leaning one way gives you one (scripts/nature.gd).
 
-## Characters
+### Characters
 
 Everyone is a character on one model, kept in the `People` autoload: the captain, the crew, and later officials, rivals and council captains.
 A character has four leadership stats (authority, experience, intimidation, charisma), seven skills, 1 to 3 traits (some hidden), relations and a history, all 0 to 20.
@@ -142,11 +204,11 @@ A held town's laws (base screen): rule (martial law, a council of townsmen) and 
 Pirate crews vote on new articles; anyone else imposes them, and a harsher one is resented. Effects are read where each number is made:
 `Civics.bonus(holder, key)`. Add an option by adding an entry; add a new effect key by reading it where it applies.
 
-## Saves
+### Saves
 
 `user://saves/quicksave.json` (on Windows: `%APPDATA%/Godot/app_userdata/Plunder and Pillage/saves/`). Readable JSON. Each system has `save_state()` and `load_state()`; `scripts/save_game.gd` collects them.
 
-## Art
+### Art
 
 Everything is swappable: code only knows art through paths in `data/`.
 
@@ -164,7 +226,7 @@ Everything is swappable: code only knows art through paths in `data/`.
 The current art is generated placeholder art (`tools/make_placeholder_art.py`, CC0). Replace any PNG with real art at the same path,
 or point the data at a new file. List every third-party asset in `assets/CREDITS.md`. No AI-generated images as game assets.
 
-## Map
+### Map
 
 The coastline comes from Natural Earth 1:10m (public domain). Shallows are areas shallower than 200 m (`ne_10m_bathymetry_K_200`).
 To rebuild it (for example, to change the bounds or the detail level):
