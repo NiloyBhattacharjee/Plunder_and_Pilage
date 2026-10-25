@@ -48,6 +48,24 @@ func _run() -> void:
 	w.dialog.hide()
 	w._in_event = false
 
+	var clock = root.get_node("Clock")  # half a year, so the charts have weeks to show
+	var s: Dictionary = w.ship.state
+	var crew_gd = load("res://scripts/crew.gd")
+	for i in 180:  # stocked, paid and earning, as if trading: idle at anchor the crew would starve and desert
+		s.cargo.food = maxf(s.cargo.get("food", 0), 120)
+		s.cargo.water = maxf(s.cargo.get("water", 0), 120)
+		s.gold += 14 + int(40 * sin(i / 9.0)) + (300 if i % 45 == 30 else 0)
+		crew_gd.add_mod(s, "screenshot", "A good voyage", 20, 2)
+		clock.advance(1.0)
+		w.dialog.hide()  # a day's event would wait for an answer
+		w._in_event = false
+		await process_frame
+	clock.day = floor(clock.day) + 0.55
+	w.crew_screen.open(w.ship)
+	w.crew_screen.show_charts()
+	await _shot("charts")
+	w.crew_screen.close()
+
 	w.start_combat(load("res://scripts/combat/encounters.gd").generate("spain", w.rng, "merchant"), "attack")
 	await _shot("battle", 150)
 	quit()

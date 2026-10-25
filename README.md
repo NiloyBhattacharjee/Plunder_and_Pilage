@@ -49,6 +49,12 @@ Each port has wealth, hunger, order and piety, a governor and interest groups wh
 
 ![Port Royal's town page: hungry and on the edge of riot](docs/screenshots/port.png)
 
+### Read the numbers
+
+Like a Paradox game, the ship's log keeps a record of every week: your gold, what you earned and spent, the crew's mood, the price on your head, your standing with each nation and how much traffic is at sea. Wars and history events are marked on it. Hover over a week to see its numbers and what you did that week.
+
+![The Charts tab: gold, crew morale, the price on your head and pirates at sea, with gold in hand and the week-by-week balance](docs/screenshots/charts.png)
+
 ### And more
 
 - **Careers:** letters of marque, pardons, false colours, a bounty from each nation and the hunters it sends.
