@@ -8,15 +8,14 @@ Every third-party asset in the game is listed here. Only licences that allow com
 | IM FELL English (regular, italic) | `assets/ui/fonts/IMFellEnglish-*.ttf` | [Google Fonts](https://fonts.google.com/specimen/IM+Fell+English) | Igino Marini | SIL Open Font License 1.1 (`OFL-IMFell.txt`) |
 | Pirata One | `assets/ui/fonts/PirataOne-Regular.ttf` | [Google Fonts](https://fonts.google.com/specimen/Pirata+One) | Rodrigo Fuenzalida, Nicolas Massi | SIL Open Font License 1.1 (`OFL-PirataOne.txt`) |
 | Pixelify Sans | `assets/ui/fonts/PixelifySans.ttf` | [Google Fonts](https://fonts.google.com/specimen/Pixelify+Sans) | Stefie Justprince | SIL Open Font License 1.1 (`OFL-PixelifySans.txt`) |
-| Blackmoor Tides Loop (battle music) | `assets/audio/Blackmoor Tides Loop.ogg` | TODO | TODO | TODO |
-| Vandalorum tracks (map music) | `assets/audio/vandalorum_-_*.ogg` | TODO | Vandalorum | TODO |
+| Blackmoor Tides Loop (battle music) | `assets/audio/Blackmoor Tides Loop.ogg` | OpenGameArt, "Blackmoor Tides (Epic Pirate Battle Theme)" ([author's page](http://opengameart.org/users/matthewpablo)) | Matthew Pablo ([matthewpablo.com](http://www.matthewpablo.com)) | CC-BY 3.0: credit "Music by Matthew Pablo, www.matthewpablo.com" in the game and on its store page |
+| Vandalorum tracks (map music, 6 songs) | `assets/audio/vandalorum_-_*.ogg` (converted from WAV) | OpenGameArt, "Water Level Synth Music"; from the album [Antediluvian Secrets](https://vandalorum.bandcamp.com/album/antediluvian-secrets) | Vandalorum ([vandalorum.bandcamp.com](https://vandalorum.bandcamp.com)) | CC-BY 4.0: credit "Music by Vandalorum vandalorum.bandcamp.com" in the game and on its store page |
 | Explosion and gunshot | `assets/audio/effects/ExplosionMetal*.wav`, `GunShot*.wav` | [OpenGameArt](https://opengameart.org) (see `effects/README.txt`) | Iwan Gabovitch (qubodup) | CC0 |
 | Accessory SFX Library (dice, coins) | `assets/audio/effects/accessory/` | [vehiclemusic.eu](http://www.vehiclemusic.eu) | Jan Schupke | CC0 |
 | 80 CC0 RPG SFX (blades, chains, wood, coins) | `assets/audio/effects/80-CC0-RPG-SFX/` | [OpenGameArt](https://opengameart.org/content/80-cc0-rpg-sfx) | rubberduck | CC0 |
 | Waves | `assets/audio/effects/waves/` (converted from FLAC to OGG) | [Freesound](https://freesound.org) #11505, #18363 | transitking, jasinski | CC0 |
-| Pirate Pack Vol 1 | `assets/audio/effects/pirate_pack_vol_1/` | TODO | TODO | TODO |
-| Cannon and ship sounds | `assets/audio/effects/cannon/`, `Ship/` | TODO | TODO | TODO |
-| Gold sack, splash, water explosions | `assets/audio/effects/gold sack/`, `splash/`, `water surface explosion/` | TODO | TODO | TODO |
+| Pirate Pack Vol 1 | `assets/audio/effects/pirate_pack_vol_1/` | OpenGameArt, "JC Sounds - Pirate Pack Vol 1" | JC Sounds ([@xjcsounds](https://x.com/xjcsounds)) | CC-BY 4.0: credit "JC Sounds" in the game and on its store page |
+| Naval battle sounds (cannon, ship) | `assets/audio/effects/cannon/`, `Ship/` | OpenGameArt (made for the OpenGameArt Winter Jam 2022) | Thimras | CC0 |
 | GUT test framework (not shipped art) | `addons/gut/` | [bitwes/Gut](https://github.com/bitwes/Gut) | Butch Wesley | MIT |
 
 ## Our own placeholder art (CC0)

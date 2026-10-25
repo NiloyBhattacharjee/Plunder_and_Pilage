@@ -5,6 +5,8 @@ config_version=5
 
 config/name="Plunder and Pillage"
 config/version="0.1.0"
+config/icon="res://icon.png"
+config/windows_native_icon="res://icon.ico"
 run/main_scene="res://ui/new_game.tscn"
 config/features=PackedStringArray("4.7")
 

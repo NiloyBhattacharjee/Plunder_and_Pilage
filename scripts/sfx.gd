@@ -9,7 +9,7 @@ const PP := "pirate_pack_vol_1/Pirate Pack Vol 1/"
 const SOUNDS := {
 	"cannon": [PP + "Misc Sfx/sfx_cannon_fire_", "cannon/cannon_fire."],
 	"shot_hits": ["cannon/cannon_hit_ship_short", "cannon/cannon_hit_wall_no_splash", "cannon/cannon_hit."],
-	"shot_misses": ["cannon/cannon_miss", "water surface explosion/WaterSurfaceExplosion0", PP + "Misc Sfx/sfx_splash_"],
+	"shot_misses": ["cannon/cannon_miss", PP + "Misc Sfx/sfx_splash_"],
 	"gun_bursts": ["ExplosionMetal."],
 	"break": ["ExplosionMetalGverb"],
 	"musket": ["GunShot.", PP + "Misc Sfx/sfx_pistol_"],
@@ -21,7 +21,7 @@ const SOUNDS := {
 	"sinks": ["Ship/ship_destroyed_short"],
 	"dice": ["accessory/sfx/die-one-roll-", "accessory/sfx/dice-two-roll-"],
 	"coins": [PP + "Misc Sfx/sfx_coin_clink_", "accessory/sfx/coins-shake-", "80-CC0-RPG-SFX/item_coins_"],
-	"plunder": [PP + "Misc Sfx/sfx_coin_spill_", "gold sack/gold_sack"],
+	"plunder": [PP + "Misc Sfx/sfx_coin_spill_"],
 	"anchor": ["80-CC0-RPG-SFX/chain_"],
 	"wave": ["waves/wave_"],
 	"click": ["80-CC0-RPG-SFX/wood_"],

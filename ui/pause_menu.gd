@@ -4,6 +4,12 @@ extends CanvasLayer
 ## Fullscreen and volume are your machine's settings, kept in user://settings.cfg beside the mute (ui/hud.gd).
 
 const SETTINGS := "user://settings.cfg"
+## Who made what (assets/CREDITS.md has the full list); the CC-BY licences ask for these lines in the game.
+const CREDITS := """Music by Matthew Pablo, www.matthewpablo.com
+Music by Vandalorum, vandalorum.bandcamp.com
+Sound effects: JC Sounds (Pirate Pack Vol 1), Thimras, Iwan Gabovitch, rubberduck, Jan Schupke, transitking, jasinski
+Map: Natural Earth
+Fonts: IM FELL English (Igino Marini), Pirata One, Pixelify Sans"""
 
 var _save: Button
 var _full: CheckButton
@@ -45,6 +51,11 @@ func _ready() -> void:
 	_volume.value_changed.connect(_set_volume)
 	row.add_child(_volume)
 	_save = UIKit.button(box, "Save", _save_game, "Quick-save (F5). The game also saves itself every week at sea.")
+	var credits := UIKit.label(box, CREDITS)
+	credits.visible = false
+	credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UIKit.button(box, "Credits", func(): credits.visible = not credits.visible)
+	box.move_child(credits, -1)
 	UIKit.button(box, "Quit to desktop", get_tree().quit, "Anything since your last save is lost.")
 	_full.button_pressed = cfg.get_value("video", "fullscreen", false)
 	_volume.value = cfg.get_value("audio", "volume", 0.8)
