@@ -3,9 +3,9 @@ shader_type canvas_item;
 // focus, and a little haze lies over the far (northern) edge. The names and the HUD are drawn above it, sharp.
 
 uniform sampler2D screen : hint_screen_texture, filter_linear_mipmap;
-uniform float focus = 0.3;     // half the height of the sharp band, as a share of the screen
+uniform float focus = 0.36;    // half the height of the sharp band, as a share of the screen
 uniform float centre = 0.55;   // where the band sits (a little below the middle: the ship)
-uniform float blur = 2.2;      // how far out of focus the edges go (mip levels)
+uniform float blur = 1.3;      // how far out of focus the edges go (mip levels)
 uniform vec4 haze : source_color = vec4(0.72, 0.8, 0.9, 0.22);
 
 void fragment() {

@@ -790,31 +790,10 @@ def make_props():
     save(im, out / "rock.png")
 
 
-# ---- the world map: land texture and port towns ---------------------------------------------------
+# ---- the world map: port towns (trees: tools/make_map_trees.py) ---------------------------------------------------
 
 def make_map():
     out = A / "map"
-    rng = random.Random(11)
-    W = 96  # a seamless tile of grass and jungle, lit from the upper left
-    tile = Image.new("RGBA", (W, W))
-    px = tile.load()
-    G = [(52, 92, 50, 255), (66, 112, 58, 255), (82, 132, 66, 255), (104, 150, 76, 255)]
-    for y in range(W):
-        for x in range(W):
-            n = (math.sin(x * 0.21) + math.sin(y * 0.17) + math.sin((x + y) * 0.11)) / 3.0
-            px[x, y] = dith(G[1], G[2], 0.5 + n * 0.5, x, y)
-    for _ in range(40):  # jungle clumps: dark crowns with a lit edge, wrapping round the tile edges
-        cx, cy, r = rng.randrange(W), rng.randrange(W), rng.randint(3, 6)
-        for dy in range(-r - 1, r + 2):
-            for dx in range(-r - 1, r + 2):
-                d = math.hypot(dx, dy)
-                x, y = (cx + dx) % W, (cy + dy) % W
-                if d <= r:
-                    px[x, y] = G[3] if (dx + dy) < -r * 0.6 else (G[0] if (dx + dy) > r * 0.5 else G[1])
-    for _ in range(140):  # grass flecks
-        x, y = rng.randrange(W), rng.randrange(W)
-        px[x, y] = G[3]
-    save(tile, out / "land_tile.png")
     # a port town: walls, a fort, red roofs and a church tower; windows lit (they glow at night)
     T = Image.new("RGBA", (28, 22), CLEAR)
     d = ImageDraw.Draw(T)

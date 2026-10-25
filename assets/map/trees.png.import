@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://uekrbj416b0c"
-path="res://.godot/imported/land_tile.png-66b72eb6c800baa50ae91205c193ff68.ctex"
+uid="uid://6nxelx14a817"
+path="res://.godot/imported/trees.png-089af501b3a914776d3dfafafebdbe16.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/map/land_tile.png"
-dest_files=["res://.godot/imported/land_tile.png-66b72eb6c800baa50ae91205c193ff68.ctex"]
+source_file="res://assets/map/trees.png"
+dest_files=["res://.godot/imported/trees.png-089af501b3a914776d3dfafafebdbe16.ctex"]
 
 [params]
 

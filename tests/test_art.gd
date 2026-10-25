@@ -78,3 +78,13 @@ func test_ship_sprite_switches_layers_with_condition():
 	sp.set_state(0.3, 0.2, 0, true)
 	assert_string_contains(sp.get_node("Sails").texture.resource_path, "sails_furled")
 	assert_false(sp.get_node("Flag").visible, "struck colours")
+
+
+func test_map_trees_stand_on_land():
+	var t0 := Time.get_ticks_msec()
+	var trees := TreeLayer.place()
+	gut.p("%d trees placed in %d ms" % [trees.size(), Time.get_ticks_msec() - t0])
+	assert_gt(trees.size(), 1000)
+	var terrain := TerrainGrid.new(load("res://data/map/terrain.png").get_image(), int(Data.map.cell_px))
+	for t in trees:
+		assert_eq(terrain.at(t.foot), TerrainGrid.LAND, str(t.foot))

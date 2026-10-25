@@ -8,6 +8,7 @@ class_name Geo
 ## drawn under UPRIGHT to undo it. The land's hills rise by the same angle (assets/map/land.gdshader).
 const TILT := 0.66
 const UPRIGHT := Vector2(1.0, 1.0 / TILT)
+const HILL := 70.0  # how many map pixels the highest peak rises (land.gdshader hill_height; trees stand on it)
 
 const COMPASS := ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
 	"S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]

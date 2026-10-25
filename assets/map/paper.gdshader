@@ -27,12 +27,15 @@ float clouds(vec2 p) {
 void fragment() {
 	vec2 px = (floor(UV * map_size / art_px) + 0.5) * art_px;
 	vec2 drift = vec2(TIME * 6.0, TIME * 1.5);
-	float shadow = smoothstep(0.62, 0.7, clouds(px + drift + vec2(40.0, 60.0)));   // offset: the sun is high in the east
-	float cloud = smoothstep(0.66, 0.76, clouds(px + drift));
+	float shadow = smoothstep(0.72, 0.75, clouds(px + drift + vec2(40.0, 60.0)));   // offset: the sun is high in the east
+	float c = clouds(px + drift);
+	float cloud = smoothstep(0.74, 0.77, c);  // fewer, firmer clouds: a clean edge, not a smudge
+	float lit = clamp((clouds(px + drift - vec2(6.0, 8.0)) - c) * 12.0 + 0.5, 0.0, 1.0);  // brighter where it rises toward the sun
 	vec2 e = min(UV, 1.0 - UV);
 	float vignette = 1.0 - smoothstep(0.0, 0.05, min(e.x * map_size.x / map_size.y, e.y));
-	vec4 col = vec4(0.05, 0.08, 0.15, shadow * 0.22 + vignette * 0.5);
-	col = mix(col, vec4(0.97, 0.98, 1.0, 0.55), cloud * 0.8);
+	vec4 col = vec4(0.03, 0.06, 0.14, shadow * 0.2 + vignette * 0.5);
+	vec3 puff = mix(vec3(0.62, 0.69, 0.82), vec3(0.98, 0.98, 1.0), smoothstep(0.3, 0.7, lit + (c - 0.77) * 5.0));  // grey-blue underside, white tops
+	col = mix(col, vec4(puff, 0.8), cloud);
 	for (int i = 0; i < storm_count; i++) {
 		vec4 s = storms[i];
 		vec2 d = px - s.xy;

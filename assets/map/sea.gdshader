@@ -1,6 +1,6 @@
 // The sea on the world map, HD-2D style (like the battle sea): deep blue offshore, turquoise over the banks,
 // pale water over the reefs, surf along the coasts, slow pixel waves with foam on the crests, and glints of sun.
-// Snapped to a world grid of art pixels and posterised. Colours come from data/palette.json (scripts/sea_layer.gd).
+// Snapped to a world grid of art pixels; colour in flat steps, dithered between them so depth reads smooth. Colours come from data/palette.json (scripts/sea_layer.gd).
 shader_type canvas_item;
 
 uniform sampler2D mask_soft : filter_linear;   // terrain mask: r 0 deep, 0.5 shallow, 0.75 reef, 1 land
@@ -20,6 +20,23 @@ float noise(vec2 p) {
 	return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
 }
 
+// 4x4 ordered dither, -0.5..0.5
+float bayer(vec2 a) {
+	int x = int(mod(a.x, 4.0)), y = int(mod(a.y, 4.0));
+	int m[16] = int[](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+	return float(m[y * 4 + x]) / 16.0 - 0.5;
+}
+
+// Whitecaps: one in about seven cells of 14 art pixels, at a random spot and time, a short dash of foam that swells and fades; 1 lit, 0 none.
+float whitecap(vec2 a) {
+	vec2 c = floor(a / 14.0);
+	if (hash(c + 3.7) < 0.85) { return 0.0; }
+	float life = sin(TIME * (0.5 + hash(c + 4.4) * 0.6) + hash(c) * 6.28) - 0.3;  // out of the water most of the time
+	vec2 d = a - (c * 14.0 + 3.0 + floor(vec2(hash(c + 1.3), hash(c + 8.1)) * 8.0));
+	float len = floor(life * 3.0);
+	return step(0.0, life) * step(abs(d.x + d.y * 0.5), len) * step(-0.5, d.y) * step(d.y, 0.5);
+}
+
 void fragment() {
 	vec2 px = (floor(UV * map_size / art_px) + 0.5) * art_px;
 	vec2 uv = px / map_size;
@@ -37,22 +54,25 @@ void fragment() {
 	float depth = soft / 81.0 * 2.0;     // 0 deep .. 1 shallow
 	float coast = wide / 81.0;           // rises toward land: where the surf is
 	vec3 deep2 = deep_color.rgb * 0.75;
-	vec3 col = mix(deep2, deep_color.rgb, smoothstep(0.0, 0.35, depth + noise(px / 140.0) * 0.25));
+	vec2 a = floor(px / art_px);
+	vec3 col = mix(deep2, deep_color.rgb, smoothstep(0.0, 0.35, depth + (noise(px / 220.0) - 0.5) * 0.12));
 	col = mix(col, shallow_color.rgb, smoothstep(0.42, 0.6, depth));
 	float r = texture(mask_near, uv).r;
 	if (r > 0.6 && r < 0.9) {            // reef: pale water and broken white
 		col = mix(col, reef_color.rgb, 0.7);
 		col = mix(col, vec3(0.95), step(0.82, noise(px / 3.0 + TIME * 0.4)) * 0.6);
 	}
-	// waves: long swells drifting west on the trade wind, foam on the crests, only in open water
-	float swell = sin(px.x * 0.035 + px.y * 0.012 + TIME * 0.9 + noise(px / 80.0) * 5.0);
-	float crest = step(0.985, swell) * step(0.62, noise(px / 14.0 + vec2(TIME * 0.05, 0.0)));
-	col = mix(col, vec3(0.9, 0.96, 1.0), crest * 0.45 * (1.0 - depth));
+	// waves: long swells drifting west on the trade wind (a faint light and dark ripple), whitecaps in open water
+	float swell = sin(px.x * 0.03 + px.y * 0.012 + TIME * 0.9 + noise(px / 80.0) * 4.0);
+	col *= 1.0 + 0.05 * swell;
+	float cap = whitecap(a + vec2(floor(TIME * 1.5), 0.0));
+	col = mix(col, vec3(0.92, 0.97, 1.0), cap * 0.7 * (1.0 - depth));
+	col = mix(col, col * 0.8, whitecap(a + vec2(floor(TIME * 1.5), -1.0)) * (1.0 - cap) * (1.0 - depth));  // its shadow
 	// surf: bands of foam rolling in toward the beaches
 	float band = smoothstep(0.35, 0.7, coast) * (1.0 - step(0.97, coast));
 	float roll = step(0.75, sin(coast * 38.0 - TIME * 2.2 + noise(px / 30.0) * 3.0));
 	col = mix(col, vec3(0.94, 0.98, 1.0), band * roll * 0.6);
 	// glints of sun
 	col += vec3(0.7) * step(0.9994, hash(floor(px / 3.0) + floor(TIME * 2.0))) * (1.0 - depth);
-	COLOR = vec4(floor(col * 20.0 + 0.5) / 20.0, 1.0);
+	COLOR = vec4(floor(col * 24.0 + 0.5 + bayer(a)) / 24.0, 1.0);
 }

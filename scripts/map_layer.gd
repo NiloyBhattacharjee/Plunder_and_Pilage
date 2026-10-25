@@ -16,12 +16,13 @@ func _ready() -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://assets/map/land.gdshader")
 	mat.set_shader_parameter("height_map", load("res://assets/map/height.png"))
-	mat.set_shader_parameter("detail", load("res://assets/map/land_tile.png"))
 	mat.set_shader_parameter("map_size", Vector2(Data.map.size[0], Data.map.size[1]))
 	mat.set_shader_parameter("art_px", float(Data.table("palette").map_pixel))
 	mat.set_shader_parameter("tilt", Geo.TILT)
+	mat.set_shader_parameter("hill_height", Geo.HILL)
 	land.material = mat
 	add_child(land)
+	add_child(TreeLayer.new())  # standing on the land, under the sea names
 
 
 func _draw() -> void:
