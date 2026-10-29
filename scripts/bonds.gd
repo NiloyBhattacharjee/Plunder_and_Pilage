@@ -11,6 +11,7 @@ signal news(text: String)
 
 var captains: Array = []   # the roster of named captains (character ids)
 var npc := {}              # "a|b" -> how two NPCs feel about each other, -100..100
+var real := {}             # real captain (data/captains.json) -> character id, once they've come on the scene
 var rng := RandomNumberGenerator.new()
 
 
@@ -21,6 +22,7 @@ func _ready() -> void:
 func reset() -> void:
 	captains = []
 	npc = {}
+	real = {}
 
 
 static func cfg() -> Dictionary:
@@ -85,6 +87,8 @@ func grow(id: String, amount: int) -> String:
 			c.stats[k] = mini(20, c.stats[k] + 1)
 		else:
 			c.skills[k] = mini(20, c.skills[k] + 1)
+	if c.has("real") and not c.get("off_script", false):
+		return ""  # the histories choose their ships
 	var ladder: Array = gr.ships
 	var best: String = c.ship_type
 	for tier in ladder:
@@ -112,6 +116,98 @@ func npc_rel(a: String, b: String) -> int:
 
 func npc_set(a: String, b: String, v: int) -> void:
 	npc[pair_key(a, b)] = clampi(v, -100, 100)
+
+
+# ---- the real captains ---------------------------------------------------------------
+
+## The real captains of the age (data/captains.json) come on the scene on their dates and live their lives
+## step by step: new ships, pardons, deaths. They keep to the histories only while you leave them be: once you
+## have any bond with one (a fight starts a rivalry), they're off the script and their story is their own.
+func history_day(s: Dictionary) -> Array:
+	var msgs := []
+	var today := Clock.date()
+	var stamp := "%04d-%02d-%02d" % [today.year, today.month, today.day]
+	var table: Dictionary = Data.table("captains")
+	for key in table:
+		if key.begins_with("_"):
+			continue
+		var h: Dictionary = table[key]
+		if not real.has(key):
+			if h.from > stamp:
+				continue
+			real[key] = _real_captain(key, h)
+			captains.append(real[key])
+			msgs.append(h.arrive)
+		if not People.chars.has(real[key]):
+			continue
+		var c := People.person(real[key])
+		while not c.get("dead", false) and c.step < h.life.size() and h.life[c.step].date <= stamp:
+			var st: Dictionary = h.life[c.step]
+			c.step += 1
+			if st.has("unless_flag") and Events.flags.has(st.unless_flag):
+				continue  # the player changed history
+			if all(s).has(real[key]):
+				c.off_script = true
+			if c.get("off_script", false):
+				if st.get("dies", false):
+					msgs.append("The histories had another end in store for %s, but you have crossed their wake, and they sail on." % c.name)
+				continue
+			for k in ["ship", "faction", "haunt"]:
+				if st.has(k):
+					c[k] = st[k]
+			if st.has("type"):
+				c.ship_type = st.type
+			if st.has("ship") and c.get("ashore", false):  # back to sea
+				c.alive = true
+				c.ashore = false
+			if st.get("gone", false):
+				c.alive = false
+				c.ashore = true
+			if st.get("dies", false):
+				c.alive = false
+				c.dead = true
+				Events.flags["fate_" + key] = -1.0
+				Events.flags["gone_" + key] = -1.0
+			if st.has("effects"):
+				EconomyEffects.apply_all(st.effects, {"s": EconomyEffects.player})
+			c.history.append("%s (%s)" % [st.text, Clock.date_string()])
+			if st.has("port"):
+				Economy.add_news(st.text, st.port)  # news travels at sailing speed
+			else:
+				msgs.append(st.text)
+	return msgs
+
+
+func _real_captain(key: String, h: Dictionary) -> String:
+	var c := People.generate({"nationality": h.nationality})
+	c.name = h.name
+	c.age = Clock.date().year - int(h.born)
+	c.traits = h.traits.duplicate()
+	c.hidden = []
+	for k in h.get("stats", {}):
+		c.stats[k] = int(h.stats[k])
+	for k in h.get("skills", {}):
+		c.skills[k] = int(h.skills[k])
+	c.role = "captain"
+	c.faction = h.faction
+	c.ship = h.ship
+	c.ship_type = h.type
+	c.haunt = h.haunt
+	c.port = h.haunt
+	c.alive = true
+	c.fame = int(h.fame)
+	c.favours = {}
+	c.real = key
+	c.step = 0
+	c.history.append(h.bio)
+	var id := People.add(c)
+	for other in h.get("friends", []):
+		if real.has(other):
+			npc_set(id, real[other], 60)
+	for other in h.get("foes", []):
+		if real.has(other):
+			npc_set(id, real[other], -60)
+	return id
 
 
 # ---- partners ------------------------------------------------------------------------
@@ -567,6 +663,9 @@ func on_battle(s: Dictionary, enemy: Dictionary, outcome: String, attacked: bool
 			s.gold += bounty
 			msgs.append("The bounty on %s pays %d gold." % [c.name, bounty])
 		c.alive = false
+		if c.has("real"):
+			c.dead = true
+			Events.flags["gone_" + c.real] = -1.0
 		c.history.append("%s by Captain %s, %s." % ["Sunk" if outcome == "enemy_sunk" else "Taken", ShipStats.captain(s).name, Clock.date_string()])
 		all(s).erase(id)
 		for f in roster():  # their friends swear revenge; their enemies warm to you
@@ -636,10 +735,11 @@ func ensure_on_map(shipping: Node) -> void:
 
 
 func save_state() -> Dictionary:
-	return {"captains": captains, "npc": npc, "rng": str(rng.state)}
+	return {"captains": captains, "npc": npc, "real": real, "rng": str(rng.state)}
 
 
 func load_state(d: Dictionary) -> void:
 	captains = d.captains
 	npc = d.npc
+	real = d.get("real", {})
 	rng.state = int(d.rng)

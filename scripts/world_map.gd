@@ -189,6 +189,8 @@ func _daily() -> void:
 	for m in Contracts.daily(s):
 		hud.show_message(m)
 	Politics.prune_secrets(s)
+	for m in Bonds.history_day(s):
+		hud.show_message(m)
 	Bonds.ensure_on_map(shipping)
 	for m in Fleet.daily(s, rng):
 		hud.show_message(m)

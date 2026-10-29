@@ -215,6 +215,8 @@ func daily() -> void:
 		n.age += 1
 		if n.age > cfg().max_age_days and not n.has("contract") and not n.has("captain_id") and not n.has("company") and not n.get("treasure", false) and not n.has("expedition") and not n.has("escort") and not n.has("invasion"):  # contract targets and named captains stay
 			remove(n)
+		elif n.has("captain_id") and not n.has("fight") and _stale_captain(n):
+			remove(n)  # dead, ashore, or in a new ship or service: they'll put to sea again as they are now
 		elif n.has("expedition") and Bases.bases.get(n.expedition, {}).get("raid", {}).get("npc", "") != n.id:
 			remove(n)  # the expedition is over, one way or the other
 		elif n.has("invasion") and Factions.invasion_at(n.invasion).get("npc", "") != n.id:
@@ -600,6 +602,13 @@ func spawn_captain(id: String) -> Dictionary:
 	n.home = c.haunt
 	_new_goal(n)
 	return n
+
+
+func _stale_captain(n: Dictionary) -> bool:
+	if not Bonds.exists(n.captain_id):
+		return true
+	var c := People.person(n.captain_id)
+	return n.enemy.name != c.ship or n.kind != ("pirate" if c.faction == "pirates" else "hunter")
 
 
 ## A merchant you're hired to escort, and the raiders who'll be after her: they wait along her course.

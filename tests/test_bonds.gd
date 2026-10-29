@@ -14,6 +14,9 @@ func before_each():
 func after_each():
 	Clock.day = 0.0
 	Factions.reset()
+	Bonds.reset()
+	for f in Events.flags.keys().filter(func(k): return k.begins_with("fate_") or k.begins_with("gone_")):
+		Events.flags.erase(f)
 
 
 func bond(key: String, lvl: int) -> void:
@@ -167,3 +170,40 @@ func test_pirate_friends_cost_you_with_the_nations():
 	var before: int = s.relations.spain
 	Bonds.monthly(s)
 	assert_lt(s.relations.spain, before)
+
+
+func _day_of(date: String) -> float:
+	return (Time.get_unix_time_from_datetime_string(date) - Time.get_unix_time_from_datetime_string(Data.rules.time.start_date)) / 86400.0
+
+
+func test_real_captains_keep_to_the_histories():
+	Bonds.reset()
+	Bonds.history_day(s)
+	assert_true(Bonds.real.has("de_graaf"), "Lorencillo is there at the start")
+	assert_false(Bonds.real.has("blackbeard"))
+	Clock.day = _day_of("1717-12-01")
+	Bonds.history_day(s)
+	var bb := People.person(Bonds.real.blackbeard)
+	assert_eq(bb.ship, "Queen Anne's Revenge")
+	assert_true(bb.id in Bonds.roster())
+	Clock.day = _day_of("1718-11-23")
+	Bonds.history_day(s)
+	assert_false(bb.alive)
+	assert_true(Events.flags.has("fate_blackbeard"))
+	assert_false(Bonds.real.grammont in Bonds.roster(), "lost at sea in 1686")
+	assert_eq(People.person(Bonds.real.hornigold).faction, "england", "took the pardon")
+
+
+func test_crossing_their_wake_takes_them_off_the_script():
+	Bonds.reset()
+	Clock.day = _day_of("1718-01-01")
+	Bonds.history_day(s)
+	bond(Bonds.real.blackbeard, -1)
+	Clock.day = _day_of("1718-11-23")
+	var msgs := Bonds.history_day(s)
+	var bb := People.person(Bonds.real.blackbeard)
+	assert_true(bb.alive)
+	assert_true(bb.off_script)
+	assert_eq(bb.ship, "Queen Anne's Revenge", "no later steps once off the script")
+	assert_false(Events.flags.has("fate_blackbeard"))
+	assert_true(msgs.any(func(m): return "another end" in m))

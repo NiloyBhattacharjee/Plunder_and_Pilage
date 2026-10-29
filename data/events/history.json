@@ -102,7 +102,7 @@
     "title": "Blackbeard",
     "text": "A big French-built ship with forty guns heaves to beside you: the Queen Anne's Revenge. On her quarterdeck, a huge man with a black beard plaited with ribbons, slow-match smoking under his hat. Edward Teach wants a word.",
     "once": true, "weight": 30,
-    "conditions": ["at_sea", "date >= 1716-06-01", "date < 1718-11-22"],
+    "conditions": ["at_sea", "date >= 1717-11-28", "date < 1718-06-10", "not flag.gone_blackbeard"],
     "choices": [
       {"text": "Sail in company with him for a cruise", "conditions": ["relation.pirates >= 0"], "outcomes": ["gold +300", "notoriety +5", "relation pirates +8", "flag sailed_with_blackbeard"], "result": "A month in his shadow. Prizes strike to him on sight. Your share is generous; his temper is not."},
       {"text": "Trade news and powder, and part friends", "check": {"who": "captain", "skill": "charisma", "dc": 13},
@@ -128,7 +128,7 @@
     "title": "Blackbeard is dead",
     "text": "News from Virginia: Blackbeard has been killed at Ocracoke by Lieutenant Maynard of the Royal Navy, after five pistol balls and twenty sword cuts. His head hangs from Maynard's bowsprit.",
     "where": "any", "once": true, "priority": true,
-    "conditions": ["date >= 1718-11-22", "date < 1719-06-01"],
+    "conditions": ["flag.fate_blackbeard", "date < 1719-06-01"],
     "choices": [
       {"text": "Drink to him", "conditions": ["flag.sailed_with_blackbeard"], "outcomes": ["opinion crew +2", "relation pirates +2"], "result": "Your old shipmates fall silent, then roar his name."},
       {"text": "A warning to every pirate", "outcomes": [], "result": "The navies are winning."}
@@ -139,7 +139,7 @@
     "title": "Calico Jack",
     "text": "A gaudy sloop flying a black flag with a skull and crossed swords: Calico Jack Rackham. Two of his crew, by the way they carry their cutlasses, are women. Anne Bonny and Mary Read, the taverns call them.",
     "once": true, "weight": 30,
-    "conditions": ["at_sea", "date >= 1719-05-01", "date < 1720-10-31"],
+    "conditions": ["at_sea", "date >= 1720-08-22", "date < 1720-10-31", "not flag.gone_rackham"],
     "roles": {"mary": {"from": "new", "name": "Mary Read", "traits": ["brave", "veteran"]}},
     "choices": [
       {"text": "Drink with them", "outcomes": ["relation pirates +4", "opinion crew +2", "flag met_calico_jack"], "result": "Rackham is all show. The two women are the real thing."},
@@ -152,7 +152,7 @@
     "title": "Rackham hanged",
     "text": "News from Jamaica: Calico Jack Rackham has been hanged at Gallows Point. Anne Bonny and Mary Read escaped the rope by 'pleading their bellies'. Bonny's last words to Jack: 'If you'd fought like a man, you need not have been hanged like a dog.'",
     "where": "any", "once": true, "priority": true,
-    "conditions": ["date >= 1720-11-18", "date < 1721-06-01"],
+    "conditions": ["flag.fate_rackham", "date < 1721-06-01"],
     "choices": [
       {"text": "A hard end", "outcomes": [], "result": "The gibbet at Port Royal is never empty these days."}
     ]
@@ -162,7 +162,7 @@
     "title": "Black Bart",
     "text": "Four sail hull-up to windward: Bartholomew Roberts' squadron, the most successful pirate of the age. He neither drinks nor gambles, and he has taken four hundred ships. A boat comes across with an invitation, or a demand.",
     "once": true, "weight": 30,
-    "conditions": ["at_sea", "date >= 1719-07-01", "date < 1722-02-10"],
+    "conditions": ["at_sea", "date >= 1720-09-01", "date < 1721-04-18", "not flag.gone_roberts"],
     "choices": [
       {"text": "Join his squadron for a season", "conditions": ["pirate"], "outcomes": ["gold +500", "notoriety +8", "relation pirates +10", "time 20"], "result": "Twenty days and a dozen prizes. Roberts runs a sober, orderly, terrifying fleet."},
       {"text": "Pay tribute and be on your way", "conditions": ["gold >= 100"], "outcomes": ["gold -100"], "result": "His quartermaster counts it, and lets you go."},

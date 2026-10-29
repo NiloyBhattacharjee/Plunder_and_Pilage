@@ -1,0 +1,129 @@
+{
+  "_comment": "The real captains of the age (scripts/bonds.gd history_day). Each joins the roster of named captains on `from`, in their real ship out of their real haunt, and then lives their life step by step: `life` is dated steps, each with news `text` and any of ship/type (a new ship; also brings them back to sea after `gone`), faction (a pardon or a new commission), haunt, gone (leaves the Caribbean, alive), dies (their historical end), effects (scripts/economy/effects.gd, as in history.json), port (the news travels from there at sailing speed), unless_flag (an event flag that stops the step, e.g. rogers_stopped). They keep to the histories only while you leave them be: a bond of any kind (a fight starts a rivalry) takes them off the script, and their story is their own. Flags set: fate_<id> when the histories' end comes, gone_<id> when they die by any hand. Dates checked against Woodard, The Republic of Pirates, and Rediker, Villains of All Nations; where a date is only known to the season, the first of the month is used. Stats and skills (0-20) and fame are design choices.",
+
+  "de_graaf": {
+    "name": "Laurens de Graaf", "nationality": "dutch", "born": 1653, "faction": "france", "haunt": "tortuga",
+    "ship": "Tigre", "type": "brigantine", "from": "1680-01-01", "fame": 70, "traits": ["veteran", "brave"],
+    "stats": {"authority": 16, "intimidation": 14}, "skills": {"gunnery": 18, "seamanship": 16},
+    "bio": "A Dutch gunner who turned buccaneer, sailing under French commissions out of Saint-Domingue. The Spanish call him Lorencillo.",
+    "arrive": "In the taverns of Tortuga they drink to Lorencillo: Laurens de Graaf, the Dutchman with a French commission and a gunner's eye.",
+    "life": [
+      {"date": "1682-11-23", "ship": "Princesa", "type": "frigate", "text": "De Graaf has taken the Spanish payship Princesa off Puerto Rico, with the garrisons' silver aboard, and made her his own."},
+      {"date": "1683-05-17", "port": "veracruz", "text": "De Graaf, Grammont and Van Hoorn have taken Veracruz by night and held the town to ransom for a fortnight.",
+       "effects": [{"type": "port_damage", "port": "veracruz", "severity": 0.4}, {"type": "stock", "port": "veracruz", "goods": ["silver"], "mult": 0.3}]},
+      {"date": "1694-06-17", "port": "port_royal", "text": "De Graaf, now a French officer, has landed on Jamaica and burned the plantations east of Port Royal."},
+      {"date": "1699-01-01", "gone": true, "text": "De Graaf has sailed north with Iberville to plant a French colony on the Mississippi. The Caribbean will not see Lorencillo again."}
+    ]
+  },
+
+  "grammont": {
+    "name": "Michel de Grammont", "nationality": "french", "born": 1645, "faction": "france", "haunt": "tortuga",
+    "ship": "Hardi", "type": "frigate", "from": "1680-01-01", "fame": 65, "traits": ["brave", "hot_headed"],
+    "stats": {"authority": 16, "charisma": 15}, "skills": {"swordplay": 16, "seamanship": 14},
+    "bio": "A gentleman of Paris who killed a man over his sister, went to sea, and became the chief of the buccaneers of Saint-Domingue.",
+    "arrive": "Michel de Grammont, 'the General' of the buccaneers, keeps a table at Petit-Goave and a fleet in the offing.",
+    "friends": ["de_graaf"],
+    "life": [
+      {"date": "1685-07-06", "port": "campeche", "text": "Grammont has taken Campeche, and when the Spanish would not ransom it, burned it after the bonfires for the feast of Saint Louis.",
+       "effects": [{"type": "port_damage", "port": "campeche", "severity": 0.5}]},
+      {"date": "1686-05-01", "dies": true, "text": "Grammont sailed north to raid the Florida coast, and has not been seen since. The Hardi is lost with all her people."}
+    ]
+  },
+
+  "hornigold": {
+    "name": "Benjamin Hornigold", "nationality": "english", "born": 1680, "faction": "pirates", "haunt": "nassau",
+    "ship": "Ranger", "type": "sloop", "from": "1713-06-01", "fame": 50, "traits": ["veteran", "calm"],
+    "stats": {"authority": 15, "experience": 17}, "skills": {"seamanship": 17, "navigation": 15},
+    "bio": "A privateer of the last war who never stopped. He takes Spanish and French prizes, but will not fire on an English ship.",
+    "arrive": "Benjamin Hornigold has made a pirates' nest of Nassau, and he's teaching a new generation the trade.",
+    "life": [
+      {"date": "1717-01-01", "text": "Hornigold's crew have voted him out for refusing to take English ships. Most went with Sam Bellamy; Hornigold keeps the Ranger and a few loyal hands."},
+      {"date": "1718-03-01", "faction": "england", "text": "Benjamin Hornigold has taken the King's Pardon from Captain Pearse of HMS Phoenix at Nassau. He'll hunt his old friends now."},
+      {"date": "1718-12-05", "port": "nassau", "text": "Hornigold, hunting for Governor Rogers, has brought John Auger and his crew back to Nassau to hang."},
+      {"date": "1719-09-01", "dies": true, "text": "Benjamin Hornigold's ship has struck a reef somewhere between New Spain and New Providence. He is lost with most of her people."}
+    ]
+  },
+
+  "bellamy": {
+    "name": "Samuel Bellamy", "nationality": "english", "born": 1689, "faction": "pirates", "haunt": "nassau",
+    "ship": "Marianne", "type": "sloop", "from": "1716-06-01", "fame": 55, "traits": ["popular", "merciful"],
+    "stats": {"charisma": 18, "authority": 15}, "skills": {"seamanship": 14, "swordplay": 13},
+    "bio": "A West Country sailor who came out to dive on the Spanish wrecks and stayed to rob the rich. His crews call themselves Robin Hood's men.",
+    "arrive": "A young West Country captain, Sam Bellamy, has joined Hornigold's company at Nassau in the sloop Marianne. The men love him.",
+    "friends": ["hornigold"],
+    "life": [
+      {"date": "1716-12-01", "ship": "Sultana", "type": "brig", "text": "Bellamy has taken the galley Sultana and mounted guns on her. Half of Hornigold's men have gone over to him."},
+      {"date": "1717-02-26", "ship": "Whydah", "type": "frigate", "text": "Bellamy has taken the Whydah in the Windward Passage, homeward bound with gold and ivory, and made her his flagship."},
+      {"date": "1717-04-26", "dies": true, "text": "The Whydah has gone down in a nor'easter off Cape Cod with Sam Bellamy and more than a hundred of his men. Two came ashore alive."}
+    ]
+  },
+
+  "la_buse": {
+    "name": "Olivier \"La Buse\" Levasseur", "nationality": "french", "born": 1690, "faction": "pirates", "haunt": "nassau",
+    "ship": "Postillion", "type": "sloop", "from": "1716-06-01", "fame": 45, "traits": ["greedy", "schemer"],
+    "stats": {"intimidation": 15, "authority": 14}, "skills": {"seamanship": 15, "trade": 14},
+    "bio": "A Calais man, schooled and well-born, who came out a privateer and went pirate with Hornigold. They call him the Buzzard.",
+    "arrive": "Olivier Levasseur, the Frenchman they call La Buse, the Buzzard, sails with Hornigold and Bellamy in the Postillion.",
+    "friends": ["hornigold", "bellamy"],
+    "life": [
+      {"date": "1719-01-01", "gone": true, "text": "La Buse has sailed for the coast of Africa, and from there, they say, for the Indian Ocean."},
+      {"date": "1730-07-07", "dies": true, "text": "News from the far side of the world: La Buse has been hanged at Saint-Denis on the Isle of Bourbon. They say he threw a cipher to the crowd: 'Find my treasure, he who can.'"}
+    ]
+  },
+
+  "blackbeard": {
+    "name": "Edward \"Blackbeard\" Teach", "nationality": "english", "born": 1680, "faction": "pirates", "haunt": "nassau",
+    "ship": "Revenge", "type": "sloop", "from": "1717-09-29", "fame": 80, "traits": ["schemer", "brave"],
+    "stats": {"intimidation": 19, "authority": 16, "charisma": 14}, "skills": {"seamanship": 15, "swordplay": 15, "gunnery": 14},
+    "bio": "Hornigold's pupil, a huge man who plaits his beard with ribbons and goes into a fight with slow-match smoking under his hat. He has killed nobody that anyone knows of. He has never needed to.",
+    "arrive": "Edward Teach, the one they call Blackbeard, has taken over the gentleman-pirate Stede Bonnet's sloop Revenge, and Bonnet with it.",
+    "friends": ["hornigold"],
+    "life": [
+      {"date": "1717-11-28", "ship": "Queen Anne's Revenge", "type": "frigate", "port": "saint_pierre", "text": "Blackbeard has taken the French ship La Concorde off Martinique, mounted forty guns on her, and renamed her the Queen Anne's Revenge."},
+      {"date": "1718-05-22", "text": "Blackbeard has blockaded Charles Town in Carolina for a week, and ransomed its leading men for a chest of medicines."},
+      {"date": "1718-06-10", "ship": "Adventure", "type": "sloop", "text": "The Queen Anne's Revenge has run aground at Beaufort Inlet. Teach has marooned half his crew, and sails on in the sloop Adventure with the loot."},
+      {"date": "1718-11-22", "dies": true, "text": "Blackbeard is dead, killed at Ocracoke by Lieutenant Maynard of the Royal Navy."}
+    ]
+  },
+
+  "vane": {
+    "name": "Charles Vane", "nationality": "english", "born": 1680, "faction": "pirates", "haunt": "nassau",
+    "ship": "Ranger", "type": "brigantine", "from": "1718-03-01", "fame": 50, "traits": ["cowardly", "bloodthirsty"],
+    "stats": {"intimidation": 16, "authority": 13}, "skills": {"seamanship": 16, "navigation": 14},
+    "bio": "The hardest of the Nassau men. He spat on the King's Pardon, and he's cruel to the crews he takes. Whether he's brave is another matter.",
+    "arrive": "Charles Vane has refused the King's Pardon and taken the brigantine Ranger. Nassau's diehards follow him now.",
+    "foes": ["hornigold"],
+    "life": [
+      {"date": "1718-07-27", "port": "nassau", "unless_flag": "rogers_stopped", "text": "Charles Vane has sent a burning prize down on Governor Rogers' warships and escaped Nassau under the black flag."},
+      {"date": "1718-11-24", "gone": true, "text": "Vane's crew have voted him out for refusing to fight a French man-of-war. Jack Rackham, his quartermaster, has the Ranger now."},
+      {"date": "1721-03-29", "dies": true, "port": "port_royal", "text": "Charles Vane, wrecked in the Bay of Honduras and recognised by an old acquaintance, has been hanged at Gallows Point, Port Royal."}
+    ]
+  },
+
+  "rackham": {
+    "name": "John \"Calico Jack\" Rackham", "nationality": "english", "born": 1682, "faction": "pirates", "haunt": "nassau",
+    "ship": "Ranger", "type": "brigantine", "from": "1718-11-24", "fame": 35, "traits": ["drunkard", "cowardly"],
+    "stats": {"charisma": 15, "authority": 11}, "skills": {"seamanship": 12, "swordplay": 11},
+    "bio": "Vane's quartermaster, in calico breeches and a gaudy coat. All show, they say; the two women who sail with him are the real thing.",
+    "arrive": "Calico Jack Rackham has turned Vane off his own ship and taken command of the Ranger.",
+    "foes": ["vane"],
+    "life": [
+      {"date": "1719-05-01", "gone": true, "port": "nassau", "unless_flag": "rogers_stopped", "text": "Calico Jack Rackham has come into Nassau and taken the King's Pardon from Governor Rogers. He's ashore, and keeping company with Anne Bonny."},
+      {"date": "1720-08-22", "ship": "William", "type": "sloop", "port": "nassau", "text": "Rackham has broken his pardon and stolen the sloop William out of Nassau harbour. Anne Bonny sails with him, and Mary Read."},
+      {"date": "1720-11-18", "dies": true, "port": "port_royal", "text": "Rackham, taken off Negril Point by Jonathan Barnet's privateer, has been hanged at Gallows Point."}
+    ]
+  },
+
+  "roberts": {
+    "name": "Bartholomew \"Black Bart\" Roberts", "nationality": "english", "born": 1682, "faction": "pirates", "haunt": "basseterre",
+    "ship": "Royal Fortune", "type": "brig", "from": "1720-09-01", "fame": 85, "traits": ["calm", "honest"],
+    "stats": {"authority": 18, "charisma": 16, "intimidation": 15}, "skills": {"navigation": 17, "seamanship": 16, "gunnery": 14},
+    "bio": "A Welsh mate taken by pirates off Africa, elected captain within six weeks. He drinks tea, keeps strict articles, and takes more ships than any man alive.",
+    "arrive": "Bartholomew Roberts is in the Leeward Islands with the Royal Fortune, fresh from burning the fishing fleet at Newfoundland.",
+    "life": [
+      {"date": "1721-01-15", "ship": "Royal Fortune", "type": "frigate", "port": "saint_pierre", "text": "Roberts has taken a French man-of-war off Martinique, hanged a governor from her yardarm, they say, and made her his new Royal Fortune."},
+      {"date": "1721-04-18", "gone": true, "text": "Roberts has sailed for the coast of Africa with his squadron."},
+      {"date": "1722-02-10", "dies": true, "text": "Off Cape Lopez, HMS Swallow has caught Bartholomew Roberts. Grapeshot tore out his throat; his crew put him over the side in his finery, as he asked."}
+    ]
+  }
+}

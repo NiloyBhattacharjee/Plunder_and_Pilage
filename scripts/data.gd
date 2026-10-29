@@ -27,6 +27,8 @@ const SCHEMA := {
 	"perks": {"required": ["name", "needs", "description"]},
 	"civics": {"required": ["name", "slot", "description"]},
 	"contracts": {"required": ["name", "description", "employer", "needs", "objective", "days", "tiers", "success", "lie_chance", "trap_chance"]},
+	"captains": {"required": ["name", "nationality", "born", "faction", "haunt", "ship", "type", "from", "fame", "traits", "bio", "arrive", "life"],
+		"refs": {"nationality": "nations", "faction": "factions", "haunt": "ports", "type": "ships", "traits": "traits"}},
 }
 
 var tables := {}
