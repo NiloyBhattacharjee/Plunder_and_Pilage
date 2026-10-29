@@ -28,6 +28,7 @@ func _init(model: EconomyModel) -> void:
 		return
 	var c := cfg()
 	idle = float(c.start.idle)
+	service = float(c.start.get("service", 0))
 	for f in c.navy_base:
 		navy[f] = float(c.navy_base[f])
 	for g in c.grounds:

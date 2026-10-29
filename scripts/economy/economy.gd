@@ -8,6 +8,7 @@ signal fleet_event(ev: Dictionary)  # a fleet arrived, sailed, or didn't come th
 var model := EconomyModel.new()
 var _warm := {}  # starting month -> the warmed-up model's state
 var news: Array = []  # [{text, port, day}]: things that happened, travelling toward the player at sailing speed
+var piracy_start := {}  # a bookmark's pirates at sea when the game opens (data/bookmarks.json), in place of economy.json's
 
 
 func _ready() -> void:
@@ -21,13 +22,17 @@ func cfg() -> Dictionary:
 
 ## A fresh economy, warmed up so it opens at its own balance. seed < 0 picks one at random.
 func reset(seed := -1) -> void:
-	model.setup(Data.table("goods"), Data.table("ports"), cfg(), seed if seed >= 0 else randi())
+	var c := cfg()
+	if not piracy_start.is_empty():
+		c = c.duplicate(true)
+		c.piracy.start = piracy_start
+	model.setup(Data.table("goods"), Data.table("ports"), c, seed if seed >= 0 else randi())
 	var date := Clock.date_of(int(Clock.day))
-	var month: int = date.month
-	if not _warm.has(month):  # warming up takes a moment, so it's done once per starting month and reused
-		model.warm_up(int(cfg().warm_up_days), month, date.year)
-		_warm[month] = model.save_state().duplicate(true)
-	model.load_state(_warm[month].duplicate(true))
+	var key := "%d-%d" % [date.year, date.month]
+	if not _warm.has(key):  # warming up takes a moment, so it's done once per starting month and reused
+		model.warm_up(int(cfg().warm_up_days), date.month, date.year)
+		_warm[key] = model.save_state().duplicate(true)
+	model.load_state(_warm[key].duplicate(true))
 
 
 func _on_day(d: int) -> void:

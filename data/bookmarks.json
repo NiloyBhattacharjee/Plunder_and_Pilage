@@ -1,0 +1,29 @@
+{
+  "_comment": "Where a new game opens (Paradox-style bookmarks). date: the first day. now: what's going on, shown on the new-game screen. suits: who should pick it. piracy: the pirates at sea that day, in place of economy.json piracy.start (men on the account, idle seamen, seamen still in war service), set by hand from tools/economy_sim.gd runs and Rediker's estimates. History before the date is caught up quietly: wars and peaces stand, timed effects run for what's left of their days, and the real captains (captains.json) have lived their lives up to it.",
+  "buccaneers": {
+    "name": "1680: The last buccaneers", "date": "1680-01-01",
+    "text": "Port Royal is the richest, wickedest town in the Americas, and the buccaneers' day is ending. Spain is the only enemy anyone cares about.",
+    "now": ["Sir Henry Morgan, an old buccaneer, now hangs buccaneers as Jamaica's lieutenant governor.",
+            "There is no peace beyond the line: French governors still commission raiders against Spain.",
+            "De Graaf and Grammont are gathering men at Tortuga for something big."],
+    "suits": "A long career, and the line of captains after you. The Golden Age is thirty-five years away."
+  },
+  "utrecht": {
+    "name": "1713: The Peace of Utrecht", "date": "1713-04-01",
+    "text": "Twelve years of war are ending. Every privateer in the Caribbean is about to lose his commission and his pay.",
+    "now": ["The peace is days away: letters of marque will be worthless, and thousands of seamen out of work.",
+            "Nassau is a burned-out ruin with no governor. Benjamin Hornigold has an eye on it.",
+            "Britain is about to win the asiento, and with it a door into the Spanish trade."],
+    "suits": "A privateer who'll have to choose: go honest, or ride the rise of the pirates from the start.",
+    "piracy": {"year": 1713, "men": 300, "idle": 1500, "service": 4500}
+  },
+  "republic": {
+    "name": "1715: The Republic of Pirates", "date": "1715-11-01", "recommended": true,
+    "text": "Nassau belongs to the pirates, and the Spanish treasure fleet lies smashed on the Florida reefs. The famous years are about to begin.",
+    "now": ["Silver lies in the shallows off Florida, and the Spanish salvage camp is barely guarded.",
+            "Hornigold rules Nassau. Bellamy, La Buse and a man called Teach will be at sea within the year.",
+            "London is losing patience: a pardon is coming, and after it the navy."],
+    "suits": "Your first voyage. History comes thick and fast, and you can change it.",
+    "piracy": {"year": 1715, "men": 900, "idle": 4500, "service": 400}
+  }
+}

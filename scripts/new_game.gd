@@ -20,16 +20,21 @@ static func build_points(b: Dictionary) -> Dictionary:
 
 
 ## cfg: {name, nationality, background, ship_name, build?, focus? (data/focus.json), night? (open on the background's
-## "night": how you took the ship, data/events/night.json)}. Returns {state, start_port}.
+## "night": how you took the ship, data/events/night.json), bookmark? (data/bookmarks.json: when the game opens)}.
+## Returns {state, start_port}.
 static func build(cfg: Dictionary) -> Dictionary:
+	var bm: Dictionary = Data.table("bookmarks").get(cfg.get("bookmark", ""), {})
+	if not bm.is_empty():
+		Clock.day = Clock.day_of(bm.date)
+	Economy.piracy_start = bm.get("piracy", {})
 	People.reset()
 	Bases.reset()
 	Ports.reset()
+	Events.reset()  # before history is caught up: it sets flags
 	Factions.reset()
 	Politics.reset()
 	Bonds.reset()
 	Contracts.reset()
-	Events.reset()
 	var bg: Dictionary = Data.table("backgrounds")[cfg.background]
 	var nation: Dictionary = Data.table("nations")[cfg.nationality]
 	var start_port: String = bg.get("start_port", nation.start_port)
@@ -97,6 +102,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 	Crew.ensure(state)
 	state.secrets = []
 	state.bonds = {}
+	Bonds.history_day(state, true)  # the real captains' lives up to today
 	state.ironman = cfg.get("ironman", false)
 	state.tutorial = cfg.get("tutorial", false)
 	if cfg.get("night", false):

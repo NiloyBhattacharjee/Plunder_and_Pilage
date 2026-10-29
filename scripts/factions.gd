@@ -72,7 +72,7 @@ func apply_history(quiet := false) -> void:
 		if ev.has("if_flag") and not Events.flags.has(ev.if_flag):
 			continue
 		if ev.has("effects"):  # what it does to the market and the world (scripts/economy/effects.gd)
-			EconomyEffects.apply_all(ev.effects, {"s": EconomyEffects.player})
+			EconomyEffects.apply_all(catch_up(ev.effects, ev.date) if quiet else ev.effects, {"s": EconomyEffects.player})
 		match ev.kind:
 			"war", "peace":
 				for a in ev.sides[0]:
@@ -101,6 +101,20 @@ func apply_history(quiet := false) -> void:
 			if not quiet:
 				changed.emit("Peace between %s and %s." % [Data.table("factions")[w.pair[0]].name, Data.table("factions")[w.pair[1]].name])
 			_make_peace(w.pair, quiet)
+
+
+## History from before the game opened (a later bookmark): what's left of its effects today. Timed effects run
+## for what remains of their days; a port's damage and stock are long mended after a year; laws and access last.
+static func catch_up(effects: Array, date: String) -> Array:
+	var age := int(Clock.day) - Clock.day_of(date)
+	var out := []
+	for e in effects:
+		if e.has("days"):
+			if int(e.days) > age:
+				out.append(e.merged({"days": int(e.days) - age}, true))
+		elif e.type in ["fair_access", "port_laws", "haven_closed"] or age < 365:
+			out.append(e)
+	return out
 
 
 ## A war started by an event, ending on `until` ("YYYY-MM-DD", or "" for none).

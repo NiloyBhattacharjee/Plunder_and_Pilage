@@ -379,10 +379,8 @@ func _meetings() -> void:
 				_start_fight(v, p)
 				break
 			if v.pos.distance_to(p.pos) < nm(cfg().contact_nm) * 2.0:
-				_say(p, "The %s navy ran down the pirate %s." % [Data.table("factions")[v.enemy.faction].adjective, p.enemy.name])
-				if p.has("company"):
-					Economy.model.brethren.lose(p.company, "navy")
-				remove(p)
+				_say(p, "The %s navy chased the pirate %s off her cruising ground." % [Data.table("factions")[v.enemy.faction].adjective, p.enemy.name])
+				remove(p)  # out of your sight the Brethren model decides who's caught (its catch_rate): counting it here too wiped them out
 
 
 func _start_fight(a: Dictionary, v: Dictionary) -> void:

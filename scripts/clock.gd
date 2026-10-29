@@ -44,6 +44,11 @@ func date() -> Dictionary:
 	return Time.get_date_dict_from_unix_time(_start_unix + int(day) * 86400)
 
 
+## The day number of a calendar date ("YYYY-MM-DD").
+static func day_of(date: String) -> int:
+	return int((Time.get_unix_time_from_datetime_string(date) - Time.get_unix_time_from_datetime_string(Data.rules.time.start_date)) / 86400)
+
+
 ## The calendar date of any day number (for the economy's seasons, and headless runs with no clock running).
 static func date_of(d: int) -> Dictionary:
 	return Time.get_date_dict_from_unix_time(Time.get_unix_time_from_datetime_string(Data.rules.time.start_date) + d * 86400)

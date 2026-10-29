@@ -123,8 +123,10 @@ func npc_set(a: String, b: String, v: int) -> void:
 ## The real captains of the age (data/captains.json) come on the scene on their dates and live their lives
 ## step by step: new ships, pardons, deaths. They keep to the histories only while you leave them be: once you
 ## have any bond with one (a fight starts a rivalry), they're off the script and their story is their own.
-func history_day(s: Dictionary) -> Array:
+## quiet: catching up the years before a later bookmark, with no news and only what's left of the effects.
+func history_day(s: Dictionary, quiet := false) -> Array:
 	var msgs := []
+	roster()  # the made-up captains first, so the real ones join them
 	var today := Clock.date()
 	var stamp := "%04d-%02d-%02d" % [today.year, today.month, today.day]
 	var table: Dictionary = Data.table("captains")
@@ -137,7 +139,8 @@ func history_day(s: Dictionary) -> Array:
 				continue
 			real[key] = _real_captain(key, h)
 			captains.append(real[key])
-			msgs.append(h.arrive)
+			if not quiet:
+				msgs.append(h.arrive)
 		if not People.chars.has(real[key]):
 			continue
 		var c := People.person(real[key])
@@ -169,8 +172,10 @@ func history_day(s: Dictionary) -> Array:
 				Events.flags["fate_" + key] = -1.0
 				Events.flags["gone_" + key] = -1.0
 			if st.has("effects"):
-				EconomyEffects.apply_all(st.effects, {"s": EconomyEffects.player})
-			c.history.append("%s (%s)" % [st.text, Clock.date_string()])
+				EconomyEffects.apply_all(Factions.catch_up(st.effects, st.date) if quiet else st.effects, {"s": EconomyEffects.player})
+			c.history.append("%s (%s)" % [st.text, Clock.date_string_of(Clock.day_of(st.date))])
+			if quiet:
+				continue
 			if st.has("port"):
 				Economy.add_news(st.text, st.port)  # news travels at sailing speed
 			else:
@@ -604,7 +609,7 @@ func monthly(s: Dictionary) -> Array:
 		var news := grow(id, rng.randi_range(int(gr.monthly[0]), int(gr.monthly[1])))
 		if news != "":
 			msgs.append(news)
-	if roster().size() < int(c.captains.count) and rng.randf() < gr.new_captain_chance:  # the dead are replaced
+	if roster().filter(func(id): return not People.person(id).has("real")).size() < int(c.captains.count) and rng.randf() < gr.new_captain_chance:  # the dead are replaced
 		var f: String = "pirates" if rng.randf() < 0.6 else Career.nations()[rng.randi() % Career.nations().size()]
 		var id := _make_captain(f)
 		captains.append(id)

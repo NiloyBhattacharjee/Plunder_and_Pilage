@@ -174,7 +174,7 @@
     "title": "The end of Black Bart",
     "text": "News from Africa: Bartholomew Roberts was killed by grapeshot off Cape Lopez, fighting HMS Swallow. His crew threw his body overboard, still in his finery, as he'd asked. With him, they say, the golden age is over.",
     "where": "any", "once": true, "priority": true,
-    "conditions": ["date >= 1722-02-10", "date < 1722-08-01"],
+    "conditions": ["flag.fate_roberts", "date < 1722-08-01"],
     "choices": [
       {"text": "The end of an age", "outcomes": [], "result": "Fewer pirates every year, and more gibbets."}
     ]

@@ -36,7 +36,7 @@ func test_the_dead_are_replaced():
 	Data.table("bonds").growth.new_captain_chance = 1.0
 	Bonds.monthly(s)
 	Data.table("bonds").growth.new_captain_chance = 0.3
-	assert_eq(Bonds.roster().size(), int(Data.table("bonds").captains.count))
+	assert_eq(Bonds.roster().filter(func(id): return not People.person(id).has("real")).size(), int(Data.table("bonds").captains.count))
 
 
 func test_beating_you_makes_their_name():

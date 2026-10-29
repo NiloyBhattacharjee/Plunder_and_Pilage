@@ -1,5 +1,6 @@
 extends Control
-## New-game screen: choose the captain's name, nationality and background, and name the ship.
+## New-game screen: choose when the game opens (data/bookmarks.json), the captain's name, nationality and
+## background, and name the ship.
 ## Background sets starting stats, skills, traits, money, ship, crew and how the nations regard you.
 ## The second page builds the captain: looks, points into stats and skills, a focus and an optional flaw. Then the game
 ## opens on the night you took the ship (data/events/night.json), which decides the rest.
@@ -18,10 +19,27 @@ var _title: Label
 var _page: PanelContainer
 var _sheet: VBoxContainer
 var _ironman := CheckBox.new()
+var _era := OptionButton.new()
 var _hints := CheckBox.new()
 
 
 func _ready() -> void:
+	for id in Data.table("bookmarks"):
+		if id.begins_with("_"):
+			continue
+		var bm: Dictionary = Data.table("bookmarks")[id]
+		_era.add_item(bm.name + ("  (recommended)" if bm.get("recommended", false) else ""))
+		_era.set_item_metadata(_era.item_count - 1, id)
+		if bm.get("recommended", false):
+			_era.select(_era.item_count - 1)
+	_era.item_selected.connect(func(_i): _describe())
+	var era_label := Label.new()
+	era_label.text = "Start"
+	var form: GridContainer = nation_pick.get_parent()
+	var row := [era_label, _era, Control.new()]
+	for i in row.size():  # the first row of the form
+		form.add_child(row[i])
+		form.move_child(row[i], i)
 	for id in Data.table("nations"):
 		nation_pick.add_item(Data.table("nations")[id].name)
 		nation_pick.set_item_metadata(nation_pick.item_count - 1, id)
@@ -73,7 +91,13 @@ func _describe() -> void:
 		lines.append("Standing: " + ", ".join(rel))
 	var port: String = bg.get("start_port", nation.start_port)
 	lines.append("Starting port: " + Data.table("ports")[port].name)
-	%Description.text = "\n".join(lines)
+	var bm: Dictionary = Data.table("bookmarks")[_era.get_selected_metadata()]
+	var era := PackedStringArray([bm.text])
+	for line in bm.now:
+		era.append("  •  " + line)
+	era.append("Suits: " + bm.suits)
+	%Description.text = "\n".join(era) + "\n\n" + "\n".join(lines)
+	$Panel/VBox/Subtitle.text = "The Caribbean, " + bm.date.left(4)
 
 
 ## The captain's name with a nickname in it, if one's chosen: Jack "Calico" Rackham.
@@ -89,7 +113,7 @@ func _start() -> void:
 	var b := _build.duplicate(true)
 	b.portrait = _cap.portrait
 	_go({"name": _full_name(), "nationality": nation_pick.get_selected_metadata(),
-		"background": bg_pick.get_selected_metadata(), "ship_name": ship_edit.text.strip_edges(), "build": b, "focus": _focus, "night": true,
+		"background": bg_pick.get_selected_metadata(), "ship_name": ship_edit.text.strip_edges(), "build": b, "focus": _focus, "night": true, "bookmark": _era.get_selected_metadata(),
 		"ironman": _ironman.button_pressed, "tutorial": _hints.button_pressed})
 
 

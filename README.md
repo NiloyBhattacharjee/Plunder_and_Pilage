@@ -60,6 +60,7 @@ Like a Paradox game, the ship's log keeps a record of every week: your gold, wha
 - **Careers:** letters of marque, pardons, false colours, a bounty from each nation and the hunters it sends.
 - **Politics:** blackmail, favours, rival officials, and Nassau's council of captains.
 - **Alliances and feuds** with named captains who sail the map and grow with their fame.
+- **Three starting eras**: 1680 (the last buccaneers), 1713 (the Peace of Utrecht) or 1715 (the Republic of Pirates). History before your start is already in place, and the captains of the time are already at sea.
 - **The real captains of the age**: de Graaf and Grammont, Hornigold, Bellamy, La Buse, Blackbeard, Vane, Calico Jack and Black Bart Roberts arrive on their real dates and live their histories (new ships, pardons, deaths), unless you cross their wake.
 - **Bases:** hidden coves you can build up with storehouses, shipyards and forts.
 - **A squadron of up to four consorts,** each with a captain who may desert you.
@@ -138,6 +139,7 @@ Each table is a dictionary keyed by id. `scripts/data.gd` has a small `SCHEMA` l
   held town earns at each tax level against its upkeep and its odds against expeditions, and the odds each town falls to an invasion.
 - Market events (shortages, gluts, poor harvests) are in `rules.json` under `market_events`; add more there.
 - `ships.json` (8 types, each with its own polar curve for points of sail), `upgrades.json` (effects use `set`, `add` and `mult` on any ship stat; `group` makes upgrades replace each other).
+- `bookmarks.json`: the starting eras (date, what's going on, the pirates at sea that day).
 - `captains.json`: the real captains and their dated lives (`scripts/bonds.gd` `history_day`).
 - `history.json`: dated wars, peace treaties and pardons (1680 onwards). `scripts/factions.gd` applies them; `scripts/career.gd` judges every attack
   (lawful prize under a letter of marque, or piracy), and handles ranks, the Crown's share, pardons, closed ports and false colours.

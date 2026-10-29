@@ -25,7 +25,7 @@ func bond(key: String, lvl: int) -> void:
 
 func test_the_roster_sails_under_names():
 	var r := Bonds.roster()
-	assert_eq(r.size(), Data.table("bonds").captains.count)
+	assert_eq(r.filter(func(id): return not People.person(id).has("real")).size(), Data.table("bonds").captains.count)
 	var c := People.person(r[0])
 	assert_string_contains(c.name, '"')
 	assert_true(Ports.state.has(c.haunt))
