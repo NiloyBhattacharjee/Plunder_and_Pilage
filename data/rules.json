@@ -156,7 +156,15 @@
   "growth": {
     "xp_per_level": 20, "max_level": 20, "perk_every": 3, "max_skill": 20,
     "build": {"stat_base": 7, "skill_base": 3, "stat_points": 8, "skill_points": 12, "max_start": 15,
-              "flaw_points": 3, "captain_skills": ["seamanship", "swordplay", "trade"], "flaws": ["cowardly", "drunkard", "seasick", "hated", "green", "gambler", "hot_headed"]},
+              "flaw_points": 3, "captain_skills": ["seamanship", "swordplay", "trade"], "flaws": ["cowardly", "drunkard", "seasick", "hated", "green", "gambler", "hot_headed"],
+              "_said": "What the waterfront says of a new captain (ui/new_game.gd): their best quality leads, their second follows.",
+              "said": {"authority": ["A hard captain", "whose orders nobody questions twice"],
+                       "charisma": ["A captain people like", "who could talk a crew into a hurricane"],
+                       "intimidation": ["A captain with a cold eye", "whose name alone makes merchants strike"],
+                       "experience": ["An old hand", "who has seen every trick the sea can play"],
+                       "seamanship": ["A born sailor", "who can feel weather coming in their bones"],
+                       "swordplay": ["A dangerous blade", "who boards first and leaves last"],
+                       "trade": ["A sharp dealer", "who knows the price of everything aboard"]}},
     "looks_need_port": true,
     "focus": {"xp_per_day": 1.0, "skill_xp_per_day": 0.25, "ranks": [30, 100, 220], "event_xp": 15}
   },

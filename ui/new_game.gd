@@ -21,6 +21,7 @@ var _sheet: VBoxContainer
 var _ironman := CheckBox.new()
 var _era := OptionButton.new()
 var _hints := CheckBox.new()
+var _bg_cards := GridContainer.new()
 
 
 func _ready() -> void:
@@ -47,7 +48,12 @@ func _ready() -> void:
 		bg_pick.add_item(Data.table("backgrounds")[id].name)
 		bg_pick.set_item_metadata(bg_pick.item_count - 1, id)
 	nation_pick.item_selected.connect(func(_i): _random_name(); _describe())
-	bg_pick.item_selected.connect(func(_i): _describe())
+	for n in [form.get_node("L3"), bg_pick, form.get_node("E3")]:  # backgrounds are picked from cards; bg_pick still holds the choice
+		n.hide()
+	_bg_cards.columns = 2
+	$Panel/VBox.add_child(_bg_cards)
+	$Panel/VBox.move_child(_bg_cards, form.get_index() + 1)
+	_fill_bg_cards()
 	%RandomName.pressed.connect(_random_name)
 	%Start.text = "Next: your captain"
 	%Start.pressed.connect(_captain_page)
@@ -73,7 +79,7 @@ func _random_name() -> void:
 func _describe() -> void:
 	var bg: Dictionary = Data.table("backgrounds")[bg_pick.get_selected_metadata()]
 	var nation: Dictionary = Data.table("nations")[nation_pick.get_selected_metadata()]
-	var lines := PackedStringArray([bg.description, ""])
+	var lines := PackedStringArray()
 	var bonus := PackedStringArray()
 	for k in bg.stats:
 		bonus.append("%s %+d" % [People.SKILL_NAMES[k], bg.stats[k]])
@@ -98,6 +104,17 @@ func _describe() -> void:
 	era.append("Suits: " + bm.suits)
 	%Description.text = "\n".join(era) + "\n\n" + "\n".join(lines)
 	$Panel/VBox/Subtitle.text = "The Caribbean, " + bm.date.left(4)
+
+
+func _fill_bg_cards() -> void:
+	UIKit.clear(_bg_cards)
+	for i in bg_pick.item_count:
+		var bg: Dictionary = Data.table("backgrounds")[bg_pick.get_item_metadata(i)]
+		_card(_bg_cards, "%s
+%s" % [bg.name, bg.description], i == bg_pick.selected, "", func():
+			bg_pick.select(i)
+			_fill_bg_cards()
+			_describe()).custom_minimum_size.x = 400
 
 
 ## The captain's name with a nickname in it, if one's chosen: Jack "Calico" Rackham.
@@ -128,13 +145,14 @@ func _captain_page() -> void:
 	_cap.background = bg_pick.get_selected_metadata()
 	_cap.age = 28
 	_cap.traits = []
+	_cap.perks = []
 	_cap.portrait = {"seed": randi(), "pick": {}}
 	_page = PanelContainer.new()
 	_page.set_anchors_preset(Control.PRESET_CENTER)
-	_page.offset_left = -720
-	_page.offset_right = 720
-	_page.offset_top = -420
-	_page.offset_bottom = 420
+	_page.offset_left = -775
+	_page.offset_right = 775
+	_page.offset_top = -435
+	_page.offset_bottom = 435
 	add_child(_page)
 	var v := VBoxContainer.new()
 	_page.add_child(v)
@@ -160,95 +178,135 @@ func _captain_page() -> void:
 	row.add_child(_looks)
 	_looks.edit(_cap, "captain")
 	_sheet = VBoxContainer.new()
+	_sheet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sheet.add_theme_constant_override("separation", 8)
 	row.add_child(_sheet)
 	_build_sheet()
 	var buttons := UIKit.row(v)
 	UIKit.button(buttons, "  Back  ", func():
 		_page.queue_free()
 		$Panel.show())
-	UIKit.button(buttons, "  Set sail  ", _start)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buttons.add_child(gap)
+	UIKit.button(buttons, "  Set sail  ", _start).custom_minimum_size = Vector2(220, 48)
 
 
 func _build_sheet() -> void:
 	UIKit.clear(_sheet)
 	var bg: Dictionary = Data.table("backgrounds")[bg_pick.get_selected_metadata()]
 	var g: Dictionary = Data.rules.growth.build
+	_sync_cap(bg)
+	UIKit.label(_sheet, "Along the waterfront they say:", "Your two best qualities, as others see them. Spend points and it changes.", Style.c("header"))
+	_wrapped(_sheet, _said())
 	var left := NewGame.build_points(_build)
 	UIKit.label(_sheet, "Leadership: %d points left    Skills: %d points left" % [left.stats, left.skills],
 		"Spend every point: nothing carries over. Background bonuses are already in. Nothing can start above %d." % g.max_start, Style.c("header"))
-	var grid := UIKit.grid(_sheet, 4)
+	var grid := UIKit.grid(_sheet, 5)
 	for k in People.STATS + g.captain_skills:
 		var pool := "stats" if k in People.STATS else "skills"
-		var v := NewGame.build_value(bg, _build, k)
-		var tip := "%s\n\nBase, plus %+d from your background." % [People.effect_text(k, v), bg[pool].get(k, 0)]
+		var raw := NewGame.build_value(bg, _build, k)
+		var v := People.value(_cap, k)
+		var tip := "%s
+
+%s" % [People.breakdown(_cap, k), People.effect_text(k)]
 		UIKit.label(grid, People.SKILL_NAMES[k], tip)
 		UIKit.button(grid, " - ", _spend.bind(pool, k, -1)).disabled = int(_build[pool].get(k, 0)) <= 0
-		UIKit.label(grid, str(v), tip).custom_minimum_size.x = 30
-		UIKit.button(grid, " + ", _spend.bind(pool, k, 1)).disabled = left[pool] <= 0 or v >= int(g.max_start)
+		var shown := UIKit.label(grid, str(v), tip, Style.c("bad") if v < raw else (Style.c("good") if v > raw else Color(0, 0, 0, 0)))
+		shown.custom_minimum_size.x = 30
+		UIKit.button(grid, " + ", _spend.bind(pool, k, 1)).disabled = left[pool] <= 0 or raw >= int(g.max_start)
+		UIKit.label(grid, "  %+d to rolls" % Dice.mod(v), "%s %d is %+d on a d20 roll." % [People.SKILL_NAMES[k], v, Dice.mod(v)], Style.c("dim"))
 	var officer: Array = People.SKILLS.filter(func(k): return not k in g.captain_skills)
-	UIKit.label(_sheet, "Your officers' work: " + ", ".join(officer.map(func(k): return "%s %d" % [People.SKILL_NAMES[k], NewGame.build_value(bg, _build, k)])),
-		"Hire a navigator, master gunner, carpenter and surgeon for these. Until you do, you cover the empty posts at half skill.\n\n"
-		+ "\n\n".join(officer.map(func(k): return "%s: %s" % [People.SKILL_NAMES[k], Data.rules.people.skill_effects[k]])), Style.c("dim"))
-	var traits := Data.table("traits")
-	var taken: Array = bg.traits + _build.traits + ([_build.flaw] if _build.flaw != "" else [])
-	UIKit.label(_sheet, "")
-	UIKit.label(_sheet, "From your background: " + ", ".join(bg.traits.map(func(x): return traits[x].name)),
-		"What kind of captain you are, you'll find out the night you take the ship.", Style.c("dim"))
+	UIKit.label(_sheet, "Your officers' work: " + ", ".join(officer.map(func(k): return "%s %d" % [People.SKILL_NAMES[k], People.value(_cap, k)])),
+		"Hire a navigator, master gunner, carpenter and surgeon for these. Until you do, you cover the empty posts at half skill.
+
+"
+		+ "
+
+".join(officer.map(func(k): return "%s: %s" % [People.SKILL_NAMES[k], Data.rules.people.skill_effects[k]])), Style.c("dim"))
 	_focus_pick()
-	_trait_pick("A flaw (+%d skill points)" % g.flaw_points, g.flaws.filter(func(x): return not x in bg.traits), _build.flaw, taken,
-		func(id):
-			_build.flaw = id
-			_trim_skills())
+	_flaw_pick(bg, g)
+
+
+## The stand-in captain carries the build, so People.value shows what traits and a flaw do to it.
+func _sync_cap(bg: Dictionary) -> void:
+	for k in People.STATS + People.SKILLS:
+		(_cap.stats if k in People.STATS else _cap.skills)[k] = NewGame.build_value(bg, _build, k)
+	_cap.traits = bg.traits + ([_build.flaw] if _build.flaw != "" else [])
+
+
+## "A born sailor who boards first and leaves last. But never far from the rum cask."
+func _said() -> String:
+	var said: Dictionary = Data.rules.growth.build.said
+	var keys: Array = said.keys()
+	keys.sort_custom(func(a, b): return People.value(_cap, a) > People.value(_cap, b))
+	var out := "\"%s %s.\"" % [said[keys[0]][0], said[keys[1]][1]]
+	if _build.flaw != "":
+		var d: String = Data.table("traits")[_build.flaw].description
+		out = out.trim_suffix("\"") + " But " + d.left(1).to_lower() + d.substr(1) + "\""
+	return out
+
+
+func _wrapped(parent: Node, text: String, color := Color(0, 0, 0, 0)) -> Label:
+	var l := UIKit.label(parent, text, "", color)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = 560
+	return l
+
+
+## A card you click to choose, and click again to put back.
+func _card(parent: Node, text: String, on: bool, tip: String, cb: Callable) -> Button:
+	var b := UIKit.button(parent, text, cb, tip)
+	b.toggle_mode = true
+	b.button_pressed = on
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if on:  # the chosen one reads gold
+		for state in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color", "font_focus_color"]:
+			b.add_theme_color_override(state, Style.c("header"))
+	return b
 
 
 ## What the captain has given their life to: every day in it teaches, and in time brings its perks.
 func _focus_pick() -> void:
-	var row := UIKit.row(_sheet)
-	UIKit.label(row, "Focus:  ", "Change it any time from the captain's sheet. Each focus teaches its perks over the months, in order.")
-	var pick := OptionButton.new()
-	pick.add_item("(choose later)")
-	pick.set_item_metadata(0, "")
+	UIKit.label(_sheet, "Focus: what you've given your life to", "Change it any time from the captain's sheet. Each focus teaches its perks over the months, in order.", Style.c("header"))
+	var grid := UIKit.grid(_sheet, 2)
 	for id in Data.table("focus"):
 		if id.begins_with("_"):
 			continue
 		var f: Dictionary = Data.table("focus")[id]
-		pick.add_item(f.name)
-		pick.set_item_metadata(pick.item_count - 1, id)
-		pick.set_item_tooltip(pick.item_count - 1, "%s\n\n%s" % [f.description, "\n".join(f.perks.map(func(p): return "%s: %s" % [Data.table("perks")[p].name, Data.table("perks")[p].description]))])
-		if id == _focus:
-			pick.select(pick.item_count - 1)
-	pick.item_selected.connect(func(i):
-		_focus = pick.get_item_metadata(i)
-		_build_sheet())
-	row.add_child(pick)
+		var tip := "
+".join(f.perks.map(func(p): return "%s: %s" % [Data.table("perks")[p].name, Data.table("perks")[p].description]))
+		_card(grid, "%s
+%s" % [f.name, f.description], id == _focus, tip, func():
+			_focus = "" if _focus == id else id
+			_build_sheet()).custom_minimum_size.x = 280
 	if _focus != "":
 		var f: Dictionary = Data.table("focus")[_focus]
-		UIKit.label(_sheet, "In time: " + ", then ".join(f.perks.map(func(p): return Data.table("perks")[p].name)), f.description, Style.c("dim"))
+		_wrapped(_sheet, "In time you'll learn " + ", then ".join(f.perks.map(func(p): return Data.table("perks")[p].name)) + ".", Style.c("dim"))
 
 
-func _trait_pick(label: String, ids: Array, now: String, taken: Array, on_pick: Callable) -> void:
-	var row := UIKit.row(_sheet)
-	UIKit.label(row, label + ":  ")
-	var pick := OptionButton.new()
-	pick.add_item("(none)")
-	pick.set_item_metadata(0, "")
-	for id in ids:
-		var td: Dictionary = Data.table("traits")[id]
-		if id != now and People._conflicts(taken, id):
+func _flaw_pick(bg: Dictionary, g: Dictionary) -> void:
+	UIKit.label(_sheet, "A flaw, for %d more skill points" % g.flaw_points, "Optional. It's a trait like any other: crew notice it, and events ask about it.", Style.c("header"))
+	var flow := HFlowContainer.new()
+	_sheet.add_child(flow)
+	for id in g.flaws:
+		if id in bg.traits or People._conflicts(bg.traits, id):
 			continue
-		pick.add_item(td.name)
-		pick.set_item_metadata(pick.item_count - 1, id)
+		var td: Dictionary = Data.table("traits")[id]
+		var b := _card(flow, td.name, id == _build.flaw, td.description, func():
+			_build.flaw = "" if _build.flaw == id else id
+			_trim_skills()
+			_build_sheet())
+		b.size_flags_horizontal = Control.SIZE_FILL
+		b.autowrap_mode = TextServer.AUTOWRAP_OFF
+	if _build.flaw != "":
+		var td: Dictionary = Data.table("traits")[_build.flaw]
 		var fx := PackedStringArray()
 		for k in td.get("effects", {}):
 			fx.append("%s %+d" % [People.SKILL_NAMES[k], td.effects[k]])
-		pick.set_item_tooltip(pick.item_count - 1, td.description + ("
-" + ", ".join(fx) if not fx.is_empty() else ""))
-		if id == now:
-			pick.select(pick.item_count - 1)
-	pick.item_selected.connect(func(i):
-		on_pick.call(pick.get_item_metadata(i))
-		_build_sheet())
-	row.add_child(pick)
+		_wrapped(_sheet, td.description + (" " + ", ".join(fx) + "." if not fx.is_empty() else ""), Style.c("dim"))
 
 
 ## Everything at once: a face, a pirate type, a nickname, and the points spent where they suit the background.
