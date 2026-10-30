@@ -105,7 +105,7 @@
     "choices": [
       {"text": "Offer them a place under the articles", "outcomes": ["crew +8", "hire {freed}", "honour +2", "relation {nation} -5", "ending brand freed"],
        "result": "{freed} and some of the others make their marks on the articles, for a full share like anyone. The rest ask to be put ashore, and you put them where they ask."},
-      {"text": "Ask {freed} where they want to go, and take them", "outcomes": ["honour +3", "time 3", "ending brand landed"],
+      {"text": "Ask {freed} where they want to go, and take them", "outcomes": ["honour +3", "time 3", "relation maroons +10", "maroons reveal {town}", "ending brand landed"],
        "result": "Most want the hills, where the runaways live free; a few want any port with a ship bound for home. Three days out of your way. Nobody aboard complains."}
     ]
   },

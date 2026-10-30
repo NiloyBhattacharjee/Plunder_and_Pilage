@@ -1057,14 +1057,14 @@
   "text": "Below the cliffs you find a group who have escaped the burning plantations: a dozen people with a dugout canoe that will never survive the open sea. Their leader speaks for them, steadily: they want passage off this island, and they will work for it.",
   "choices": [
    {
-    "text": "Take them aboard as free hands",
+    "text": "Offer them berths under the articles",
     "outcomes": [
      "crew +4",
      "honour +2",
      "relation port -5",
      "influence {port} planters -3"
     ],
-    "result": "They come aboard as crew, with shares like anyone else. The planters will call you a thief; the crew call them shipmates."
+    "result": "Most of them sign, for shares like anyone else; the rest ask to be put ashore down the coast, and you put them there. The planters will call you a thief; the crew call them shipmates."
    },
    {
     "text": "Give them provisions and a seaworthy boat",
@@ -1075,9 +1075,18 @@
      "gold -40",
      "cargo food -15",
      "honour +1",
-     "reveal_cove"
+     "maroons reveal"
     ],
-    "result": "Before they go, their leader tells you of an anchorage on the coast where the free people trade with passing ships."
+    "result": "Before they go, their leader tells you of a bay where the Maroons come down to trade with passing ships."
+   },
+   {
+    "text": "Give them passage, wherever they ask",
+    "outcomes": [
+     "flag freed_aboard 120",
+     "relation port -5",
+     "maroons reveal"
+    ],
+    "result": "They ask for the hills, where the Maroons live free, and their leader knows the bay where the Maroons come down to trade. Anchor there and they'll go up with the Maroons' guides."
    },
    {
     "text": "Go back to the ship",

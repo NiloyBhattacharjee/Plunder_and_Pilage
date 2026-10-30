@@ -1,5 +1,5 @@
 {
-  "_comment": "Hidden coves that can become bases (scripts/bases.gd). Found by sailing close (your navigator spots them) or through events. shelter: how hard the place is to find and to assault (defence and visibility). soil: whether plantations grow here. water: a spring (garrison needs less food brought in).",
+  "_comment": "Hidden coves that can become bases (scripts/bases.gd). A cove with a \"maroons\" key is a Maroon landing instead (scripts/maroons.gd): never a base, never spotted by sailing past, only learnt from people. Found by sailing close (your navigator spots them) or through events. shelter: how hard the place is to find and to assault (defence and visibility). soil: whether plantations grow here. water: a spring (garrison needs less food brought in).",
   "ile_a_vache":   {"name": "Île-à-Vache",  "lat": 18.07, "lon": -73.64, "shelter": 2, "soil": true,  "water": true,
                     "description": "A low wooded island off Hispaniola's south coast, where Morgan once gathered his fleet. Good water, poor hiding."},
   "isle_of_pines": {"name": "Isle of Pines", "lat": 21.75, "lon": -82.85, "shelter": 3, "soil": true,  "water": true,
@@ -12,6 +12,12 @@
                     "description": "A flat island off Hispaniola's eastern point, close to the Mona Passage and every ship that uses it."},
   "grand_cayman":  {"name": "Grand Cayman",  "lat": 19.30, "lon": -81.25, "shelter": 3, "soil": false, "water": true,
                     "description": "Turtle hunters' island in the middle of the sea between Jamaica and Cuba. Sheltered sound, few visitors."},
+  "manchioneal":   {"name": "Manchioneal Bay", "lat": 18.04, "lon": -76.28, "shelter": 4, "soil": false, "water": true,
+                    "description": "A river mouth on Jamaica's empty east coast, under the Blue Mountains. The Windward Maroons come down here to trade, when they trust the ship.",
+                    "maroons": {"band": "the Windward Maroons", "hills": "the Blue Mountains", "near": "port_royal", "strength": 45}},
+  "bahoruco":      {"name": "Bahoruco shore", "lat": 17.93, "lon": -71.40, "shelter": 4, "soil": false, "water": true,
+                    "description": "A stony beach below the Bahoruco mountains, on Hispaniola's south coast. Up in the forest is Le Maniel, a town of people who escaped the Spanish and French estates, free for longer than anyone remembers.",
+                    "maroons": {"band": "the people of Le Maniel", "hills": "the Bahoruco mountains", "near": "santo_domingo", "strength": 35}},
   "vieques":       {"name": "Vieques",       "lat": 18.12, "lon": -65.43, "shelter": 2, "soil": true,  "water": true,
                     "description": "Crab Island, east of Puerto Rico. Spain claims it and never sends anyone."}
 }

@@ -270,6 +270,9 @@ static func assault_parts(s: Dictionary, g: Dictionary, men: int, side: int) -> 
 		parts.append(["The town has risen", int(cfg().uprising_bonus)])
 	if g.starving:
 		parts.append(["A starving garrison", int(cfg().starving_bonus)])
+	var band := Maroons.sworn_near(s, g.port)
+	if band != "":
+		parts.append(["%s come down from the hills" % band.capitalize(), int(Data.rules.maroons.siege_bonus)])
 	return parts + _ally_part(g, int(cfg().ally_bonus))
 
 

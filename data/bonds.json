@@ -39,6 +39,12 @@
     }
   ],
   "benefits": {
+    "maroons": [
+      "They'll come down to trade whatever the colony says of you.",
+      "Better terms at the landing: more hides for your powder and tools.",
+      "Go down to the estates beside them by night: plunder for you, the cane burning.",
+      "Their warriors fight beside you if you storm the town below their hills."
+    ],
     "captain": [
       "Their ship won't attack you, nor you theirs.",
       "News of prizes and patrols; their friends think better of you.",
@@ -59,6 +65,12 @@
     ]
   },
   "costs": {
+    "maroons": [
+      "The colonies below their hills hear of it: standing with them drops.",
+      "The colonies trust you less every month.",
+      "Their raids are yours too: the governor knows whose ship was in the bay.",
+      "Sell them out after this and nobody in the hills will ever forgive it."
+    ],
     "captain": [
       "Their rivals start to dislike you.",
       "Their reputation rubs off on yours.",

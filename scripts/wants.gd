@@ -33,7 +33,7 @@ static func ensure(c: Dictionary, rng: RandomNumberGenerator) -> void:
 		c.asset = {}
 		if rng.randf() < float(table()._rules.asset_chance):
 			var id: String = table().assets.keys()[rng.randi() % table().assets.size()]
-			var hidden: Array = Data.table("coves").keys().filter(func(k): return not k.begins_with("_") and not k in Bases.discovered)
+			var hidden: Array = Bases.hidden()
 			if id == "cove" and hidden.is_empty():
 				id = "price"
 			c.asset = {"id": id, "used": false}

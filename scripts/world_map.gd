@@ -318,6 +318,9 @@ func _cove_near(pos: Vector2) -> String:
 func _at_cove(id: String) -> void:
 	ship.anchored_at = ""
 	at_base = id
+	if Maroons.is_landing(id):
+		_at_landing(id)
+		return
 	if Bases.bases.has(id):
 		Bases.visit(id)
 		var leave := Bases.shore_leave(ship.state, id)
@@ -337,6 +340,57 @@ func _at_cove(id: String) -> void:
 		port_layer.queue_redraw()
 		$BaseScreen.open(id, ship)
 		return
+	UIKit.resume_clock()
+
+
+## A Maroon landing (scripts/maroons.gd): whoever comes down from the hills, and what you can do together.
+func _at_landing(id: String) -> void:
+	var s: Dictionary = ship.state
+	var inst := Events.pick("any", _event_ctx())  # dogs on the beach, word from the hills
+	if not inst.is_empty():
+		await run_event(inst)
+		if busy():
+			return
+	UIKit.pause_clock()
+	var i := Maroons.info(id)
+	var key := "f:maroons"
+	while true:
+		var why := Maroons.trade_problem(s, id)
+		var lvl := Bonds.level(s, key)
+		var acc := Bonds.acceptance(s, key)
+		var text := "%s
+
+%s hold %s above: %s. Standing with them %+d; %s.%s" % [Bases.cove(id).description,
+			i.band.capitalize(), i.hills, Maroons.strength_word(id), s.relations.get("maroons", 0), Bonds.level_name(key, lvl).to_lower(),
+			"
+
+" + why if why != "" else "
+
+Their traders come down to the beach: hides and provisions, for powder, tools and cloth."]
+		var opts := []
+		var acts := []
+		for o in Maroons.offers(s, id):
+			opts.append({"text": "Trade %d %s for %d hides and %d provisions" % [o.qty, Data.table("goods")[o.good].name.to_lower(), o.hides, o.food], "disabled": why != "",
+				"tooltip": "Worth %d gold to them.%s" % [o.value, " Powder and tools make them stronger, and the colony may hear who sold them." if o.good in Data.rules.maroons.arms else ""]})
+			acts.append(func(): return Maroons.trade(s, id, o))
+		if Events.flags.has("freed_aboard"):
+			opts.append({"text": "See the people you carried ashore", "disabled": Maroons.burned(id), "tooltip": "They asked for the hills. The Maroons' guides will take them up."})
+			acts.append(func(): return Maroons.land_freed(s, id))
+		if lvl < 4:
+			opts.append({"text": "%s (%d/%d)" % ["Make peace" if lvl < 0 else "Propose: " + Bonds.level_name(key, acc.next), acc.score, acc.need],
+				"disabled": Maroons.burned(id), "tooltip": Bonds.preview(s, key)})
+			acts.append(func(): return Bonds.propose(s, key))
+		if lvl >= 3:
+			var rp := Maroons.raid_problem(s, id)
+			opts.append({"text": "Go down to the estates with them, by night", "disabled": rp != "", "tooltip": rp if rp != "" else
+				"Plunder for you, the crops burned around %s, and some of the people on the estates come away into the hills. Your standing there falls, and the price on your head rises." % Ports.port(i.near).name})
+			acts.append(func(): return Maroons.raid(s, id))
+		opts.append({"text": "Sail on"})
+		var pick: int = await dialog.ask(Bases.cove(id).name, text, opts, SceneView.pick("cove"))
+		if pick >= acts.size():
+			break
+		hud.show_message(acts[pick].call())
+		ship.refresh_stats()
 	UIKit.resume_clock()
 
 

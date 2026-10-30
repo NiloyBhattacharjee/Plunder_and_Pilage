@@ -14,7 +14,7 @@ static func fname(f: String) -> String:
 
 
 static func nations() -> Array:
-	return Data.table("factions").keys().filter(func(f): return f != "pirates")
+	return Data.table("factions").keys().filter(func(f): return f != "pirates" and Data.table("factions")[f].get("nation", true))
 
 
 static func status_text(s: Dictionary) -> String:

@@ -25,6 +25,7 @@ const VERBS := {  # verb: [min args, max args]
 	"reveal_cove": [0, 0], "intel": [1, 1], "base_gold": [2, 2], "base_loyalty": [2, 2], "base_visibility": [2, 2], "base_store": [3, 3],
 	"base_garrison": [2, 2], "base_damage": [1, 1], "base_lost": [1, 1], "bounty": [2, 2],
 	"patrols": [2, 2], "town": [2, 2], "deed": [1, 1], "want": [2, 2], "supply": [2, 2], "settle": [1, 1], "marque": [1, 1], "morale": [2, 2], "calm": [1, 1], "expose": [0, 0], "mutiny": [0, 0], "depose": [0, 0], "share": [1, 1], "confidence": [0, 0], "event": [1, 3], "fight": [1, 3], "market": [2, 2], "time": [1, 1], "ending": [2, 2], "focus": [1, 1],
+	"maroons": [1, 2],
 }
 const SOURCES := ["crew", "officer", "captain", "new", "port", "here", "nation", "enemy", "good", "number", "ringleader",
 	"official", "creditor", "enemy_official", "council", "ally", "rival", "captain_npc", "base"]
@@ -411,6 +412,9 @@ func value(key: String, ctx: Dictionary) -> Variant:
 		"power": return Politics.power(ctx.port).get(rest, 0.0) if ctx.port != "" else 0.0
 		"true": return true
 		"story": return int(stories[rest].act) if is_open(rest) else 0  # the act an open story is at
+		"maroons":  # the Maroons here, or in the hills above this port, if you know their landing: their strength, 0 if none
+			var mid := Maroons.near(ctx)
+			return Maroons.bands[mid].strength if mid != "" and not Maroons.burned(mid) else 0.0
 	return null
 
 
@@ -820,6 +824,18 @@ func _apply(o: String, ctx: Dictionary, vars: Dictionary, res: Dictionary) -> St
 			s.patrol_warning = s.get("patrol_warning", {})
 			s.patrol_warning[pf] = Clock.day + float(a[2])
 			return "You know the %s patrols for %d days" % [Data.table("factions")[pf].adjective, int(a[2])]
+		"maroons":  # reveal [PORT] (the landing nearest it), land (the people aboard who asked for the hills), betray, +N
+			var mid := Maroons.near(ctx)
+			match a[1]:
+				"reveal":
+					return Maroons.reveal(Maroons.nearest(a[2] if a.size() > 2 else ctx.port))
+				"land":
+					return Maroons.land_freed(s, mid) if mid != "" else ""
+				"betray":
+					return Maroons.betray(s, mid) if mid != "" else ""
+			if mid != "":
+				Maroons.bands[mid].strength = clampf(Maroons.bands[mid].strength + float(a[1]), 0.0, 100.0)
+			return ""
 		"reveal_cove":
 			var found := Bases.reveal_random()
 			return "You learn of a hidden anchorage: %s" % Bases.cove(found).name if found != "" else ""
@@ -1113,7 +1129,7 @@ const COND_KEYS := ["gold", "crew", "hull", "sails", "notoriety", "honour", "fea
 	"has_officer", "at_sea", "in_port", "storm", "pirate", "privateer", "honest", "wanted", "marque", "home", "pardoned",
 	"pardon_open", "war", "flag", "contract", "ship", "port", "port_faction", "port_fence", "port_is", "true",
 	"morale", "unrest", "unrest_known", "sick", "shares", "crew_share", "owes", "secrets", "council_member", "council_leader", "power", "allies", "rivals", "neutral", "bases", "at_base",
-	"town", "life", "towns", "own_town", "sacked", "bounty", "regard", "deed", "story", "focus"]
+	"town", "life", "towns", "own_town", "sacked", "bounty", "regard", "deed", "story", "focus", "maroons"]
 const TEXT_KEYS := ["focus", "office", "date", "ship", "port", "port_faction", "marque", "home", "post", "faction", "nationality", "taxes"]
 const BASE_KEYS := ["loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes"]
 const CAND_KEYS := ["in_town", "loyalty", "visibility", "garrison", "built", "managed", "manager_opinion", "town", "taxes", "bonded", "office", "trait", "known_trait", "opinion", "officer", "post", "nationality", "age", "hidden", "faction", "fence",

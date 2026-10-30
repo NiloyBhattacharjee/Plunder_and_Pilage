@@ -3,5 +3,7 @@
   "spain": {"name": "Spain", "color": "#d9a520", "ship_names": ["Santa Rosa", "San Felipe", "Nuestra Señora del Carmen", "San José", "Santo Cristo", "Concepción", "San Miguel", "Santa Ana", "Buen Jesús", "Trinidad"], "adjective": "Spanish", "flag": "spain"},
   "france": {"name": "France", "color": "#2f5fb3", "ship_names": ["Belle", "Saint-Louis", "Hardi", "Fortune", "Espérance", "Saint-Esprit", "Marie", "Dauphin"], "adjective": "French", "flag": "france"},
   "dutch": {"name": "Dutch Republic", "color": "#e07a1f", "ship_names": ["Hoop", "Eendracht", "Zeemeeuw", "Gouden Leeuw", "Vrede", "Fortuyn", "Liefde", "Zeepaard"], "adjective": "Dutch", "flag": "dutch"},
+  "maroons": {"name": "the Maroons", "color": "#4f6b3a", "ship_names": [], "adjective": "Maroon", "flag": "white", "nation": false,
+              "description": "People who escaped slavery and hold the hills of Jamaica and Hispaniola (scripts/maroons.gd). No ships, no ports: you meet them at a landing."},
   "pirates": {"name": "Brethren of the Coast", "color": "#222222", "ship_names": ["Black Joke", "Revenge", "Ranger", "Night Rambler", "Scourge", "Flying Dragon", "Sea King", "Bloody Hand"], "adjective": "pirate", "flag": "black"}
 }

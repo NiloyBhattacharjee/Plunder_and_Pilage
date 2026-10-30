@@ -1,0 +1,52 @@
+{
+  "_comment": "The Maroons (scripts/maroons.gd, docs/representation.md). Condition `maroons`: the strength of the Maroons at the landing you're anchored at, or in the hills above the port you're in once you know their landing (0 if none). Outcome `maroons reveal [PORT]`, `maroons land`, `maroons betray`, `maroons +N`.",
+
+  "maroons_governor": {
+    "where": "port", "weight": 14, "cooldown": 365,
+    "title": "A question at the residence",
+    "text": "{official} has you shown into the residence and doesn't offer you a chair. The estates outside {port} are burning again, and twice the militia has come back from the hills with nothing but its own dead. \"You've been on the coast below them. You know where they come down to trade. Show my officers the way up, and name your price.\"",
+    "conditions": ["maroons > 0", "not own_town", "port_faction != pirates"],
+    "roles": {"official": {"from": "official"}},
+    "choices": [
+      {"text": "Sell them the way up (300 gold)", "outcomes": ["gold +300", "relation port +12", "maroons betray"], "voice": {"cruel": 2, "greedy": 1},
+       "result": "{official}'s officers copy your chart by candlelight. The militia marches at the end of the month, and this time it knows the way."},
+      {"text": "Sell them a fine chart of the wrong valley", "check": {"who": "captain", "skill": "charisma", "dc": 13},
+       "outcomes": ["gold +100", "relation maroons +8"], "voice": {"decent": -1, "bold": 1},
+       "result": "{official} pays for a very detailed chart of a valley nobody has ever lived in. The militia spends a month in it. Word of the joke reaches the hills.",
+       "fail_outcomes": ["relation port -10"], "fail_result": "One of {official}'s officers knows that coast better than you hoped. You're shown out, and watched."},
+      {"text": "You know nothing about any Maroons", "outcomes": ["relation port -3"], "result": "\"Of course you don't,\" says {official}, and turns back to the papers."}
+    ]
+  },
+
+  "maroons_runaway": {
+    "where": "any", "weight": 30, "cooldown": 120,
+    "title": "Dogs on the beach",
+    "text": "Your boats are filling the water casks when {freed} comes out of the trees at a run, with two hunters and their dogs not far behind. {freed} got away from an estate a week ago and has been making for the hills ever since, and the path the Maroons use starts at the other end of this beach.",
+    "conditions": ["at_base", "maroons > 0"],
+    "roles": {"freed": {"from": "new", "nation": "freed"}},
+    "choices": [
+      {"text": "Put your boat crew between {freed} and the dogs", "outcomes": ["relation maroons +6", "maroons +1"], "voice": {"decent": 1, "bold": 1},
+       "result": "The hunters stop at the waterline when they see the muskets, and shout about property and the law. {freed} doesn't wait to hear it: a breath, a nod to your coxswain, and up the beach to where the path starts. Someone up there will hear about it."},
+      {"text": "Offer {freed} a berth, if they'd rather the sea", "outcomes": ["hire {freed}", "relation maroons +2"],
+       "result": "{freed} looks at the ship, then at the hills, and chooses the sea, for now. They sign the articles for a full share, like anyone else."},
+      {"text": "Keep out of it", "outcomes": ["opinion crew -1"], "voice": {"decent": -1},
+       "result": "The dogs catch {freed} at the edge of the water. Your boat crew watch it all, and row back in silence."}
+    ]
+  },
+
+  "maroons_envoy": {
+    "where": "any", "weight": 20, "cooldown": 180,
+    "title": "Word from the hills",
+    "text": "{envoy} comes down to the landing with the traders, and asks to speak to the captain alone. The governor is raising the militia again: every planter's son with a musket, and hired hunters with dogs. They have bows, cutlasses and old matchlocks, and not enough powder to hold the passes for a week.",
+    "conditions": ["at_base", "maroons > 0", "relation.maroons >= 10"],
+    "roles": {"envoy": {"from": "new", "nation": "freed"}},
+    "choices": [
+      {"text": "Leave them ten barrels of powder, as a gift", "conditions": ["cargo.gunpowder >= 10"], "outcomes": ["cargo gunpowder -10", "relation maroons +12", "maroons +4"],
+       "voice": {"decent": 1, "greedy": -1},
+       "result": "The barrels go up the path on people's backs. {envoy} doesn't make a speech about it. They'll remember it in the hills."},
+      {"text": "Sell them powder at the going price", "conditions": ["cargo.gunpowder >= 10"], "outcomes": ["cargo gunpowder -10", "cargo hides +20", "relation maroons +3", "maroons +2"],
+       "result": "Powder for hides, at a price that would make a Kingston merchant blush. {envoy} pays it."},
+      {"text": "You've nothing to spare", "outcomes": [], "result": "{envoy} nods and goes back up the path. The hills have held without you before."}
+    ]
+  }
+}

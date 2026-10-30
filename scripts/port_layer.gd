@@ -29,7 +29,7 @@ func _draw() -> void:
 		draw_arc(cp, 5.0 * s, 0.0, TAU, 16, col, 1.5 * s)
 		draw_line(cp + Vector2(0, -3.5) * s, cp + Vector2(0, 3.5) * s, col, 1.5 * s)  # an anchor, roughly
 		draw_line(cp + Vector2(-2.5, -1.5) * s, cp + Vector2(2.5, -1.5) * s, col, 1.5 * s)
-		var label: String = Bases.cove(id).name + (" (your base)" if mine else "")
+		var label: String = Bases.cove(id).name + (" (your base)" if mine else (" (Maroons)" if Maroons.is_landing(id) else ""))
 		if mine and not Bases.bases[id].raid.is_empty() and Bases.bases[id].raid.warned:
 			label += " - RAID COMING"
 		_text(Style.font("pixel"), cp + Vector2(8, 5) * s, label, 15, col, Style.c("chart_paper_light"))

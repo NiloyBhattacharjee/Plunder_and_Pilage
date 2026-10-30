@@ -36,8 +36,11 @@ Enslaved people are people with their own choices, never cargo, and never props 
 - **Sensitivity readers:** before release, paid readers, ideally Black readers who know Caribbean history, read every event that touches slavery or race. Drafts by the developer or Claude are only drafts until then.
 - **Content note** on the new-game screen, and a history-notes page crediting these sources.
 
+## The Maroons
+
+Built in `scripts/maroons.gd` and `data/events/maroons.json`. They are a people, not a nation: no ships, no ports, no commissions. They grow by their own escapes and raid the estates below their hills whether the player comes or not. The player meets them only at a landing they're told of, by people who know it. The player can trade, carry people who asked for the hills, ally with them, raid beside them, or sell them to the governor, which pays, as it did. Its cost comes through the crew (hands of African descent take it hardest), the bond, and a burned town in the hills. Real leaders (Nanny of the Windward Maroons, Cudjoe of the Leeward Maroons) aren't characters: their envoys and captains are generated people, so the game never puts words in a national hero's mouth. These events need the sensitivity read like the rest.
+
 ## Still to build
 
-- **The Maroons as a faction** (planned in `brief_additions.md`, Addition 4).
 - **A West African name and origin pool** for people taken off slavers, separate from `afro_caribbean` (Caribbean-born). The `freed` mix uses `afro_caribbean` until then.
 - **A background for a captain who escaped slavery.** Not written yet; it needs a sensitivity reader before it goes in.

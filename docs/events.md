@@ -68,6 +68,8 @@ Yes/no: `own_town` (you hold the town you're in), `sacked` (you sacked the town 
 
 Stories: `story.ID` (the act an open story is at, 0 if it isn't running).
 
+The Maroons (scripts/maroons.gd): `maroons` is the strength (0-100) of the Maroons at the landing you're anchored at, or in the hills above the port you're in once you know their landing; 0 if there are none, or their town was burned. `"maroons > 0"` asks whether they're there.
+
 Text: `date` (`"date >= 1715-07-31"`), `ship` (type), `port`, `port_faction`, `marque`, `home`, `focus` (the captain's focus, data/focus.json: `"focus == blade"`).
 
 The dialog tags what a choice asks of the captain, Fallout-style: `captain.SKILL >= N` shows as `[Swordplay 12]`, `captain_trait.T`
@@ -113,6 +115,7 @@ Going against a trait `rules.json` `nature.strain` times wears it away; leaning 
 | `time 3` | Days pass |
 | `focus 15` | Experience in the captain's focus (data/focus.json): its next perk may follow |
 | `want {r} done`, `want {r} ignored` | A person's want (data/wants.json) seen to (they're yours: opinion up, loyal) or let go (they remember) |
+| `maroons reveal [PORT]`, `maroons land`, `maroons betray`, `maroons +3` | The Maroons (scripts/maroons.gd): learn the landing nearest that port (or the port you're in); put ashore the people who asked for the hills (flag `freed_aboard`); sell their paths to the governor (the militia burns their town, crew of African descent never forget); their strength |
 | `deed fed_hungry` | The town you're in remembers what you did: its regard for you moves (data/port_life.json `_memory` `deeds`) |
 
 ## Stories
@@ -163,6 +166,7 @@ player is), or a role of the event that names a port. Durations are `days`.
 | `pirate_spawn_rate_multiplier` | value, days | More (or fewer) pirates at sea, and merchants lost to them |
 | `letter_of_marque`, `revoke_letter_of_marque` | faction | Grant or cancel the player's commission |
 | `gold`, `gold_percent`, `cargo_percent`, `provisions` | amount, percent, days | Money and supplies |
+| `population` | port, mult, reason | People lost (fever, a sack, an earthquake): the share left. The town fills again slowly (scripts/economy/towns.gd) |
 | `fleet_blocked`, `trade_slump`, `fair_access`, `port_laws`, `flows`, `stock`, `spread`, `sailings`, `route_risk` | | History's own (data/history.json): a blockade, a credit crash, the asiento, new laws in a port, and the raw market levers shocks use |
 
 `start_land_raid` is known but isn't the market's business: it's logged and skipped.

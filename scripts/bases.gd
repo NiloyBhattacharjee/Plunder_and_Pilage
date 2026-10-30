@@ -54,9 +54,7 @@ static func has(b: Dictionary, building_id: String) -> bool:
 
 ## Sailing close to an undiscovered cove: your navigator may spot it. Returns a message or "".
 func look_for_coves(s: Dictionary, pos: Vector2) -> String:
-	for id in Data.table("coves"):
-		if id.begins_with("_") or id in discovered:
-			continue
+	for id in hidden():
 		if pos.distance_to(cove_pos(id)) > cfg().discover_nm * Geo.px_per_nm():
 			continue
 		var nav := ShipStats.officer_skill(s, "navigator")
@@ -68,15 +66,22 @@ func look_for_coves(s: Dictionary, pos: Vector2) -> String:
 
 ## An event or a tavern tale reveals a cove you haven't found. Returns its id or "".
 func reveal_random() -> String:
-	var hidden: Array = Data.table("coves").keys().filter(func(id): return not id.begins_with("_") and not id in discovered)
-	if hidden.is_empty():
+	var left := hidden()
+	if left.is_empty():
 		return ""
-	var id: String = hidden[rng.randi() % hidden.size()]
+	var id: String = left[rng.randi() % left.size()]
 	discovered.append(id)
 	return id
 
 
+## Coves not yet found that could be bases (not the Maroons' landings: those are learnt from people).
+func hidden() -> Array:
+	return Data.table("coves").keys().filter(func(id): return not id.begins_with("_") and not id in discovered and not Maroons.is_landing(id))
+
+
 func claim_problem(s: Dictionary, id: String) -> String:
+	if Maroons.is_landing(id):
+		return "The Maroons' landing isn't yours to take."
 	if bases.has(id):
 		return "It's already yours."
 	if bases.size() >= cfg().max:

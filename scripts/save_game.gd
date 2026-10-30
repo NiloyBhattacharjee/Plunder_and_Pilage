@@ -28,6 +28,7 @@ static func save_game(world: Node, path := QUICKSAVE) -> Error:
 		"politics": Politics.save_state(),
 		"bonds": Bonds.save_state(),
 		"bases": Bases.save_state(),
+		"maroons": Maroons.save_state(),
 		"contracts": Contracts.save_state(),
 		"events": Events.save_state(),
 		"shipping": world.shipping.save_state(),
@@ -62,6 +63,7 @@ static func load_game(world: Node, path := QUICKSAVE) -> Error:
 	Politics.load_state(data.politics)
 	Bonds.load_state(data.bonds)
 	Bases.load_state(data.bases)
+	Maroons.load_state(data.get("maroons", {}))
 	Contracts.load_state(data.contracts)
 	Events.load_state(data.events)
 	world.shipping.load_state(data.shipping)

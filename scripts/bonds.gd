@@ -218,6 +218,8 @@ func _real_captain(key: String, h: Dictionary) -> String:
 # ---- partners ------------------------------------------------------------------------
 
 static func kind(key: String) -> String:
+	if key == "f:maroons":  # no ships, no ports: bonds of their own (data/bonds.json benefits.maroons)
+		return "maroons"
 	if key.begins_with("f:"):
 		return "faction"
 	return "captain" if People.person(key).get("role", "") in ["captain", "council"] else "official"
@@ -284,6 +286,8 @@ static func _note(s: Dictionary, key: String, text: String) -> void:
 
 ## Who will think less of you for siding with them: a nation's enemies, a person's rivals.
 func enemies_of(key: String) -> Array:
+	if key == "f:maroons":  # the colonies whose estates they raid
+		return Maroons.colonies().map(func(e): return "f:" + e)
 	if key.begins_with("f:"):
 		var f := key.substr(2)
 		var out: Array = Factions.enemies_of(f).map(func(e): return "f:" + e) if f != "pirates" else Career.nations().map(func(e): return "f:" + e)
@@ -327,11 +331,14 @@ func acceptance(s: Dictionary, key: String) -> Dictionary:
 		var f := key.substr(2)
 		need = int(cfg().faction_need[next - 1]) if next > 0 else -10
 		parts.append(["Your standing with %s" % Data.table("factions")[f].name, regard(s, key)])
-		if f != "pirates" and s.career.pirate:
+		var nation: bool = Data.table("factions")[f].get("nation", true)
+		if f != "pirates" and nation and s.career.pirate:
 			parts.append(["You're a pirate", -40])
+		if f == "maroons" and s.career.marque in Maroons.colonies():
+			parts.append(["You sail under a commission from the colony that hunts them", -20])
 		if f == "pirates" and not s.career.pirate:
 			parts.append(["You've never sailed on the account", -15])
-		if next == 3 and f != "pirates" and s.career.marque != f:
+		if next == 3 and f != "pirates" and nation and s.career.marque != f:
 			parts.append(["No %s commission" % Data.table("factions")[f].adjective, -30])
 	else:
 		var c := People.person(key)
@@ -573,6 +580,11 @@ func monthly(s: Dictionary) -> Array:
 	var weak: bool = s.crew.size() < 15 or s.hull < ShipStats.effective(s.type, s.upgrades).hull * 0.4
 	for key in allies(s):
 		var lvl := level(s, key)
+		if key == "f:maroons":  # the colonies take it badly; and they don't sail, so they never call you out
+			if lvl >= 2:
+				for f in Maroons.colonies():
+					s.relations[f] = s.relations.get(f, 0) - int(c.drag)
+			continue
 		var pirate_ally: bool = key == "f:pirates" or (not key.begins_with("f:") and People.person(key).get("faction", "") == "pirates")
 		if lvl >= 2 and pirate_ally:  # your friends' names rub off on yours
 			for f in Career.nations():

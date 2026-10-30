@@ -29,6 +29,7 @@ static func build(cfg: Dictionary) -> Dictionary:
 	Economy.piracy_start = bm.get("piracy", {})
 	People.reset()
 	Bases.reset()
+	Maroons.reset()
 	Ports.reset()
 	Events.reset()  # before history is caught up: it sets flags
 	Factions.reset()
