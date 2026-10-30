@@ -555,7 +555,7 @@ func _spawn_company(co: Dictionary) -> Dictionary:
 	if rng.randf() < Data.rules.flags.npc_false_flag_chance:
 		var nat: Array = Career.nations()
 		flag = Data.table("factions")[nat[rng.randi() % nat.size()]].flag  # honest-looking colours
-	var ports: Array = ([co.haven] if co.haven != "" else []) + Economy.model.brethren.cfg().grounds[co.ground].ports
+	var ports: Array = ([co.haven] if co.haven != "" else []) + Economy.model.brethren.cfg().grounds.get(co.ground, {}).get("ports", [])  # older saves: companies without a ground
 	ports = ports.filter(func(id): return world.anchorages.has(id))
 	var n := _add("pirate", e, terrain.nearest_sea(world.anchorages[ports[0]]), flag)
 	n.company = co.id

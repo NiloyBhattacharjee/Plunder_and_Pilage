@@ -147,6 +147,23 @@ func fleet_text(id: String) -> String:
 		"August", "September", "October", "November", "December"][int(cfg().fleets[f.id].month) - 1]]
 
 
+## How many live in a town, and why it's changing: a Paradox-style tooltip (scripts/economy/towns.gd).
+func people_text(id: String) -> String:
+	var t := model.towns
+	var lines := PackedStringArray(["About %d people live in %s." % [Ports.port(id).population, Ports.port(id).name]])
+	var ashore: int = Ports.port(id).population - int(round(t.settled.get(id, 0.0)))
+	if ashore > 0:
+		lines.append("Of them, about %d are pirates ashore from the companies that use the haven." % ashore)
+	lines.append("Growing %+.1f%% a year:" % (t.growth(id) * 100.0))
+	for part in t.growth_parts(id):
+		if absf(part[1]) >= 0.0005:
+			lines.append("  %s: %+.1f%%" % [part[0], part[1] * 100.0])
+	for x in t.losses.get(id, []):
+		lines.append("%s, %s: %d lost" % [x.why, Clock.date_string_of(to_game_day(int(x.day))), x.n])
+	return "
+".join(lines)
+
+
 func price_at(id: String, good: String, mult: float, buying: bool, spread_mult := 1.0) -> float:
 	return model.price_at_mult(id, good, mult, buying, spread_mult, duty(id, good))
 

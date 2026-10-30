@@ -109,9 +109,9 @@
   "shock_chance_per_day": 0.03,
   "shocks": {
     "_comment": "Random shocks (scripts/economy/shocks.gd): about one a month somewhere. months: when it can happen; tags: the ports it can hit (any of these tags); weight: how often, against the others; effects: the shared vocabulary (EconomyModel.apply_effect: port_damage, flows, stock, spread, sailings, route_risk, market_shock); goods: ids, made, used, all, random (one this port makes) or random_used (one it ships in). The news goes out at sailing speed.",
-    "hurricane": {"name": "Hurricane", "months": [7, 8, 9, 10], "weight": 3, "effects": [{"type": "port_damage", "severity": 0.35}],
+    "hurricane": {"name": "Hurricane", "months": [7, 8, 9, 10], "weight": 3, "effects": [{"type": "port_damage", "severity": 0.35}, {"type": "population", "mult": 0.98, "reason": "Hurricane"}],
                   "news": "A hurricane has torn through {port}: roofs gone, warehouses flooded, the fields flattened."},
-    "epidemic": {"name": "Fever", "weight": 1.5, "effects": [{"type": "flows", "goods": "all", "use": 0.7, "make": 0.7, "days": 120}, {"type": "sailings", "mult": 0.5, "days": 90}],
+    "epidemic": {"name": "Fever", "weight": 1.5, "effects": [{"type": "flows", "goods": "all", "use": 0.7, "make": 0.7, "days": 120}, {"type": "sailings", "mult": 0.5, "days": 90}, {"type": "population", "mult": 0.88, "reason": "Yellow fever"}],
                  "news": "Yellow fever in {port}. Half the town is sick, and few ships will put in."},
     "bad_harvest": {"name": "Poor harvest", "weight": 2, "tags": ["plantation", "capital"], "effects": [{"type": "flows", "goods": "random", "make": 0.3, "days": 90}, {"type": "stock", "goods": "random", "mult": 0.6}],
                     "news": "The {good} crop has failed around {port}. Prices there are climbing."},
@@ -121,9 +121,9 @@
                  "news": "{good} is fetching a fortune in {port}. They can't get enough of it."},
     "bankruptcy": {"name": "A merchant house fails", "weight": 1, "tags": ["capital", "free_port"], "effects": [{"type": "sailings", "mult": 0.4, "days": 90}, {"type": "spread", "mult": 1.4, "days": 90}],
                    "news": "A great merchant house in {port} has failed. Credit is gone, and few ships are fitting out there."},
-    "sacked": {"name": "Sacked", "months": [], "effects": [{"type": "port_damage", "severity": 0.6}, {"type": "stock", "goods": "all", "mult": 0.3}],
+    "sacked": {"name": "Sacked", "months": [], "effects": [{"type": "port_damage", "severity": 0.6}, {"type": "stock", "goods": "all", "mult": 0.3}, {"type": "population", "mult": 0.85, "reason": "Sacked: the dead, and those who fled"}],
                "news": "{port} has been sacked: the warehouses emptied, the churches stripped, half the town burned."},
-    "famine": {"name": "Famine", "months": [], "effects": [{"type": "stock", "goods": ["food"], "mult": 0.15}, {"type": "flows", "goods": ["food"], "make": 0.3, "use": 4.0, "days": 75}],
+    "famine": {"name": "Famine", "months": [], "effects": [{"type": "stock", "goods": ["food"], "mult": 0.15}, {"type": "flows", "goods": ["food"], "make": 0.3, "use": 4.0, "days": 75}, {"type": "population", "mult": 0.96, "reason": "Famine"}],
                "news": "{port} is going hungry: the provision ships are late and the bakers have nothing to sell."},
     "warehouse_fire": {"name": "Warehouse fire", "weight": 1.5, "effects": [{"type": "stock", "goods": "all", "mult": 0.55}],
                        "news": "Fire on the waterfront at {port}: a row of warehouses has burned to the ground."},
@@ -157,6 +157,16 @@
     "indigo": {"high": "The indigo vats are full", "low": "Few indigo cakes this time of year"},
     "cotton": {"high": "The cotton is picked", "low": "Little cotton till the picking"}
   },
+  "towns": {
+    "_comment": "Living towns (scripts/economy/towns.gd). Growth a year: default for every town, plus each tag's (why: the reason shown). Plantation towns grew fastest, and most of those who came were enslaved people brought by the slave ships: say so, never count them apart (docs/representation.md). A town below its starting size regrows by regrow x the share it lost. War cuts war_cut of the arrivals; sailings cut by a shock cut them too. limits: the people a town can fall to and grow to, against its starting size. haven_ashore: the share of a haven's pirates ashore at any time, counted in its people. Blows come through the population effect (shocks below, history, events).",
+    "growth": {"default": 0.004, "plantation": 0.022, "capital": 0.008, "free_port": 0.018, "fair_town": 0.003},
+    "why": {"plantation": "New estates: most who come are enslaved people the slave ships bring to work the cane",
+            "capital": "Officials, soldiers and merchants follow the government",
+            "free_port": "Traders of every nation settle where trade is free",
+            "fair_town": "Merchants come for the fair"},
+    "regrow": 0.25, "war_cut": 0.7, "limits": [0.2, 3.0], "haven_ashore": 0.35, "keep": 5
+  },
+
   "piracy": {
     "_comment": "The pirates as a population (scripts/economy/brethren.gd). Weekly rates. Men come from the idle seamen of the Americas: wars take men into the navies and privateers (war_service, enlist_rate) and the peace pays them off (pay_off_rate), so a long war ends in a crowd of hungry sailors. A war draws men in over war_ramp_weeks: a short war barely dents piracy, a long one empties the seas. Recruits gather at the havens and form a company at new_crew men. Calibrate with tools/economy_sim.gd, which prints the numbers each year: roughly 1,500 men at sea around 1680 (the last of the buccaneers), a few hundred in the war years after 1702, about 2,000 at the peak in 1717-1722, under 200 by 1726 (Marcus Rediker, Villains of All Nations).",
     "start": {"year": 1680, "men": 1400, "idle": 2500},

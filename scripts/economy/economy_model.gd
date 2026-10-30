@@ -20,6 +20,7 @@ var traffic: Traffic # merchant voyages between the ports (scripts/economy/traff
 var fleets: Fleets   # the treasure fleets and sugar convoys (scripts/economy/fleets.gd)
 var shocks: Shocks   # random shocks: hurricanes, epidemics, fires... (scripts/economy/shocks.gd)
 var brethren: Brethren # the pirates: companies, the idle seamen they recruit from, the navy against them (scripts/economy/brethren.gd)
+var towns: Towns     # how many people live in each port, and why it changes (scripts/economy/towns.gd)
 var world := {}      # key -> {value, until}: world conditions in force (pirates, sailings:<faction or port>,
                      # imports:<faction>, spread:<port>, fleet_blocked:<fleet>, fair_access:<faction>, state:<key>)
 var day := 0         # days the model has run
@@ -43,6 +44,8 @@ func setup(goods_t: Dictionary, ports_t: Dictionary, cfg_t: Dictionary, seed: in
 	stock = {}
 	mods = {}
 	history = {}
+	world = {}
+	towns = Towns.new(self)  # first: the data's populations come back, and the trades scale with them
 	for id in ports:
 		if id.begins_with("_"):
 			continue
@@ -58,7 +61,6 @@ func setup(goods_t: Dictionary, ports_t: Dictionary, cfg_t: Dictionary, seed: in
 	traffic = Traffic.new(self)
 	fleets = Fleets.new(self)
 	shocks = Shocks.new(self)
-	world = {}
 	brethren = Brethren.new(self)
 
 
@@ -85,11 +87,17 @@ func _params(id: String, g: String) -> Dictionary:
 		rex *= o.tag_export.get(t, 1.0)
 	use *= p.get("use", {}).get(g, 1.0)
 	imp *= p.get("import_mult", 1.0)  # a port's own extra supply (Portobelo's mule trains from Panama)
-	var make := float(p.make.get(g, 0.0))
+	var make := float(p.make.get(g, 0.0)) * towns.labour(id)
 	return {"make": make, "use": use, "imp": imp, "exp": ex, "rex": rex, "normal": maxf(cfg.min_normal, (make + use) * cfg.cover_days)}
 
 
 # ---- prices ------------------------------------------------------------------------------------
+
+## A town's people changed: what it eats and makes follows (Towns).
+func refresh(id: String) -> void:
+	for g in _traded:
+		params[id][g] = _params(id, g)
+
 
 ## The price multiplier at a given stock: base x this is the middle price.
 func mult_at(id: String, g: String, s: float) -> float:
@@ -184,6 +192,8 @@ func step(month: int, year := -1) -> void:
 	traffic.step(day, month)
 	fleets.step(day, month, year if year > 0 else 1000 + day / 365)
 	brethren.step(day, month, year if year > 0 else 1000 + day / 365)
+	if day % 7 == 0:
+		towns.week()
 	for id in stock:
 		for g in _traded:
 			var f := flows(id, g, month)
@@ -242,6 +252,8 @@ func world_has(key: String) -> bool:
 ## fades as trade restores supply.
 func apply_effect(id: String, e: Dictionary) -> bool:
 	match e.type:
+		"population":  # people lost: fever, a hurricane, a sack (mult: the share left)
+			towns.lose(id, float(e.get("mult", 0.9)), e.get("reason", "Disaster"))
 		"haven_closed":  # no more fences or recruits for pirates here (Brethren.havens)
 			set_world("haven_closed:" + id, true, -1)
 		"market_shock":  # price_multiplier on goods for days: the stock falls (or rises) to match, supply stays short
@@ -380,7 +392,7 @@ func breakdown(id: String, g: String, month: int, spread_mult := 1.0, duty := 0.
 
 func save_state() -> Dictionary:
 	return {"rng": str(rng.state), "stock": stock, "mods": mods, "history": history, "day": day, "traffic": traffic.save_state(),
-		"fleets": fleets.save_state(), "world": world, "brethren": brethren.save_state()}
+		"fleets": fleets.save_state(), "world": world, "brethren": brethren.save_state(), "towns": towns.save_state()}
 
 
 func load_state(d: Dictionary) -> void:
@@ -404,3 +416,5 @@ func load_state(d: Dictionary) -> void:
 		world[k].until = int(world[k].until)
 	if d.has("brethren"):
 		brethren.load_state(d.brethren)
+	if d.has("towns"):
+		towns.load_state(d.towns)

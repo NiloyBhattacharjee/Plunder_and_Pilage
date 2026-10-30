@@ -688,13 +688,15 @@ func _build_town() -> void:
 	var t := PortLife.situation(port_id)
 	var head := UIKit.label(_town, "%s is %s." % [Ports.port(port_id).name, PortLife.describe(port_id)], PortLife.explain(port_id), Style.c("header"))
 	head.theme_type_variation = &"Header"
-	var g := UIKit.grid(_town, 10)
+	var g := UIKit.grid(_town, 12)
 	var tips := {
 		"Wealth": "How rich the town is: its size, and how its trade is doing. Rich towns give balls; poor ones breed fever and beggars.",
 		"Prosperity": "What its goods fetch against what it must buy. Prosperous towns hold feast days and pay for errands.",
 		"Hunger": "The price of food against its usual price. Hungry towns riot, and hungry men sign on cheap.",
 		"Order": "Soldiers and priests against the hungry poor, and war. Orderly towns hang pirates; restless ones riot and set curfews.",
 		"Piety": "The church's say in the town."}
+	UIKit.label(g, "People", "Who lives here. More people eat more and make more, send out more ships, and pay more taxes to whoever holds the town.")
+	UIKit.label(g, "%d" % Ports.port(port_id).population, Economy.people_text(port_id))
 	for k in tips:
 		var v: float = t[k.to_lower()]
 		UIKit.label(g, k, tips[k])

@@ -37,7 +37,7 @@ func _init(model: EconomyModel) -> void:
 	var left := int(c.start.men)
 	while left >= int(c.new_crew):
 		var men := mini(left, m.rng.randi_range(int(c.new_crew), int(c.split_at)))
-		_form(men, havens(int(c.start.year)), "", false)
+		_form(men, havens(int(c.start.year)), _choose_ground(1), false)
 		left -= men
 
 
