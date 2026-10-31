@@ -23,6 +23,17 @@ static func week(s: Dictionary, stats: Dictionary, npcs: Array) -> void:
 		var r := PortLife.regard(id)
 		if absf(r) >= 1.0:
 			regard[id] = snappedf(r, 0.1)
+	var towns := {}
+	var people := {}
+	for id in Data.table("ports"):
+		if id.begins_with("_"):
+			continue
+		var p := Ports.port(id)
+		towns[id] = int(p.population)
+		people[p.faction] = people.get(p.faction, 0) + int(p.population)
+	var maroons := {}
+	for id in Maroons.bands:
+		maroons[id] = int(Maroons.bands[id].strength)
 	rec.append({
 		"day": int(Clock.day),
 		"gold": int(s.gold),
@@ -41,6 +52,7 @@ static func week(s: Dictionary, stats: Dictionary, npcs: Array) -> void:
 		"navy_ships": snappedf(b.navy.values().reduce(func(a, x): return a + x, 0.0), 0.1),
 		"losses": traffic.lost_log.filter(func(l): return l.day > since).size(),
 		"wars": Factions.wars.duplicate(true),
+		"towns": towns, "people": people, "maroons": maroons,  # people per port and per nation; Maroon strength per landing
 		"notes": cap.history.slice(int(s.get("stats_seen", cap.history.size()))),  # what the captain did this week
 	})
 	s.stats_seen = cap.history.size()
@@ -52,7 +64,7 @@ static func week(s: Dictionary, stats: Dictionary, npcs: Array) -> void:
 static func line(s: Dictionary, key: String) -> Array:
 	var parts := key.split(".")
 	return s.get("stats", []).map(func(w):
-		var v = w.get(parts[0], 0)
+		var v = w.get(parts[0], {} if parts.size() > 1 else 0)  # weeks from older saves lack newer fields
 		return float(v.get(parts[1], 0) if parts.size() > 1 else v))
 
 

@@ -31,3 +31,12 @@ func test_wars_merge_into_bands_and_history_falls_in_its_week():
 	assert_eq(bands.size(), 2, "a gap splits the war into two bands")
 	assert_eq([bands[0].from, bands[0].to], [0, 1])
 	assert_true(Stats.history_marks(s).any(func(m): return m.at == 2 and "Utrecht" in m.text), "Utrecht lands in its week")
+
+
+func test_towns_and_maroons_are_recorded_and_old_weeks_read_as_zero():
+	Clock.day = 7.0
+	s.stats = [{"day": 0}]  # a week from a save before towns were recorded
+	Stats.week(s, ShipStats.effective(s.type, s.upgrades), [])
+	assert_eq(Stats.line(s, "towns.port_royal"), [0.0, float(Ports.port("port_royal").population)])
+	assert_eq(s.stats[1].people.values().reduce(func(a, x): return a + x, 0), s.stats[1].towns.values().reduce(func(a, x): return a + x, 0))
+	assert_eq(Stats.line(s, "maroons.bahoruco")[1], float(int(Maroons.bands.bahoruco.strength)))

@@ -710,6 +710,24 @@ func _build_charts() -> void:
 	_chart(grid, ctx, "Merchants lost", "Merchant ships lost each week, to pirates, storms and you.", [{"name": "Lost", "values": Stats.line(s, "losses")}], true)
 	_chart(grid, ctx, "Merchants at sea", "Merchant voyages under way across the Caribbean.", [{"name": "At sea", "values": Stats.line(s, "voyages")}])
 
+	_section(box, "The towns")
+	var nations: Array = rec[-1].get("people", {}).keys()
+	nations.sort_custom(func(a, b): return rec[-1].people[a] > rec[-1].people[b])
+	if not nations.is_empty():
+		UIKit.label(box, "People under each flag", "Everyone living in the towns each nation holds: sugar and peace grow them, fever, hurricanes, sacks and war shrink them, and a town that changes hands takes its people with it. Each has its own scale.", Style.c("dim"))
+		_multiples(box, ctx, nations.slice(0, 6).map(func(f): return [Career.fname(f), Stats.line(s, "people." + f)]), {})
+		var moved := func(id: String) -> float:
+			var v := Stats.line(s, "towns." + id).filter(func(x): return x > 0.0)
+			return (v.max() - v.min()) / v.max() if not v.is_empty() else 0.0
+		var ports: Array = rec[-1].get("towns", {}).keys()
+		ports.sort_custom(func(a, b): return moved.call(a) > moved.call(b))
+		UIKit.label(box, "The towns that changed most", "The five towns whose people rose or fell the most. Each has its own scale; hover the People row in a town's tab for why.", Style.c("dim"))
+		_multiples(box, ctx, ports.slice(0, 5).map(func(id): return [Ports.port(id).name, Stats.line(s, "towns." + id)]), {})
+	var known := Maroons.landings().filter(func(id): return id in Bases.discovered)
+	if not known.is_empty():
+		UIKit.label(box, "The Maroons", "How strong the free people in the hills are, 0 to 100. Escapes and the powder and tools you sell them make them stronger; the militia, guided or not, weakens them.", Style.c("dim"))
+		_multiples(box, ctx, known.map(func(id): return [Maroons.info(id).band.left(1).to_upper() + Maroons.info(id).band.substr(1), Stats.line(s, "maroons." + id)]), {"lo": 0.0, "hi": 100.0})
+
 
 func _section(box: VBoxContainer, title: String) -> void:
 	UIKit.label(box, "")
@@ -737,11 +755,13 @@ func _chart(parent: Control, ctx: Dictionary, title: String, tip: String, lines:
 
 
 ## A row of small panels, one per nation or town: [[name, values]], all on one scale so they compare fairly.
-func _multiples(box: VBoxContainer, ctx: Dictionary, rows: Array) -> void:
+## span: a fixed {lo, hi}, or {} for each panel on its own scale.
+func _multiples(box: VBoxContainer, ctx: Dictionary, rows: Array, span = null) -> void:
 	var row := UIKit.row(box)
 	row.add_theme_constant_override("separation", 8)
 	var all: Array = rows.reduce(func(a, r): return a + r[1], [])
-	var span := {"lo": minf(all.min(), 0.0), "hi": maxf(all.max(), 1.0)}
+	if span == null:
+		span = {"lo": minf(all.min(), 0.0), "hi": maxf(all.max(), 1.0)}
 	for r in rows:
 		var c := Chart.make_mini(ctx.days, r[0], r[1])
 		c.fixed = span
